@@ -1,40 +1,54 @@
 ﻿import { createRootRoute, Link, Outlet } from '@tanstack/react-router'
 import { TanStackRouterDevtools } from '@tanstack/react-router-devtools'
+import { ThemeToggle } from '../components/ThemeToggle'
 
 export const Route = createRootRoute({
   component: () => (
     <>
-      <div style={{ padding: '1rem', borderBottom: '1px solid #333' }}>
-        <nav style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
-          <Link
-            to="/"
-            style={{ textDecoration: 'none', color: '#646cff' }}
-            activeProps={{ style: { fontWeight: 'bold', textDecoration: 'underline' } }}
-          >
-            Home
-          </Link>
-          <Link
-            to="/dashboard"
-            style={{ textDecoration: 'none', color: '#646cff' }}
-            activeProps={{ style: { fontWeight: 'bold', textDecoration: 'underline' } }}
-          >
-            Dashboard
-          </Link>
-          <Link
-            to="/vaults"
-            style={{ textDecoration: 'none', color: '#646cff' }}
-            activeProps={{ style: { fontWeight: 'bold', textDecoration: 'underline' } }}
-          >
-            Vaults
-          </Link>
-          <Link
-            to="/about"
-            style={{ textDecoration: 'none', color: '#646cff' }}
-            activeProps={{ style: { fontWeight: 'bold', textDecoration: 'underline' } }}
-          >
-            About
-          </Link>
-        </nav>
+      <div className="border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm">
+        <div className="container mx-auto px-4 py-4">
+          <nav className="flex items-center justify-between">
+            <div className="flex gap-6">
+              <Link
+                to="/"
+                className="text-gray-600 dark:text-gray-300 hover:text-primary-500 dark:hover:text-primary-400 transition-colors font-medium"
+                activeProps={{
+                  className: "text-primary-500 dark:text-primary-400 font-bold underline underline-offset-4"
+                }}
+              >
+                Home
+              </Link>
+              <Link
+                to="/dashboard"
+                className="text-gray-600 dark:text-gray-300 hover:text-primary-500 dark:hover:text-primary-400 transition-colors font-medium"
+                activeProps={{
+                  className: "text-primary-500 dark:text-primary-400 font-bold underline underline-offset-4"
+                }}
+              >
+                Dashboard
+              </Link>
+              <Link
+                to="/vaults"
+                className="text-gray-600 dark:text-gray-300 hover:text-primary-500 dark:hover:text-primary-400 transition-colors font-medium"
+                activeProps={{
+                  className: "text-primary-500 dark:text-primary-400 font-bold underline underline-offset-4"
+                }}
+              >
+                Vaults
+              </Link>
+              <Link
+                to="/about"
+                className="text-gray-600 dark:text-gray-300 hover:text-primary-500 dark:hover:text-primary-400 transition-colors font-medium"
+                activeProps={{
+                  className: "text-primary-500 dark:text-primary-400 font-bold underline underline-offset-4"
+                }}
+              >
+                About
+              </Link>
+            </div>
+            <ThemeToggle />
+          </nav>
+        </div>
       </div>
       <Outlet />
       <TanStackRouterDevtools />
