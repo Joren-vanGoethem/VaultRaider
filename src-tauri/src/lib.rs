@@ -9,10 +9,6 @@ struct UserInfo {
 }
 
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
-#[tauri::command]
-fn greet(name: &str) -> String {
-    format!("Hello, {}! You've been greeted from Rust!", name)
-}
 
 /// Tauri command to start Azure login
 #[tauri::command]
@@ -44,7 +40,6 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .invoke_handler(tauri::generate_handler![
-            greet,
             azure_login,
             check_auth,
             get_current_user,
