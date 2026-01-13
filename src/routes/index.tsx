@@ -14,6 +14,13 @@ interface UserInfo {
   name?: string;
 }
 
+interface DeviceCodeInfo {
+  user_code: string;
+  device_code: string;
+  verification_uri: string;
+  message: string;
+}
+
 export const Route = createFileRoute('/')({
   component: Index,
 })
@@ -23,6 +30,8 @@ function Index() {
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState("");
   const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
+  const [deviceCodeInfo, setDeviceCodeInfo] = useState<DeviceCodeInfo | null>(null);
+  const [showDeviceCodeFlow, setShowDeviceCodeFlow] = useState(false);
 
   // Check authentication status on mount
   useEffect(() => {
@@ -63,10 +72,91 @@ function Index() {
       }
     } catch (error) {
       console.error("Error during login:", error);
-      setMessage(`Error: ${error}`);
+      const errorMessage = String(error);
+
+      // Check if Azure CLI failed - offer device code flow as fallback
+      if (errorMessage.includes("Azure CLI") || errorMessage.includes("az login")) {
+        setMessage("Azure CLI not available. Would you like to use browser authentication instead?");
+        setShowDeviceCodeFlow(true);
+      } else {
+        setMessage(`Error: ${error}`);
+      }
     } finally {
       setIsLoading(false);
     }
+  }
+
+  async function handleDeviceCodeLogin() {
+    setIsLoading(true);
+    setMessage("Starting device code authentication...");
+    setShowDeviceCodeFlow(false);
+
+    try {
+      // Start device code flow
+      const deviceInfo = await invoke<DeviceCodeInfo>("start_browser_login");
+      setDeviceCodeInfo(deviceInfo);
+      setMessage("Please complete authentication in your browser");
+
+      // Automatically poll for completion
+      pollForDeviceCodeCompletion();
+    } catch (error) {
+      console.error("Error starting device code flow:", error);
+      setMessage(`Error: ${error}`);
+      setIsLoading(false);
+    }
+  }
+
+  async function pollForDeviceCodeCompletion() {
+    try {
+      // This will poll automatically in the backend
+      const result = await invoke<AuthResult>("complete_browser_login", {
+        authCode: "",
+        state: ""
+      });
+
+      if (result.success) {
+        setIsAuthenticated(true);
+        setUserInfo({
+          email: result.user_email || "",
+          name: result.user_name,
+        });
+        setMessage("Successfully authenticated with device code!");
+        setDeviceCodeInfo(null);
+      } else {
+        setMessage(`Authentication failed: ${result.message}`);
+      }
+    } catch (error) {
+      console.error("Error during device code authentication:", error);
+      const errorMessage = String(error);
+
+      // Check for specific Azure configuration errors
+      if (errorMessage.includes("AADSTS7000218") || errorMessage.includes("client_assertion") || errorMessage.includes("client_secret")) {
+        setMessage(
+          "❌ Azure App Registration Configuration Error\n\n" +
+          "Your app needs to be configured as a Public Client:\n\n" +
+          "1. Go to Azure Portal → App Registrations\n" +
+          "2. Select your app (Client ID: d904e24e...)\n" +
+          "3. Click 'Authentication' → Advanced Settings\n" +
+          "4. Set 'Allow public client flows' to YES ✅\n" +
+          "5. Click Save\n\n" +
+          "See AZURE_APP_REGISTRATION_SETUP.md for detailed instructions."
+        );
+      } else if (errorMessage.includes("authorization_pending")) {
+        setMessage("Still waiting for authentication. Please complete the sign-in in your browser.");
+      } else if (errorMessage.includes("expired_token") || errorMessage.includes("timed out")) {
+        setMessage("Authentication timed out. Please try again.");
+      } else {
+        setMessage(`Error: ${error}`);
+      }
+      setDeviceCodeInfo(null);
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  function copyToClipboard(text: string) {
+    navigator.clipboard.writeText(text);
+    setMessage("Code copied to clipboard!");
   }
 
   async function handleLogout() {
@@ -96,27 +186,113 @@ function Index() {
             <p className="text-gray-600 dark:text-gray-400 mb-6">
               Sign in with your Azure account to access your Key Vaults
             </p>
-            <button
-              type="button"
-              onClick={handleLogin}
-              disabled={isLoading}
-              className="btn-primary w-full"
-            >
-              {isLoading ? (
-                <span className="flex items-center justify-center gap-2">
-                  <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
-                  Authenticating...
-                </span>
-              ) : (
-                "Login with Azure"
-              )}
-            </button>
-            {message && (
-              <div className="mt-4 p-4 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800">
-                <p className="text-sm text-blue-700 dark:text-blue-300">{message}</p>
+
+            {/* Device Code Display */}
+            {deviceCodeInfo && (
+              <div className="mb-6 p-6 rounded-lg bg-blue-50 dark:bg-blue-900/30 border-2 border-blue-300 dark:border-blue-700">
+                <h3 className="text-lg font-semibold text-blue-900 dark:text-blue-100 mb-4">
+                  Complete Authentication
+                </h3>
+                <ol className="space-y-3 text-sm text-blue-800 dark:text-blue-200">
+                  <li className="flex items-start gap-2">
+                    <span className="flex-shrink-0 w-6 h-6 rounded-full bg-blue-500 text-white flex items-center justify-center text-xs font-bold">1</span>
+                    <span className="pt-0.5">
+                      Visit: <a
+                        href={deviceCodeInfo.verification_uri}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="font-medium underline hover:text-blue-600 dark:hover:text-blue-300"
+                      >
+                        {deviceCodeInfo.verification_uri}
+                      </a>
+                    </span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="flex-shrink-0 w-6 h-6 rounded-full bg-blue-500 text-white flex items-center justify-center text-xs font-bold">2</span>
+                    <div className="pt-0.5 flex-1">
+                      <span className="block mb-2">Enter this code:</span>
+                      <div className="flex items-center gap-2">
+                        <code className="flex-1 px-4 py-2 bg-white dark:bg-gray-800 rounded border border-blue-300 dark:border-blue-600 font-mono text-lg font-bold text-blue-600 dark:text-blue-400 tracking-wider">
+                          {deviceCodeInfo.user_code}
+                        </code>
+                        <button
+                          onClick={() => copyToClipboard(deviceCodeInfo.user_code)}
+                          className="px-3 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded transition-colors"
+                          title="Copy code"
+                        >
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                          </svg>
+                        </button>
+                      </div>
+                    </div>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="flex-shrink-0 w-6 h-6 rounded-full bg-blue-500 text-white flex items-center justify-center text-xs font-bold">3</span>
+                    <span className="pt-0.5">Sign in with your Microsoft account</span>
+                  </li>
+                </ol>
+                {isLoading && (
+                  <div className="mt-4 flex items-center gap-2 text-blue-700 dark:text-blue-300">
+                    <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    <span className="text-sm">Waiting for authentication...</span>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Login Buttons */}
+            {!deviceCodeInfo && (
+              <>
+                <button
+                  type="button"
+                  onClick={handleLogin}
+                  disabled={isLoading}
+                  className="btn-primary w-full"
+                >
+                  {isLoading ? (
+                    <span className="flex items-center justify-center gap-2">
+                      <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Authenticating...
+                    </span>
+                  ) : (
+                    "Login with Azure"
+                  )}
+                </button>
+
+                {/* Device Code Flow Option */}
+                {showDeviceCodeFlow && (
+                  <div className="mt-4 p-4 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800">
+                    <p className="text-sm text-amber-800 dark:text-amber-200 mb-3">
+                      Azure CLI is not available. You can authenticate using your browser instead.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={handleDeviceCodeLogin}
+                      className="w-full px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white font-semibold rounded-lg transition-colors"
+                    >
+                      Use Browser Authentication
+                    </button>
+                  </div>
+                )}
+              </>
+            )}
+
+            {message && !deviceCodeInfo && (
+              <div className={`mt-4 p-4 rounded-lg border ${
+                message.includes("Success") || message.includes("authenticated")
+                  ? "bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800 text-green-700 dark:text-green-300"
+                  : message.includes("Azure CLI not available") || showDeviceCodeFlow
+                  ? "bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800 text-amber-700 dark:text-amber-300"
+                  : "bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800 text-red-700 dark:text-red-300"
+              }`}>
+                <p className="text-sm whitespace-pre-wrap">{message}</p>
               </div>
             )}
           </div>

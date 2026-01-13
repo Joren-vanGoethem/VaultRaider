@@ -1,4 +1,4 @@
-﻿﻿import { createFileRoute, redirect } from '@tanstack/react-router'
+﻿import { createFileRoute, redirect } from '@tanstack/react-router'
 import { invoke } from "@tauri-apps/api/core";
 
 export const Route = createFileRoute('/dashboard')({

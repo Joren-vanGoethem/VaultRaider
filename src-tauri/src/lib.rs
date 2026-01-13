@@ -1,6 +1,11 @@
 mod azure_auth;
 
-use azure_auth::{AuthResult, DeviceCodeInfo, login, start_device_code_login, complete_device_code_login, is_authenticated, logout, get_user_info};
+use azure_auth::{
+    AuthResult, DeviceCodeInfo, login,
+    start_device_code_login, complete_device_code_login,
+    start_interactive_browser_login, complete_interactive_browser_login,
+    is_authenticated, logout, get_user_info
+};
 
 #[derive(serde::Serialize)]
 struct UserInfo {
@@ -26,6 +31,18 @@ async fn start_device_code() -> Result<DeviceCodeInfo, String> {
 #[tauri::command]
 async fn complete_device_code() -> Result<AuthResult, String> {
     complete_device_code_login().await
+}
+
+/// Tauri command to start interactive browser authentication (RECOMMENDED - no secret needed!)
+#[tauri::command]
+async fn start_browser_login() -> Result<DeviceCodeInfo, String> {
+    start_interactive_browser_login().await
+}
+
+/// Tauri command to complete browser authentication with authorization code
+#[tauri::command]
+async fn complete_browser_login(auth_code: String, state: String) -> Result<AuthResult, String> {
+    complete_interactive_browser_login(auth_code, state).await
 }
 
 /// Tauri command to check authentication status
@@ -55,6 +72,8 @@ pub fn run() {
             azure_login,
             start_device_code,
             complete_device_code,
+            start_browser_login,
+            complete_browser_login,
             check_auth,
             get_current_user,
             azure_logout
