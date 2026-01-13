@@ -29,4 +29,6 @@ tokio = { version = "1", features = ["full"] }
 reqwest = { version = "0.12", features = ["json"] }
 url = "2.5"
 lazy_static = "1.5"
+jsonwebtoken = "9"
+base64 = "0.22"
 

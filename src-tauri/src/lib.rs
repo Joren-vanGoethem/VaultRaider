@@ -1,6 +1,12 @@
 mod azure_auth;
 
-use azure_auth::{AuthResult, start_device_code_login, is_authenticated, logout};
+use azure_auth::{AuthResult, start_device_code_login, is_authenticated, logout, get_user_info};
+
+#[derive(serde::Serialize)]
+struct UserInfo {
+    email: String,
+    name: Option<String>,
+}
 
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
 #[tauri::command]
@@ -20,6 +26,12 @@ async fn check_auth() -> bool {
     is_authenticated().await
 }
 
+/// Tauri command to get current user info
+#[tauri::command]
+async fn get_current_user() -> Option<UserInfo> {
+    get_user_info().await.map(|(email, name)| UserInfo { email, name })
+}
+
 /// Tauri command to logout
 #[tauri::command]
 async fn azure_logout() -> Result<String, String> {
@@ -35,6 +47,7 @@ pub fn run() {
             greet,
             azure_login,
             check_auth,
+            get_current_user,
             azure_logout
         ])
         .run(tauri::generate_context!())

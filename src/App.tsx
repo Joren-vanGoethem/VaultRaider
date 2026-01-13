@@ -6,12 +6,19 @@ interface AuthResult {
   success: boolean;
   message: string;
   user_email?: string;
+  user_name?: string;
+}
+
+interface UserInfo {
+  email: string;
+  name?: string;
 }
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState("");
+  const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
 
   // Check authentication status on mount
   useEffect(() => {
@@ -22,6 +29,12 @@ function App() {
     try {
       const authenticated = await invoke<boolean>("check_auth");
       setIsAuthenticated(authenticated);
+
+      if (authenticated) {
+        // Fetch user info if authenticated
+        const info = await invoke<UserInfo | null>("get_current_user");
+        setUserInfo(info);
+      }
     } catch (error) {
       console.error("Error checking auth status:", error);
     }
@@ -37,6 +50,14 @@ function App() {
       if (result.success) {
         setIsAuthenticated(true);
         setMessage(result.message);
+
+        // Store user info from login result
+        if (result.user_email) {
+          setUserInfo({
+            email: result.user_email,
+            name: result.user_name,
+          });
+        }
       } else {
         setMessage("Login failed: " + result.message);
       }
@@ -51,6 +72,7 @@ function App() {
     try {
       await invoke("azure_logout");
       setIsAuthenticated(false);
+      setUserInfo(null);
       setMessage("Logged out successfully");
     } catch (error) {
       setMessage("Error logging out: " + String(error));
@@ -85,6 +107,19 @@ function App() {
         ) : (
           <div className="authenticated-container">
             <h2>✓ Connected to Azure</h2>
+
+            {userInfo && (
+              <div className="user-info">
+                <div className="user-avatar">
+                  {userInfo.name ? userInfo.name.charAt(0).toUpperCase() : userInfo.email.charAt(0).toUpperCase()}
+                </div>
+                <div className="user-details">
+                  {userInfo.name && <p className="user-name">{userInfo.name}</p>}
+                  <p className="user-email">{userInfo.email}</p>
+                </div>
+              </div>
+            )}
+
             <p className="success-message">{message}</p>
 
             <div className="actions">
