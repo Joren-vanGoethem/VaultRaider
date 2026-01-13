@@ -1,5 +1,5 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { invoke } from '@tauri-apps/api/core';
+import {createContext, useContext, useState, useEffect, type ReactNode, useEffectEvent} from 'react';
+import {invoke} from '@tauri-apps/api/core';
 
 interface UserInfo {
   email: string;
@@ -17,12 +17,12 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export function AuthProvider({ children }: { children: ReactNode }) {
+export function AuthProvider({children}: { children: ReactNode }) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  const checkAuthStatus = async () => {
+  const checkAuthStatus = useEffectEvent(async () => {
     try {
       setIsLoading(true);
       const authenticated = await invoke<boolean>("check_auth");
@@ -42,7 +42,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } finally {
       setIsLoading(false);
     }
-  };
+  });
 
   const setAuthenticated = (authenticated: boolean, user?: UserInfo | null) => {
     setIsAuthenticated(authenticated);

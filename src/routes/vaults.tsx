@@ -1,4 +1,6 @@
 ﻿import { createFileRoute, Link } from '@tanstack/react-router'
+import { PageHeader } from '../components/PageHeader'
+import { ArrowLeftIcon, ArrowRightIcon, ChevronLeftIcon } from '../components/icons'
 
 // Note: For production use, you can add zod for search param validation
 // npm install zod
@@ -37,9 +39,7 @@ function Vaults() {
   return (
     <div className="min-h-screen px-4 py-12">
       <div className="max-w-4xl mx-auto">
-        <h1 className="text-5xl font-bold mb-8 gradient-text text-center">
-          Azure Key Vaults
-        </h1>
+        <PageHeader>Azure Key Vaults</PageHeader>
 
         <div className="card">
           <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-4">
@@ -103,9 +103,7 @@ function Vaults() {
               className="btn-secondary flex-1 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <span className="flex items-center justify-center gap-2">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5" aria-hidden="true">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
-                </svg>
+                <ChevronLeftIcon />
                 Previous
               </span>
             </button>
@@ -116,9 +114,7 @@ function Vaults() {
             >
               <span className="flex items-center justify-center gap-2">
                 Next
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5" aria-hidden="true">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
-                </svg>
+                <ArrowRightIcon />
               </span>
             </button>
           </div>
@@ -138,9 +134,7 @@ function Vaults() {
             to="/"
             className="inline-flex items-center gap-2 text-primary-500 hover:text-primary-600 dark:text-primary-400 dark:hover:text-primary-300 font-medium transition-colors"
           >
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5" aria-hidden="true">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18" />
-            </svg>
+            <ArrowLeftIcon />
             Back to Home
           </Link>
         </div>
