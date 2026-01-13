@@ -18,10 +18,27 @@ A modern desktop application for managing Azure Key Vaults, built with Tauri, Ru
 - [Rust](https://www.rust-lang.org/tools/install)
 - Azure account with Key Vault access
 
+#### System Dependencies (Linux)
+
+**Fedora/RHEL/CentOS:**
+```bash
+sudo dnf install webkit2gtk4.1-devel openssl-devel curl wget file libappindicator-gtk3-devel librsvg2-devel gtk3-devel atk-devel
+```
+
+**Ubuntu/Debian:**
+```bash
+sudo apt-get install libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf libgtk-3-dev libatk1.0-dev
+```
+
+**Arch Linux:**
+```bash
+sudo pacman -S webkit2gtk-4.1 libappindicator-gtk3 librsvg gtk3 atk
+```
+
 ### Installation
 
 1. **Clone and install dependencies:**
-   ```powershell
+   ```bash
    bun install
    ```
 
@@ -30,13 +47,13 @@ A modern desktop application for managing Azure Key Vaults, built with Tauri, Ru
    - Update your Client ID and Tenant ID in `src-tauri/src/azure_auth.rs`
 
 3. **Run the development server:**
-   ```powershell
+   ```bash
    bun run tauri dev
    ```
 
 ### Building for Production
 
-```powershell
+```bash
 bun run tauri build
 ```
 
