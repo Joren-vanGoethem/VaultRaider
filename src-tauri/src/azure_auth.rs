@@ -1,7 +1,8 @@
-﻿use azure_identity::{AzureCliCredential, AzureCliCredentialOptions};
-use azure_core::credentials::TokenCredential;
+﻿use azure_identity::{AzureCliCredential, AzureCliCredentialOptions, ClientSecretCredential, ClientSecretCredentialOptions};
+use azure_core::credentials::{TokenCredential, Secret};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
+use std::env;
 use tokio::sync::Mutex;
 use base64::Engine;
 use base64::engine::general_purpose::STANDARD as BASE64;
@@ -82,9 +83,7 @@ fn extract_user_info_from_token(token: &str) -> Result<(Option<String>, Option<S
 
 /// Initiates Azure authentication using Azure CLI
 /// Note: This requires the user to be logged in via Azure CLI (az login)
-/// For a GUI-based device code flow, you would need to implement a custom credential
-/// or use the interactive browser flow
-pub async fn start_device_code_login() -> Result<AuthResult, String> {
+async fn try_azure_cli_login() -> Result<AuthResult, String> {
     // Create Azure CLI credential with tenant ID
     let mut options = AzureCliCredentialOptions::default();
     options.tenant_id = Some(TENANT_ID.to_string());
@@ -118,7 +117,108 @@ pub async fn start_device_code_login() -> Result<AuthResult, String> {
             })
         }
         Err(e) => {
-            Err(format!("Authentication failed: {}. Please ensure you are logged in via Azure CLI (az login) with the correct tenant.", e))
+            Err(format!("Azure CLI authentication failed: {}", e))
+        }
+    }
+}
+
+/// Initiates Azure authentication using environment variables
+/// This tries to authenticate using AZURE_CLIENT_ID, AZURE_CLIENT_SECRET, and AZURE_TENANT_ID
+/// environment variables (Service Principal authentication)
+async fn try_environment_credential() -> Result<AuthResult, String> {
+    // Check if environment variables are set
+    let client_id = env::var("AZURE_CLIENT_ID")
+        .or_else(|_| Ok::<String, std::env::VarError>(CLIENT_ID.to_string()))
+        .map_err(|e| format!("AZURE_CLIENT_ID not set: {}", e))?;
+
+    let client_secret = env::var("AZURE_CLIENT_SECRET")
+        .map_err(|_| "AZURE_CLIENT_SECRET environment variable not set".to_string())?;
+
+    let tenant_id = env::var("AZURE_TENANT_ID")
+        .or_else(|_| Ok::<String, std::env::VarError>(TENANT_ID.to_string()))
+        .map_err(|e| format!("AZURE_TENANT_ID not set: {}", e))?;
+
+    let options = ClientSecretCredentialOptions::default();
+
+    let credential = ClientSecretCredential::new(
+        &client_id,
+        tenant_id,
+        Secret::new(client_secret),
+        Some(options)
+    ).map_err(|e| format!("Failed to create client secret credential: {}", e))?;
+
+    // Try to get a token to verify authentication
+    let scopes = &["https://vault.azure.net/.default"];
+    match credential.get_token(scopes, None).await {
+        Ok(token) => {
+            // Extract user info from token
+            let (user_email, user_name) = extract_user_info_from_token(token.token.secret())
+                .unwrap_or((None, None));
+
+            // Store the credential for future use
+            let mut cred = AUTH_CREDENTIAL.lock().await;
+            *cred = Some(credential);
+
+            // Store user info
+            if let Some(ref email) = user_email {
+                let mut user_info = USER_INFO.lock().await;
+                *user_info = Some((email.clone(), user_name.clone()));
+            }
+
+            Ok(AuthResult {
+                success: true,
+                message: "Successfully authenticated using Service Principal!".to_string(),
+                user_email,
+                user_name,
+            })
+        }
+        Err(e) => {
+            Err(format!("Service Principal authentication failed: {}", e))
+        }
+    }
+}
+
+/// Initiates Azure authentication using an environment-based approach
+/// This provides instructions for setting up alternative authentication
+pub async fn start_device_code_login() -> Result<DeviceCodeInfo, String> {
+    // Provide instructions for alternative authentication methods
+    Ok(DeviceCodeInfo {
+        user_code: "N/A".to_string(),
+        device_code: "N/A".to_string(),
+        verification_uri: "https://portal.azure.com".to_string(),
+        message: "Alternative authentication methods:\n1. Azure CLI: Run 'az login' in your terminal\n2. Service Principal: Set AZURE_CLIENT_ID, AZURE_CLIENT_SECRET, and AZURE_TENANT_ID environment variables\n\nThen click Login again.".to_string(),
+    })
+}
+
+/// Complete the authentication flow
+/// This tries environment-based authentication (Service Principal)
+pub async fn complete_device_code_login() -> Result<AuthResult, String> {
+    try_environment_credential().await
+}
+
+/// Try to authenticate with the best available method
+/// First tries Azure CLI, then falls back to environment-based authentication (Service Principal)
+pub async fn login() -> Result<AuthResult, String> {
+    // First, try Azure CLI authentication
+    match try_azure_cli_login().await {
+        Ok(result) => {
+            println!("Successfully authenticated with Azure CLI");
+            return Ok(result);
+        }
+        Err(cli_error) => {
+            println!("Azure CLI authentication failed: {}", cli_error);
+            println!("Falling back to Service Principal authentication...");
+
+            // Fall back to Service Principal authentication via environment variables
+            match try_environment_credential().await {
+                Ok(result) => Ok(result),
+                Err(env_error) => {
+                    Err(format!(
+                        "All authentication methods failed.\n\nAzure CLI: {}\n\nService Principal: {}\n\nPlease either:\n1. Run 'az login' in your terminal, or\n2. Set AZURE_CLIENT_SECRET environment variable for Service Principal auth",
+                        cli_error, env_error
+                    ))
+                }
+            }
         }
     }
 }
