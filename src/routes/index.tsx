@@ -1,17 +1,13 @@
 ﻿import { createFileRoute, Link } from '@tanstack/react-router'
-import {useState, useEffect, useEffectEvent} from "react";
+import { useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
+import { useAuth } from "../contexts/AuthContext";
 
 interface AuthResult {
   success: boolean;
   message: string;
   user_email?: string;
   user_name?: string;
-}
-
-interface UserInfo {
-  email: string;
-  name?: string;
 }
 
 interface DeviceCodeInfo {
@@ -26,32 +22,13 @@ export const Route = createFileRoute('/')({
 })
 
 function Index() {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const { isAuthenticated, userInfo, setAuthenticated, logout } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState("");
-  const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
   const [deviceCodeInfo, setDeviceCodeInfo] = useState<DeviceCodeInfo | null>(null);
   const [showDeviceCodeFlow, setShowDeviceCodeFlow] = useState(false);
 
-  // Check authentication status on mount
-  useEffect(() => {
-    checkAuthStatus();
-  }, []);
 
-  const checkAuthStatus = useEffectEvent(async () =>{
-    try {
-      const authenticated = await invoke<boolean>("check_auth");
-      setIsAuthenticated(authenticated);
-
-      if (authenticated) {
-        // Fetch user info if authenticated
-        const info = await invoke<UserInfo | null>("get_current_user");
-        setUserInfo(info);
-      }
-    } catch (error) {
-      console.error("Error checking auth status:", error);
-    }
-  });
 
   async function handleLogin() {
     setIsLoading(true);
@@ -61,8 +38,7 @@ function Index() {
       const result = await invoke<AuthResult>("azure_login");
 
       if (result.success) {
-        setIsAuthenticated(true);
-        setUserInfo({
+        setAuthenticated(true, {
           email: result.user_email || "",
           name: result.user_name,
         });
@@ -115,8 +91,7 @@ function Index() {
       });
 
       if (result.success) {
-        setIsAuthenticated(true);
-        setUserInfo({
+        setAuthenticated(true, {
           email: result.user_email || "",
           name: result.user_name,
         });
@@ -161,9 +136,7 @@ function Index() {
 
   async function handleLogout() {
     try {
-      await invoke("logout");
-      setIsAuthenticated(false);
-      setUserInfo(null);
+      await logout();
       setMessage("Logged out successfully");
     } catch (error) {
       console.error("Error during logout:", error);

@@ -85,28 +85,6 @@ struct DeviceCodeResponse {
   message: String,
 }
 
-/// Custom credential implementation temporarily disabled due to TokenCredential trait compatibility issues
-/// The PKCE flow functions below work, but storing/reusing the credential requires fixing the trait implementation
-/*
-#[derive(Debug)]
-struct InteractiveBrowserCredential {
-  client_id: String,
-  tenant_id: String,
-  #[allow(dead_code)]
-  access_token: Arc<Mutex<Option<AccessToken>>>,
-  #[allow(dead_code)]
-  refresh_token: Arc<Mutex<Option<String>>>,
-}
-
-impl TokenCredential for InteractiveBrowserCredential {
-  ...trait implementation...
-}
-
-impl InteractiveBrowserCredential {
-  ...methods...
-}
-*/
-
 /// Decode JWT token without verification to extract user info
 fn extract_user_info_from_token(token: &str) -> Result<(Option<String>, Option<String>), String> {
   // Split the JWT token (format: header.payload.signature)
