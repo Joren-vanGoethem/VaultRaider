@@ -1,49 +1,100 @@
-import { useState } from "react";
-import reactLogo from "./assets/react.svg";
+import { useState, useEffect } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import "./App.css";
 
-function App() {
-  const [greetMsg, setGreetMsg] = useState("");
-  const [name, setName] = useState("");
+interface AuthResult {
+  success: boolean;
+  message: string;
+  user_email?: string;
+}
 
-  async function greet() {
-    // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
-    setGreetMsg(await invoke("greet", { name }));
+function App() {
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [message, setMessage] = useState("");
+
+  // Check authentication status on mount
+  useEffect(() => {
+    checkAuthStatus();
+  }, []);
+
+  async function checkAuthStatus() {
+    try {
+      const authenticated = await invoke<boolean>("check_auth");
+      setIsAuthenticated(authenticated);
+    } catch (error) {
+      console.error("Error checking auth status:", error);
+    }
+  }
+
+  async function handleLogin() {
+    setIsLoading(true);
+    setMessage("Starting Azure login...");
+
+    try {
+      const result = await invoke<AuthResult>("azure_login");
+
+      if (result.success) {
+        setIsAuthenticated(true);
+        setMessage(result.message);
+      } else {
+        setMessage("Login failed: " + result.message);
+      }
+    } catch (error) {
+      setMessage("Error: " + String(error));
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  async function handleLogout() {
+    try {
+      await invoke("azure_logout");
+      setIsAuthenticated(false);
+      setMessage("Logged out successfully");
+    } catch (error) {
+      setMessage("Error logging out: " + String(error));
+    }
   }
 
   return (
     <main className="container">
-      <h1>Welcome to Tauri + React</h1>
+      <h1>VaultRaider</h1>
+      <p className="subtitle">Azure Key Vault Manager</p>
 
-      <div className="row">
-        <a href="https://vite.dev" target="_blank">
-          <img src="/vite.svg" className="logo vite" alt="Vite logo" />
-        </a>
-        <a href="https://tauri.app" target="_blank">
-          <img src="/tauri.svg" className="logo tauri" alt="Tauri logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
+      <div className="auth-section">
+        {!isAuthenticated ? (
+          <div className="login-container">
+            <h2>Sign in to Azure</h2>
+            <p>Connect to your Azure account to manage Key Vaults</p>
+
+            <button
+              onClick={handleLogin}
+              disabled={isLoading}
+              className="login-button"
+            >
+              {isLoading ? "Authenticating..." : "Sign in with Azure"}
+            </button>
+
+            {message && (
+              <div className={`message ${message.includes("Error") || message.includes("failed") ? "error" : "success"}`}>
+                {message}
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="authenticated-container">
+            <h2>✓ Connected to Azure</h2>
+            <p className="success-message">{message}</p>
+
+            <div className="actions">
+              <button onClick={handleLogout} className="logout-button">
+                Sign Out
+              </button>
+            </div>
+          </div>
+        )}
       </div>
-      <p>Click on the Tauri, Vite, and React logos to learn more.</p>
-
-      <form
-        className="row"
-        onSubmit={(e) => {
-          e.preventDefault();
-          greet();
-        }}
-      >
-        <input
-          id="greet-input"
-          onChange={(e) => setName(e.currentTarget.value)}
-          placeholder="Enter a name..."
-        />
-        <button type="submit">Greet</button>
-      </form>
-      <p>{greetMsg}</p>
     </main>
   );
 }
