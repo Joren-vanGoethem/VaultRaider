@@ -31,6 +31,7 @@ export function ThemeToggle() {
           className="w-5 h-5 text-yellow-500"
           aria-hidden="true"
         >
+          <title>Light mode icon</title>
           <path
             strokeLinecap="round"
             strokeLinejoin="round"
@@ -48,6 +49,7 @@ export function ThemeToggle() {
           className="w-5 h-5 text-blue-400"
           aria-hidden="true"
         >
+          <title>Dark mode icon</title>
           <path
             strokeLinecap="round"
             strokeLinejoin="round"
@@ -65,6 +67,7 @@ export function ThemeToggle() {
           className="w-5 h-5 text-purple-500"
           aria-hidden="true"
         >
+          <title>System mode icon</title>
           <path
             strokeLinecap="round"
             strokeLinejoin="round"
