@@ -1,5 +1,5 @@
 ﻿import { createFileRoute, Link } from '@tanstack/react-router'
-import { useState, useEffect } from "react";
+import {useState, useEffect, useEffectEvent} from "react";
 import { invoke } from "@tauri-apps/api/core";
 import "../App.css";
 
@@ -30,7 +30,7 @@ function Index() {
     checkAuthStatus();
   }, []);
 
-  async function checkAuthStatus() {
+  const checkAuthStatus = useEffectEvent(async () =>{
     try {
       const authenticated = await invoke<boolean>("check_auth");
       setIsAuthenticated(authenticated);
@@ -43,7 +43,7 @@ function Index() {
     } catch (error) {
       console.error("Error checking auth status:", error);
     }
-  }
+  });
 
   async function handleLogin() {
     setIsLoading(true);
@@ -89,7 +89,7 @@ function Index() {
       <div className="card">
         {!isAuthenticated ? (
           <div>
-            <button onClick={handleLogin} disabled={isLoading}>
+            <button type="button" onClick={handleLogin} disabled={isLoading}>
               {isLoading ? "Authenticating..." : "Login with Azure"}
             </button>
             {message && <p className="message">{message}</p>}
@@ -113,16 +113,12 @@ function Index() {
               <Link to="/dashboard" style={{ padding: '0.5rem 1rem', background: '#646cff', color: 'white', borderRadius: '8px', textDecoration: 'none' }}>
                 Go to Dashboard
               </Link>
-              <button onClick={handleLogout}>Logout</button>
+              <button type="button" onClick={handleLogout}>Logout</button>
             </div>
             {message && <p className="message">{message}</p>}
           </div>
         )}
       </div>
-
-      <p className="read-the-docs">
-        Click on the Tauri, Vite, and React logos to learn more
-      </p>
     </div>
   );
 }
