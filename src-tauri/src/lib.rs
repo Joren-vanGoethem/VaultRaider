@@ -1,11 +1,9 @@
 mod azure_auth;
 
-use azure_auth::{
-    AuthResult, DeviceCodeInfo, login,
-    start_device_code_login, complete_device_code_login,
-    start_interactive_browser_login, complete_interactive_browser_login,
-    is_authenticated, logout, get_user_info
-};
+use crate::azure_auth::auth::{get_user_info, is_authenticated, login, logout};
+use crate::azure_auth::device_code::*;
+use crate::azure_auth::interactive_browser::{complete_interactive_browser_login, start_interactive_browser_login};
+use crate::azure_auth::types::{AuthResult, DeviceCodeInfo};
 
 #[derive(serde::Serialize)]
 struct UserInfo {
