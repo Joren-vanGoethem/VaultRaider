@@ -38,4 +38,6 @@ async-trait = "0.1"
 time = { version = "0.3", features = ["macros"] }
 tauri-plugin-log = "2.8.0"
 log = "0.4.29"
+serde_path_to_error = "0.1"
+
 

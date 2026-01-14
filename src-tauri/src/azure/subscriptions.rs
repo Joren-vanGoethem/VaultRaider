@@ -7,12 +7,18 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Subscription {
   pub id: String,
+  #[serde(rename = "authorizationSource")]
   pub authorization_source: String,
+  #[serde(rename = "managedByTenants")]
   pub managed_by_tenants: Vec<String>,
+  #[serde(rename = "subscriptionId")]
   pub subscription_id: String,
+  #[serde(rename = "tenantId")]
   pub tenant_id: String,
+  #[serde(rename = "displayName")]
   pub display_name: String,
   pub state: String,
+  #[serde(rename = "subscriptionPolicies")]
   pub subscription_policies: Vec<SubscriptionPolicy>,
 }
 
@@ -30,8 +36,11 @@ pub struct SubscriptionCount {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SubscriptionPolicy {
+  #[serde(rename = "locationPlacementId")]
   pub location_placement_id: String,
+  #[serde(rename = "quotaId")]
   pub quota_id: String,
+  #[serde(rename = "spendingLimit")]
   pub spending_limit: String,
 }
 
@@ -94,14 +103,35 @@ pub async fn get_subscriptions() -> Result<Vec<Subscription>, String> {
     error!("ARM API request failed with status {}: {}", status, error_text);
     return Err(format!("API request failed: {}", error_text));
   }
+  //
+  // let sub_list: SubscriptionListResponse = response
+  //   .json()
+  //   .await
+  //   .map_err(|e| {
+  //     error!("Failed to parse ARM subscriptions response: {}", e);
+  //     format!("Failed to parse response: {}", e)
+  //   })?;
 
-  let sub_list: SubscriptionListResponse = response
-    .json()
+  let status = response.status();
+  let body = response
+    .text()
     .await
     .map_err(|e| {
-      error!("Failed to parse ARM subscriptions response: {}", e);
-      format!("Failed to parse response: {}", e)
+      error!("Failed to read ARM response body: {}", e);
+      format!("Failed to read response body: {}", e)
     })?;
+
+  let mut deserializer = serde_json::Deserializer::from_str(&body);
+
+  let sub_list: SubscriptionListResponse =
+    serde_path_to_error::deserialize(&mut deserializer)
+      .map_err(|e| {
+        error!("Failed to parse ARM subscriptions JSON at {}: {}",
+        e.path(),
+        e
+      );
+        format!("JSON parse error at {}: {}", e.path(), e)
+      })?;
 
   info!("Successfully fetched {} subscriptions", sub_list.value.len());
   Ok(sub_list.value)
