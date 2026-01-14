@@ -1,9 +1,11 @@
-mod azure_auth;
+mod azure;
 
-use crate::azure_auth::auth::{get_user_info, is_authenticated, login, logout};
-use crate::azure_auth::device_code::*;
-use crate::azure_auth::interactive_browser::{complete_interactive_browser_login, start_interactive_browser_login};
-use crate::azure_auth::types::{AuthResult, DeviceCodeInfo};
+use crate::azure::auth::auth::{get_user_info, is_authenticated, login, logout};
+use crate::azure::auth::device_code::*;
+use crate::azure::auth::interactive_browser::{complete_interactive_browser_login, start_interactive_browser_login};
+use crate::azure::keyvaults::{get_keyvaults, KeyVault};
+use crate::azure::subscriptions::{get_subscriptions, Subscription};
+use crate::azure::auth::types::{AuthResult, DeviceCodeInfo};
 
 #[derive(serde::Serialize)]
 struct UserInfo {
@@ -62,9 +64,22 @@ async fn azure_logout() -> Result<String, String> {
     Ok("Logged out successfully".to_string())
 }
 
+/// Tauri command to fetch Azure subscriptions
+#[tauri::command]
+async fn fetch_subscriptions() -> Result<Vec<Subscription>, String> {
+    get_subscriptions().await
+}
+
+/// Tauri command to fetch Azure Key Vaults for a subscription
+#[tauri::command]
+async fn fetch_keyvaults(subscription_id: String) -> Result<Vec<KeyVault>, String> {
+    get_keyvaults(&subscription_id).await
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_log::Builder::new().build())
         .plugin(tauri_plugin_opener::init())
         .invoke_handler(tauri::generate_handler![
             azure_login,
@@ -74,7 +89,9 @@ pub fn run() {
             complete_browser_login,
             check_auth,
             get_current_user,
-            azure_logout
+            azure_logout,
+            fetch_subscriptions,
+            fetch_keyvaults
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

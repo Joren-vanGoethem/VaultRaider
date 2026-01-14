@@ -36,4 +36,6 @@ sha2 = "0.10"
 urlencoding = "2.1"
 async-trait = "0.1"
 time = { version = "0.3", features = ["macros"] }
+tauri-plugin-log = "2.8.0"
+log = "0.4.29"
 

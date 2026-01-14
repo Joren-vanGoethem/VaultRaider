@@ -5,7 +5,7 @@
 use std::sync::Arc;
 use tokio::sync::Mutex;
 use azure_core::credentials::TokenCredential;
-use crate::azure_auth::types::DeviceCodeState;
+use crate::azure::auth::types::DeviceCodeState;
 
 lazy_static::lazy_static! {
     /// Stores the authenticated credential for making Azure API calls

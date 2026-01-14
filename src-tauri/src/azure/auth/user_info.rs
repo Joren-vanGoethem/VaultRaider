@@ -1,6 +1,6 @@
 ﻿use std::sync::Arc;
 use tokio::sync::Mutex;
-use crate::azure_auth::types::UserInfo;
+use crate::azure::auth::types::UserInfo;
 
 lazy_static::lazy_static! {
     /// Stores authenticated user information (email, display name)

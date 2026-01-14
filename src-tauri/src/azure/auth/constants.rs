@@ -10,7 +10,8 @@ pub const TENANT_ID: &str = "8948bc3d-2462-4abf-b447-84b07161f34e"; // Replace w
 pub const DEVICE_CODE_ENDPOINT: &str = "https://login.microsoftonline.com";
 pub const TOKEN_ENDPOINT: &str = "https://login.microsoftonline.com";
 pub const VAULT_SCOPE: &str = "https://vault.azure.net/.default";
-pub const AUTH_SCOPES: &str = "https://vault.azure.net/.default offline_access openid profile email";
+pub const ARM_SCOPE: &str = "https://management.azure.com/.default";
+pub const AUTH_SCOPES: &str = "https://management.azure.com/.default offline_access openid profile email";
 
 // Polling configuration
 pub const MAX_POLL_ATTEMPTS: u32 = 60;

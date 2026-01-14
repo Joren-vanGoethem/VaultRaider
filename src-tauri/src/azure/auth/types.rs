@@ -64,11 +64,11 @@ pub struct TokenResponse {
     pub(crate) access_token: String,
     #[allow(dead_code)]
     token_type: String,
-    #[allow(dead_code)]
-    expires_in: u64,
+    pub(crate) expires_in: Option<u64>,
     #[serde(default)]
     refresh_token: Option<String>,
 }
+
 
 /// Response from Azure device code endpoint
 #[derive(Debug, Deserialize)]

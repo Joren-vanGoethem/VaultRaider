@@ -1,8 +1,8 @@
 ﻿use std::sync::Arc;
 use azure_core::credentials::TokenCredential;
-use crate::azure_auth::state::AUTH_CREDENTIAL;
-use crate::azure_auth::types::{AuthResult, TokenClaims};
-use crate::azure_auth::user_info::store_user_info;
+use crate::azure::auth::state::AUTH_CREDENTIAL;
+use crate::azure::auth::types::{AuthResult, TokenClaims};
+use crate::azure::auth::user_info::store_user_info;
 use base64::engine::general_purpose::STANDARD as BASE64;
 use base64::Engine;
 
@@ -39,18 +39,39 @@ pub fn extract_user_info_from_token(token: &str) -> Result<(Option<String>, Opti
 }
 
 
+use log::{info, warn, error};
+
 /// Extracts user info from token and stores credential
 pub async fn store_auth_result(
     credential: Arc<dyn TokenCredential>,
     token_secret: &str,
     auth_method: &str,
 ) -> Result<AuthResult, String> {
-    let (user_email, user_name) = extract_user_info_from_token(token_secret)
-        .unwrap_or((None, None));
+    info!("Storing authentication result for method: {}", auth_method);
+    let (user_email, user_name) = match extract_user_info_from_token(token_secret) {
+        Ok((email, name)) => {
+            info!("Extracted user info: email={:?}, name={:?}", email, name);
+            (email, name)
+        }
+        Err(e) => {
+            warn!("Failed to extract user info from token: {}", e);
+            (None, None)
+        }
+    };
 
     // Store the credential
-    let mut cred = AUTH_CREDENTIAL.lock().await;
-    *cred = Some(credential);
+    {
+        let mut cred = AUTH_CREDENTIAL.lock().await;
+        *cred = Some(credential);
+        info!("Credential stored in global AUTH_CREDENTIAL. Type: {}. Is Some: {}", auth_method, cred.is_some());
+        
+        // Verify it's actually there
+        if cred.is_some() {
+            info!("AUTH_CREDENTIAL verification: Some");
+        } else {
+            error!("AUTH_CREDENTIAL verification: None! This should not happen.");
+        }
+    }
 
     // Store user info
     store_user_info(user_email.clone(), user_name.clone()).await;
