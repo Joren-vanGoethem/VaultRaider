@@ -1,5 +1,4 @@
-﻿use std::collections::HashMap;
-use log::info;
+﻿use log::info;
 use reqwest::header::{HeaderMap, HeaderValue, AUTHORIZATION};
 use crate::azure::auth::state::AUTH_CREDENTIAL;
 use crate::azure::keyvault::constants::{get_keyvault_uri, TOKEN_URI};
