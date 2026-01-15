@@ -41,7 +41,7 @@ function Vaults() {
         const subs = await fetchSubscriptions()
         setSubscriptions(subs)
         if (subs.length > 0) {
-          setSelectedSubscription(subs[0].subscription_id)
+          setSelectedSubscription(subs[0].subscriptioId)
         }
       } catch (err) {
         setError(err instanceof Error ? err.message : String(err))
@@ -112,8 +112,8 @@ function Vaults() {
               className="w-full p-2 rounded-lg bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-100"
             >
               {subscriptions.map((sub) => (
-                <option key={sub.id} value={sub.subscription_id}>
-                  {sub.display_name} ({sub.subscription_id})
+                <option key={sub.id} value={sub.subscriptionId}>
+                  {sub.displayName} ({sub.subscriptionId})
                 </option>
               ))}
             </select>
@@ -149,83 +149,18 @@ function Vaults() {
             </div>
           )}
 
-          <div className="mt-12">
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-4">
-              Filter Vaults (Mock)
-            </h2>
-            <div className="flex flex-wrap gap-3 mb-6">
-              <button
-                type="button"
-                onClick={() => handleFilterChange('all')}
-                className={`px-6 py-2 rounded-lg font-medium transition-all duration-200 ${
-                  filter === 'all'
-                    ? 'bg-primary-500 text-white shadow-lg'
-                    : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
-                }`}
-              >
-                All
-              </button>
-              <button
-                type="button"
-                onClick={() => handleFilterChange('production')}
-                className={`px-6 py-2 rounded-lg font-medium transition-all duration-200 ${
-                  filter === 'production'
-                    ? 'bg-primary-500 text-white shadow-lg'
-                    : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
-                }`}
-              >
-                Production
-              </button>
-              <button
-                type="button"
-                onClick={() => handleFilterChange('development')}
-                className={`px-6 py-2 rounded-lg font-medium transition-all duration-200 ${
-                  filter === 'development'
-                    ? 'bg-primary-500 text-white shadow-lg'
-                    : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
-                }`}
-              >
-                Development
-              </button>
-            </div>
-
-            <div className="bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 rounded-lg p-6 mb-6">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Current Filter</p>
-                  <p className="text-xl font-bold text-gray-900 dark:text-gray-100 capitalize">{filter}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Current Page</p>
-                  <p className="text-xl font-bold text-gray-900 dark:text-gray-100">{page}</p>
-                </div>
-              </div>
-            </div>
-
-            <div className="flex gap-3 mb-6">
-              <button
-                type="button"
-                onClick={() => handlePageChange(page - 1)}
-                disabled={page <= 1}
-                className="btn-secondary flex-1 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <span className="flex items-center justify-center gap-2">
-                  <ChevronLeftIcon />
-                  Previous
-                </span>
-              </button>
-              <button
-                type="button"
-                onClick={() => handlePageChange(page + 1)}
-                className="btn-primary flex-1"
-              >
-                <span className="flex items-center justify-center gap-2">
-                  Next
-                  <ArrowRightIcon />
-                </span>
-              </button>
-            </div>
-          </div>
+          {/*<div className="bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 rounded-lg p-6 mb-6">*/}
+          {/*  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">*/}
+          {/*    <div>*/}
+          {/*      <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Current Filter</p>*/}
+          {/*      <p className="text-xl font-bold text-gray-900 dark:text-gray-100 capitalize">{filter}</p>*/}
+          {/*    </div>*/}
+          {/*    <div>*/}
+          {/*      <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">Current Page</p>*/}
+          {/*      <p className="text-xl font-bold text-gray-900 dark:text-gray-100">{page}</p>*/}
+          {/*    </div>*/}
+          {/*  </div>*/}
+          {/*</div>*/}
         </div>
 
         <div className="bg-gray-50 dark:bg-gray-900/50 rounded-lg p-4 border border-gray-200 dark:border-gray-700 mt-6">

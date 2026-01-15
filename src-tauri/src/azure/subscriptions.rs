@@ -19,7 +19,7 @@ pub struct Subscription {
   pub display_name: String,
   pub state: String,
   #[serde(rename = "subscriptionPolicies")]
-  pub subscription_policies: Vec<SubscriptionPolicy>,
+  pub subscription_policies: SubscriptionPolicy,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -103,14 +103,6 @@ pub async fn get_subscriptions() -> Result<Vec<Subscription>, String> {
     error!("ARM API request failed with status {}: {}", status, error_text);
     return Err(format!("API request failed: {}", error_text));
   }
-  //
-  // let sub_list: SubscriptionListResponse = response
-  //   .json()
-  //   .await
-  //   .map_err(|e| {
-  //     error!("Failed to parse ARM subscriptions response: {}", e);
-  //     format!("Failed to parse response: {}", e)
-  //   })?;
 
   let status = response.status();
   let body = response
@@ -120,6 +112,8 @@ pub async fn get_subscriptions() -> Result<Vec<Subscription>, String> {
       error!("Failed to read ARM response body: {}", e);
       format!("Failed to read response body: {}", e)
     })?;
+
+  info!("body: {}", body);
 
   let mut deserializer = serde_json::Deserializer::from_str(&body);
 
