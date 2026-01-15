@@ -1,0 +1,8 @@
+﻿{
+  "compilationMode": "annotation",
+  "sources": ["src/**"],
+  "environment": {
+    "enableTryCatchOptimization": true
+  }
+}
+

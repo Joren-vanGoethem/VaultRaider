@@ -1,3 +1,4 @@
+use log::info;
 use crate::azure::auth::state::AUTH_CREDENTIAL;
 use reqwest::header::{HeaderMap, HeaderValue, AUTHORIZATION};
 use serde::{Deserialize, Serialize};
@@ -24,6 +25,7 @@ pub struct KeyVaultListResponse {
 
 /// Fetch all Key Vaults for a specific subscription
 pub async fn get_keyvaults(subscription_id: &str) -> Result<Vec<KeyVault>, String> {
+  info!("Fetching keyvaults...");
   let credential = {
     let cred_lock = AUTH_CREDENTIAL.lock().await;
     cred_lock.clone().ok_or("Not authenticated. Please login first.")?

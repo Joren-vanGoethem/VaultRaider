@@ -3,6 +3,16 @@ use crate::azure::auth::state::AUTH_CREDENTIAL;
 use reqwest::header::{HeaderMap, HeaderValue, AUTHORIZATION};
 use serde::{Deserialize, Serialize};
 
+use std::sync::Arc;
+use tokio::sync::Mutex;
+use azure_core::credentials::TokenCredential;
+
+lazy_static::lazy_static! {
+    /// Stores the authenticated credential for making Azure API calls
+    pub static ref SUBSCRIPTIONS_RESPONSE: Arc<Mutex<Option<SubscriptionListResponse>>> =
+        Arc::new(Mutex::new(None));
+}
+
 /// Azure Subscription information
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Subscription {
@@ -22,13 +32,13 @@ pub struct Subscription {
   pub subscription_policies: SubscriptionPolicy,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SubscriptionListResponse {
   pub value: Vec<Subscription>,
   pub count: SubscriptionCount
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SubscriptionCount {
   pub r#type: String,
   pub value: u32,
@@ -44,12 +54,24 @@ pub struct SubscriptionPolicy {
   pub spending_limit: String,
 }
 
-
 use log::{info, error};
+
+pub async fn refresh_subscriptions() -> Result<Vec<Subscription>, String> {
+  let mut subscription_response = SUBSCRIPTIONS_RESPONSE.lock().await;
+  *subscription_response = None;
+  get_subscriptions().await
+}
 
 /// Fetch all subscriptions for the authenticated user
 pub async fn get_subscriptions() -> Result<Vec<Subscription>, String> {
   info!("Fetching subscriptions...");
+  //
+  // let subscription_response = SUBSCRIPTIONS_RESPONSE.lock().await;
+  // if subscription_response.is_some() {
+  //   info!("Subscriptions already fetched, returning cached value...");
+  //   return Ok(subscription_response.clone().unwrap().value);
+  // }
+
   let credential = {
     let cred_lock = AUTH_CREDENTIAL.lock().await;
     info!("Checking AUTH_CREDENTIAL state... Is Some: {}", cred_lock.is_some());
@@ -112,9 +134,7 @@ pub async fn get_subscriptions() -> Result<Vec<Subscription>, String> {
       error!("Failed to read ARM response body: {}", e);
       format!("Failed to read response body: {}", e)
     })?;
-
-  info!("body: {}", body);
-
+  
   let mut deserializer = serde_json::Deserializer::from_str(&body);
 
   let sub_list: SubscriptionListResponse =
@@ -126,6 +146,9 @@ pub async fn get_subscriptions() -> Result<Vec<Subscription>, String> {
       );
         format!("JSON parse error at {}: {}", e.path(), e)
       })?;
+
+  let mut subscription_response = SUBSCRIPTIONS_RESPONSE.lock().await;
+  *subscription_response = Some(sub_list.clone());
 
   info!("Successfully fetched {} subscriptions", sub_list.value.len());
   Ok(sub_list.value)
