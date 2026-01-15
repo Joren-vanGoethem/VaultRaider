@@ -148,7 +148,7 @@ function Index() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center px-4 py-12">
+    <div className="h-full flex flex-col items-center justify-center px-4 py-12">
       <h1 className="text-5xl md:text-6xl font-bold mb-12 gradient-text">
         Welcome to VaultRaider
       </h1>

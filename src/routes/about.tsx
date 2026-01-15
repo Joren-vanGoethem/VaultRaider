@@ -9,7 +9,7 @@ export const Route = createFileRoute('/about')({
 
 function About() {
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center px-4 py-12">
+    <div className="h-full flex flex-col items-center justify-center px-4 py-12">
       <div className="w-full max-w-2xl">
         <PageHeader>About VaultRaider</PageHeader>
 

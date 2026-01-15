@@ -42,42 +42,17 @@ pub struct SubscriptionPolicy {
 }
 
 use log::{error, info};
+use crate::azure::auth::token::get_token_from_state;
 
 /// Fetch all subscriptions for the authenticated user
 pub async fn get_subscriptions() -> Result<Vec<Subscription>, String> {
     info!("Fetching subscriptions...");
-
-    let credential = {
-        let cred_lock = AUTH_CREDENTIAL.lock().await;
-        info!(
-            "Checking AUTH_CREDENTIAL state... Is Some: {}",
-            cred_lock.is_some()
-        );
-        cred_lock.clone().ok_or_else(|| {
-            error!("Not authenticated attempt to fetch subscriptions. AUTH_CREDENTIAL is None.");
-            "Not authenticated. Please login first."
-        })?
-    };
-
-    info!("Got credential from state, requesting token...");
-
-    // Get a token for the Azure Management API
-    // The scope for ARM is ARM_SCOPE
-    let token_response = credential
-        .get_token(&[ARM_SCOPE], None)
-        .await
-        .map_err(|e| {
-            error!("Failed to get token for ARM: {}", e);
-            format!("Failed to get token: {}", e)
-        })?;
-
-    info!("Token acquired, calling ARM API...");
-
+    
     let client = reqwest::Client::new();
     let mut headers = HeaderMap::new();
     headers.insert(
         AUTHORIZATION,
-        HeaderValue::from_str(&format!("Bearer {}", token_response.token.secret())).map_err(
+        HeaderValue::from_str(&format!("Bearer {}", get_token_from_state().await?)).map_err(
             |e| {
                 error!("Invalid header value for Authorization: {}", e);
                 format!("Invalid header value: {}", e)

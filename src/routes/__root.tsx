@@ -1,12 +1,14 @@
-﻿import { createRootRoute, Outlet } from '@tanstack/react-router'
-import { TanStackRouterDevtools } from '@tanstack/react-router-devtools'
-import { ThemeToggle } from '../components/ThemeToggle'
-import { NavLink } from '../components/NavLink'
-import { UserProfile } from '../components/UserProfile'
-import { AuthProvider, useAuth } from '../contexts/AuthContext'
+﻿import {createRootRouteWithContext, Outlet} from '@tanstack/react-router'
+import {TanStackRouterDevtools} from '@tanstack/react-router-devtools'
+import {ThemeToggle} from '../components/ThemeToggle'
+import {NavLink} from '../components/NavLink'
+import {UserProfile} from '../components/UserProfile'
+import {AuthProvider, useAuth} from '../contexts/AuthContext'
+import {QueryClient} from "@tanstack/react-query";
+import {ReactQueryDevtools} from '@tanstack/react-query-devtools'
 
 function Navigation() {
-  const { isAuthenticated, userInfo, logout } = useAuth();
+  const {isAuthenticated, userInfo, logout} = useAuth();
 
   const handleLogout = async () => {
     try {
@@ -17,7 +19,7 @@ function Navigation() {
   };
 
   return (
-    <div className="border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm">
+    <div className="flex-none border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm">
       <div className="container mx-auto px-4 py-4">
         <nav className="flex items-center justify-between">
           <div className="flex gap-6">
@@ -28,9 +30,9 @@ function Navigation() {
           </div>
           <div className="flex items-center gap-4">
             {isAuthenticated && userInfo && (
-              <UserProfile userInfo={userInfo} onLogout={handleLogout} />
+              <UserProfile userInfo={userInfo} onLogout={handleLogout}/>
             )}
-            <ThemeToggle />
+            <ThemeToggle/>
           </div>
         </nav>
       </div>
@@ -38,12 +40,20 @@ function Navigation() {
   );
 }
 
-export const Route = createRootRoute({
+export const Route = createRootRouteWithContext<{
+  queryClient: QueryClient
+}>()({
   component: () => (
     <AuthProvider>
-      <Navigation />
-      <Outlet />
-      <TanStackRouterDevtools />
+      <div className="flex flex-col min-h-screen">
+        <Navigation/>
+        <main className="flex-1">
+          <Outlet/>
+        </main>
+        <ReactQueryDevtools/>
+        <TanStackRouterDevtools position="bottom-right"/>
+
+      </div>
     </AuthProvider>
   ),
 })

@@ -6,6 +6,23 @@ use crate::azure::auth::user_info::store_user_info;
 use base64::engine::general_purpose::URL_SAFE_NO_PAD as BASE64URL;
 use base64::Engine;
 
+pub async fn get_token_from_state() -> Result<String, String> {
+    let credential = {
+        let cred_lock = AUTH_CREDENTIAL.lock().await;
+        cred_lock
+          .clone()
+          .ok_or("Not authenticated. Please login first.")?
+    };
+
+    // Get a token for the Azure Management API
+    let token_response = credential
+      .get_token(&[crate::azure::keyvault::constants::TOKEN_URI], None)
+      .await
+      .map_err(|e| format!("Failed to get token: {}", e))?;
+
+    Ok(token_response.token.secret().parse().unwrap())
+}
+
 /// Decode JWT token without verification to extract user info
 pub fn extract_user_info_from_token(token: &str) -> Result<(Option<String>, Option<String>), String> {
     // Split the JWT token (format: header.payload.signature)

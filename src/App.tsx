@@ -92,6 +92,7 @@ function App() {
             <p>Connect to your Azure account to manage Key Vaults</p>
 
             <button
+              type="button"
               onClick={handleLogin}
               disabled={isLoading}
               className="login-button"
@@ -124,7 +125,7 @@ function App() {
             <p className="success-message">{message}</p>
 
             <div className="actions">
-              <button onClick={handleLogout} className="logout-button">
+              <button type="button" onClick={handleLogout} className="logout-button">
                 Sign Out
               </button>
             </div>

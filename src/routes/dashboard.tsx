@@ -25,7 +25,7 @@ function Dashboard() {
   // Show loading state while checking auth
   if (isLoading) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center px-4 py-12">
+      <div className="h-full flex flex-col items-center justify-center px-4 py-12">
         <LoadingSpinner message="Checking authentication..." size="lg" />
       </div>
     );
@@ -37,7 +37,7 @@ function Dashboard() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center px-4 py-12">
+    <div className="h-full flex flex-col items-center justify-center px-4 py-12">
       <div className="w-full max-w-3xl">
         <PageHeader>Dashboard</PageHeader>
 

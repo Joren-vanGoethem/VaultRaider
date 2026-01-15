@@ -6,43 +6,44 @@ import {fetchSubscriptions, fetchSubscriptionsKey} from '../services/azureServic
 import {LoadingSpinner} from '../components/LoadingSpinner'
 import {SubscriptionSelector} from '../components/SubscriptionSelector'
 import {KeyVaultsList} from '../components/KeyVaultsList'
-import {useSuspenseQuery} from "@tanstack/react-query";
+import { useSuspenseQuery} from "@tanstack/react-query";
+
+const subscriptionQueryOptions = { queryKey: [fetchSubscriptionsKey], queryFn: fetchSubscriptions }
 
 export const Route = createFileRoute('/vaults')({
   component: Vaults,
   pendingComponent: VaultsLoadingSpinner,
   errorComponent: VaultsError,
-  loader: async () => {
-    const {data: subscriptions} = useSuspenseQuery ({
-      queryKey: [fetchSubscriptionsKey],
-      queryFn: fetchSubscriptions,
-    })
-
-    const defaultSubscriptionId = subscriptions[0]?.subscriptionId
-
-    return {
-      subscriptions,
-      defaultSubscriptionId
-    }
+  // beforeLoad: () => {
+  //   return {
+  //     subscriptionQueryOptions: subscriptionQueryOptions
+  //   }
+  // },
+  loader: ({
+    context: { queryClient },
+    // routeContext: { subscriptionQueryOptions },
+  }) => {
+    queryClient.prefetchQuery(subscriptionQueryOptions)
   },
 })
 
 function VaultsLoadingSpinner() {
   return (
-    <div className="min-h-screen flex items-center justify-center">
+    <div className="h-full flex items-center justify-center">
       <LoadingSpinner size="md"/>
     </div>
   )
 }
 
 function Vaults() {
-  const {subscriptions, defaultSubscriptionId} = Route.useLoaderData()
+  const subscriptions = useSuspenseQuery(subscriptionQueryOptions).data || [];
+  const defaultSubscriptionId = subscriptions[0]?.subscriptionId;
 
   const [selectedSubscription, setSelectedSubscription] = useState(defaultSubscriptionId)
 
   return (
     <Suspense fallback={<VaultsLoadingSpinner/>}>
-      <div className="min-h-screen px-4 py-4">
+      <div className="h-full px-4 py-4">
         <div className="max-w-4xl mx-auto">
           <PageHeader>Azure Key Vaults</PageHeader>
 
@@ -95,7 +96,7 @@ function Vaults() {
 
 function VaultsError({error}: { error: Error }) {
   return (
-    <div className="min-h-screen flex items-center justify-center px-4">
+    <div className="h-full flex items-center justify-center px-4">
       <div
         className="max-w-md w-full bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-6">
         <h2 className="text-lg font-semibold text-red-700 dark:text-red-300 mb-2">

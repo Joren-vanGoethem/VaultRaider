@@ -5,6 +5,6 @@ pub mod device_code;
 pub mod interactive_browser;
 mod service_principal;
 pub(crate) mod state;
-mod token;
+pub mod token;
 pub mod types;
 mod user_info;

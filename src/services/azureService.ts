@@ -1,5 +1,6 @@
 import {invoke} from '@tauri-apps/api/core';
 import type {Subscription, KeyVault} from '../types/azure';
+import {QueryClient} from "@tanstack/react-query";
 
 export const fetchSubscriptionsKey = 'fetch_subscriptions';
 export const fetchKeyVaultsKey = 'fetch_keyvaults';
@@ -13,6 +14,14 @@ export async function fetchSubscriptions(): Promise<Subscription[]> {
     return []
   }
 }
+
+export const prefetchSubscriptions = (queryClient: QueryClient) => {
+  queryClient.prefetchQuery({
+    queryKey: [fetchSubscriptions],
+    queryFn: fetchSubscriptions
+  })
+}
+
 
 export async function fetchKeyVaults(subscriptionId: string): Promise<KeyVault[]> {
   try {
