@@ -1,10 +1,9 @@
 ﻿import {createFileRoute, Link} from '@tanstack/react-router'
 import {PageHeader} from '../components/PageHeader'
 import {ArrowLeftIcon} from '../components/icons'
-import {Suspense, useState, useEffect} from 'react'
+import {Suspense, useState, useEffect, startTransition} from 'react'
 import {fetchSubscriptions, fetchKeyVaults} from '../services/azureService'
 import {LoadingSpinner} from '../components/LoadingSpinner'
-import {KeyVault} from "~/types/azure.ts";
 
 // Note: For production use, you can add zod for search param validation
 // npm install zod
@@ -21,7 +20,18 @@ export const Route = createFileRoute('/vaults')({
   errorComponent: VaultsError,
   loader: async () => {
     const subscriptions = await fetchSubscriptions()
-    return { subscriptions }
+    const defaultSubscriptionId = subscriptions[0]?.subscriptionId
+
+    // Fetch key vaults for the first subscription immediately
+    const keyVaults = defaultSubscriptionId
+      ? await fetchKeyVaults(defaultSubscriptionId)
+      : []
+
+    return {
+      subscriptions,
+      defaultSubscriptionId,
+      initialKeyVaults: keyVaults
+    }
   },
 })
 
@@ -36,23 +46,27 @@ function VaultsLoadingSpinner() {
 function Vaults() {
   console.log("render");
   const searchParams = Route.useSearch() as SearchParams
-  const { subscriptions } = Route.useLoaderData()
+  const { subscriptions, defaultSubscriptionId, initialKeyVaults } = Route.useLoaderData()
 
-  const [selectedSubscription, setSelectedSubscription] = useState<string | undefined>(
-    subscriptions[0]?.subscriptionId ?? undefined
-  )
-
-  // useMemo ensures the promise is stable across re-renders
-  // React Compiler will optimize the rest of the component
-  let [keyVaults, setKeyVaults] = useState<KeyVault[]>([])
+  // Initialize with loader data to prevent unnecessary re-renders
+  const [selectedSubscription, setSelectedSubscription] = useState(defaultSubscriptionId)
+  const [keyVaults, setKeyVaults] = useState(initialKeyVaults)
 
   useEffect(() => {
-    console.log("useEffect");
-    if (selectedSubscription != null) {
-      console.log("selectedSubscription not null, fetching vaults");
-      fetchKeyVaults(selectedSubscription).then(setKeyVaults)
+    // Skip if this is the initial subscription (already loaded)
+    if (selectedSubscription === defaultSubscriptionId) {
+      return
     }
-  }, [selectedSubscription])
+
+    console.log("useEffect - fetching for new subscription");
+    if (selectedSubscription != null) {
+      fetchKeyVaults(selectedSubscription).then((vaults) => {
+        startTransition(() => {
+          setKeyVaults(vaults)
+        })
+      })
+    }
+  }, [selectedSubscription, defaultSubscriptionId])
 
   const filter = searchParams.filter || 'all'
   const page = Number(searchParams.page) || 1
