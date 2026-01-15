@@ -1,3 +1,3 @@
 pub(crate) mod auth;
 pub(crate) mod subscriptions;
-pub(crate) mod keyvaults;
+pub(crate) mod keyvault;

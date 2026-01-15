@@ -3,9 +3,10 @@ mod azure;
 use crate::azure::auth::auth::{get_user_info, is_authenticated, login, logout};
 use crate::azure::auth::device_code::*;
 use crate::azure::auth::interactive_browser::{complete_interactive_browser_login, start_interactive_browser_login};
-use crate::azure::keyvaults::{get_keyvaults, KeyVault};
 use crate::azure::subscriptions::{get_subscriptions, Subscription};
 use crate::azure::auth::types::{AuthResult, DeviceCodeInfo};
+use crate::azure::keyvault::types::{KeyVault};
+use crate::azure::keyvault::client::{get_keyvaults};
 
 #[derive(serde::Serialize)]
 struct UserInfo {

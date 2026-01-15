@@ -1,34 +1,19 @@
+﻿use std::collections::HashMap;
 use log::info;
-use crate::azure::auth::state::AUTH_CREDENTIAL;
 use reqwest::header::{HeaderMap, HeaderValue, AUTHORIZATION};
-use serde::{Deserialize, Serialize};
-
-/// Azure Key Vault information
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct KeyVault {
-  pub id: String,
-  pub name: String,
-  pub location: String,
-  pub properties: KeyVaultProperties,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct KeyVaultProperties {
-  #[serde(rename = "vaultUri")]
-  pub vault_uri: String,
-}
-
-#[derive(Debug, Deserialize)]
-pub struct KeyVaultListResponse {
-  pub value: Vec<KeyVault>,
-}
+use crate::azure::auth::state::AUTH_CREDENTIAL;
+use crate::azure::keyvault::state::{KeyvaultStore, KEYVAULT_STORE};
+use crate::azure::keyvault::types::{KeyVault, KeyVaultListResponse};
 
 /// Fetch all Key Vaults for a specific subscription
 pub async fn get_keyvaults(subscription_id: &str) -> Result<Vec<KeyVault>, String> {
   info!("Fetching keyvaults...");
+  
   let credential = {
     let cred_lock = AUTH_CREDENTIAL.lock().await;
-    cred_lock.clone().ok_or("Not authenticated. Please login first.")?
+    cred_lock
+      .clone()
+      .ok_or("Not authenticated. Please login first.")?
   };
 
   // Get a token for the Azure Management API
@@ -46,7 +31,7 @@ pub async fn get_keyvaults(subscription_id: &str) -> Result<Vec<KeyVault>, Strin
   );
 
   let url = format!(
-    "https://management.azure.com/subscriptions/{}/providers/Microsoft.KeyVault/vaults?api-version=2023-07-01",
+    "https://management.azure.com/subscriptions/{}/providers/Microsoft.KeyVault/vaults?api-version=2025-05-01",
     subscription_id
   );
 

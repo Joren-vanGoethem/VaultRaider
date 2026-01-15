@@ -7,24 +7,17 @@ export async function fetchSubscriptions(): Promise<Subscription[]> {
   } catch (err) {
     const errorMessage = err instanceof Error ? err.message : String(err)
     console.error('Failed to fetch subscriptions:', errorMessage)
-    throw new Error(`Failed to fetch subscriptions: ${errorMessage}`)
+    return []
   }
 }
 
 export async function fetchKeyVaults(subscriptionId: string): Promise<KeyVault[]> {
   try {
+    console.log(`Fetching key vaults for subscription ${subscriptionId}`)
     return await invoke<KeyVault[]>('fetch_keyvaults', {subscriptionId});
   } catch (err) {
     const errorMessage = err instanceof Error ? err.message : String(err)
     console.error(`Failed to fetch key vaults for subscription ${subscriptionId}:`, errorMessage)
-
-    // If it's an authorization error, return empty array instead of throwing
-    // This prevents infinite loops when the user doesn't have permissions
-    if (errorMessage.includes('AuthorizationFailed') || errorMessage.includes('authorization')) {
-      console.warn('Authorization failed - returning empty array')
-      return []
-    }
-
-    throw new Error(`Failed to fetch key vaults: ${errorMessage}`)
+    return [];
   }
 }
