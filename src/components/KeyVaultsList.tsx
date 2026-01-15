@@ -1,11 +1,11 @@
 ﻿import {Suspense} from 'react'
-import {fetchKeyVaults} from '../services/azureService'
+import {fetchKeyVaults, fetchKeyVaultsKey} from '../services/azureService'
 import {KeyVaultCard} from './KeyVaultCard'
 import {LoadingSpinner} from './LoadingSpinner'
 import {useSuspenseQuery} from "@tanstack/react-query";
 
 interface KeyVaultsListProps {
-  subscriptionId: string | undefined
+  subscriptionId: string;
 }
 
 export function KeyVaultsList({ subscriptionId }: KeyVaultsListProps) {
@@ -19,13 +19,11 @@ export function KeyVaultsList({ subscriptionId }: KeyVaultsListProps) {
 
 function Content({ subscriptionId }: KeyVaultsListProps) {
   console.log("render content")
-  if (!subscriptionId) return null
 
   const {data: keyvaults} = useSuspenseQuery ({
-    queryKey: ['fetchKeyVaults', subscriptionId],
+    queryKey: [fetchKeyVaultsKey, subscriptionId],
     queryFn: () => fetchKeyVaults(subscriptionId),
   })
-  // const keyVaults = use(fetchKeyVaults(subscriptionId))
 
   if (keyvaults == null || keyvaults.length === 0) {
     return <div>No Key Vaults found.</div>

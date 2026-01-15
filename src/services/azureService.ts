@@ -1,6 +1,9 @@
 import {invoke} from '@tauri-apps/api/core';
 import type {Subscription, KeyVault} from '../types/azure';
 
+export const fetchSubscriptionsKey = 'fetch_subscriptions';
+export const fetchKeyVaultsKey = 'fetch_keyvaults';
+
 export async function fetchSubscriptions(): Promise<Subscription[]> {
   try {
     return await invoke<Subscription[]>('fetch_subscriptions');

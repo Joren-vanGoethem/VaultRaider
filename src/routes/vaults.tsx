@@ -2,22 +2,22 @@
 import {PageHeader} from '../components/PageHeader'
 import {ArrowLeftIcon} from '../components/icons'
 import {Suspense, useState} from 'react'
-import {fetchSubscriptions} from '../services/azureService'
+import {fetchSubscriptions, fetchSubscriptionsKey} from '../services/azureService'
 import {LoadingSpinner} from '../components/LoadingSpinner'
 import {SubscriptionSelector} from '../components/SubscriptionSelector'
 import {KeyVaultsList} from '../components/KeyVaultsList'
-
-// Note: For production use, you can add zod for search param validation
-// npm install zod
-// import { z } from 'zod'
-// Then add: validateSearch: z.object({ filter: z.string().optional(), page: z.number().optional() })
+import {useSuspenseQuery} from "@tanstack/react-query";
 
 export const Route = createFileRoute('/vaults')({
   component: Vaults,
   pendingComponent: VaultsLoadingSpinner,
   errorComponent: VaultsError,
   loader: async () => {
-    const subscriptions = await fetchSubscriptions()
+    const {data: subscriptions} = useSuspenseQuery ({
+      queryKey: [fetchSubscriptionsKey],
+      queryFn: fetchSubscriptions,
+    })
+
     const defaultSubscriptionId = subscriptions[0]?.subscriptionId
 
     return {
@@ -114,7 +114,10 @@ function VaultsError({error}: { error: Error }) {
           Retry
         </button>
 
-        {/*<button onClick={() => router.invalidate()}>*/}
+        {/*<button*/}
+        {/*  type="button"*/}
+        {/*  className="px-4 py-2 rounded bg-red-600 text-white hover:bg-red-700"*/}
+        {/*  onClick={() => router.invalidate()}>*/}
         {/*  Retry*/}
         {/*</button>*/}
       </div>
