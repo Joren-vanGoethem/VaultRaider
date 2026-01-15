@@ -158,7 +158,7 @@ pub async fn start_interactive_browser_login() -> Result<DeviceCodeInfo, String>
 }
 
 /// Complete interactive browser login by polling for token
-pub async fn complete_interactive_browser_login(auth_code: String, state: String) -> Result<AuthResult, String> {
+pub async fn complete_interactive_browser_login() -> Result<AuthResult, String> {
     info!("Completing interactive browser login...");
     let credential = {
         let auth_lock = AUTH_CREDENTIAL.lock().await;

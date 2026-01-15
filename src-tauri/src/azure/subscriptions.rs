@@ -113,7 +113,6 @@ pub async fn get_subscriptions() -> Result<Vec<Subscription>, String> {
         return Err(format!("API request failed: {}", error_text));
     }
 
-    let status = response.status();
     let body = response.text().await.map_err(|e| {
         error!("Failed to read ARM response body: {}", e);
         format!("Failed to read response body: {}", e)

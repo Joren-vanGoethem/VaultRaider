@@ -43,7 +43,7 @@ async fn start_browser_login() -> Result<DeviceCodeInfo, String> {
 /// Tauri command to complete browser authentication with authorization code
 #[tauri::command]
 async fn complete_browser_login(auth_code: String, state: String) -> Result<AuthResult, String> {
-    complete_interactive_browser_login(auth_code, state).await
+    complete_interactive_browser_login().await
 }
 
 /// Tauri command to check authentication status
