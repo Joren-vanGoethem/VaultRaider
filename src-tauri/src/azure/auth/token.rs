@@ -3,7 +3,7 @@ use azure_core::credentials::TokenCredential;
 use crate::azure::auth::state::AUTH_CREDENTIAL;
 use crate::azure::auth::types::{AuthResult, TokenClaims};
 use crate::azure::auth::user_info::store_user_info;
-use base64::engine::general_purpose::STANDARD as BASE64;
+use base64::engine::general_purpose::URL_SAFE_NO_PAD as BASE64URL;
 use base64::Engine;
 
 /// Decode JWT token without verification to extract user info
@@ -17,12 +17,8 @@ pub fn extract_user_info_from_token(token: &str) -> Result<(Option<String>, Opti
     // Decode the payload (second part)
     let payload = parts[1];
 
-    // JWT uses base64url encoding, need to handle padding
-    let padding_needed = (4 - payload.len() % 4) % 4;
-    let padded_payload = format!("{}{}", payload, "=".repeat(padding_needed));
-
-    let decoded = BASE64
-        .decode(padded_payload.as_bytes())
+    let decoded = BASE64URL
+        .decode(payload.as_bytes())
         .map_err(|e| format!("Failed to decode token: {}", e))?;
 
     let claims: TokenClaims = serde_json::from_slice(&decoded)
