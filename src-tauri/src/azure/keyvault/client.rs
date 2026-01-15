@@ -2,13 +2,13 @@
 use log::info;
 use reqwest::header::{HeaderMap, HeaderValue, AUTHORIZATION};
 use crate::azure::auth::state::AUTH_CREDENTIAL;
-use crate::azure::keyvault::state::{KeyvaultStore, KEYVAULT_STORE};
+use crate::azure::keyvault::constants::{get_keyvault_uri, TOKEN_URI};
 use crate::azure::keyvault::types::{KeyVault, KeyVaultListResponse};
 
 /// Fetch all Key Vaults for a specific subscription
 pub async fn get_keyvaults(subscription_id: &str) -> Result<Vec<KeyVault>, String> {
   info!("Fetching keyvaults...");
-  
+
   let credential = {
     let cred_lock = AUTH_CREDENTIAL.lock().await;
     cred_lock
@@ -18,7 +18,7 @@ pub async fn get_keyvaults(subscription_id: &str) -> Result<Vec<KeyVault>, Strin
 
   // Get a token for the Azure Management API
   let token_response = credential
-    .get_token(&["https://management.azure.com/.default"], None)
+    .get_token(&[TOKEN_URI], None)
     .await
     .map_err(|e| format!("Failed to get token: {}", e))?;
 
@@ -30,10 +30,7 @@ pub async fn get_keyvaults(subscription_id: &str) -> Result<Vec<KeyVault>, Strin
       .map_err(|e| format!("Invalid header value: {}", e))?,
   );
 
-  let url = format!(
-    "https://management.azure.com/subscriptions/{}/providers/Microsoft.KeyVault/vaults?api-version=2025-05-01",
-    subscription_id
-  );
+  let url = get_keyvault_uri(subscription_id);
 
   let response = client
     .get(&url)
