@@ -1,12 +1,11 @@
-﻿
-import { createFileRoute, Link } from '@tanstack/react-router'
-import { PageHeader } from '../components/PageHeader'
-import { ArrowLeftIcon } from '../components/icons'
-import { Suspense, useState } from 'react'
-import { fetchSubscriptions } from '../services/azureService'
-import { LoadingSpinner } from '../components/LoadingSpinner'
-import { SubscriptionSelector } from '../components/SubscriptionSelector'
-import { KeyVaultsList } from '../components/KeyVaultsList'
+﻿import {createFileRoute, Link} from '@tanstack/react-router'
+import {PageHeader} from '../components/PageHeader'
+import {ArrowLeftIcon} from '../components/icons'
+import {Suspense, useState} from 'react'
+import {fetchSubscriptions} from '../services/azureService'
+import {LoadingSpinner} from '../components/LoadingSpinner'
+import {SubscriptionSelector} from '../components/SubscriptionSelector'
+import {KeyVaultsList} from '../components/KeyVaultsList'
 
 // Note: For production use, you can add zod for search param validation
 // npm install zod
@@ -23,9 +22,11 @@ export const Route = createFileRoute('/vaults')({
 
     return {
       subscriptions,
-      defaultSubscriptionId}
+      defaultSubscriptionId
+    }
   },
 })
+
 function VaultsLoadingSpinner() {
   return (
     <div className="min-h-screen flex items-center justify-center">
@@ -35,12 +36,12 @@ function VaultsLoadingSpinner() {
 }
 
 function Vaults() {
-  const { subscriptions, defaultSubscriptionId } = Route.useLoaderData()
+  const {subscriptions, defaultSubscriptionId} = Route.useLoaderData()
 
   const [selectedSubscription, setSelectedSubscription] = useState(defaultSubscriptionId)
 
   return (
-    <Suspense fallback={<VaultsLoadingSpinner />}>
+    <Suspense fallback={<VaultsLoadingSpinner/>}>
       <div className="min-h-screen px-4 py-4">
         <div className="max-w-4xl mx-auto">
           <PageHeader>Azure Key Vaults</PageHeader>
@@ -56,9 +57,11 @@ function Vaults() {
               Key Vaults
             </h2>
 
-            <KeyVaultsList
-              subscriptionId={selectedSubscription}
-            />
+            {selectedSubscription &&
+                <KeyVaultsList
+                    subscriptionId={selectedSubscription}
+                />
+            }
           </div>
 
           {/*<div className="bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 rounded-lg p-6 mb-6">*/}
@@ -90,10 +93,11 @@ function Vaults() {
   )
 }
 
-function VaultsError({ error }: { error: Error }) {
+function VaultsError({error}: { error: Error }) {
   return (
     <div className="min-h-screen flex items-center justify-center px-4">
-      <div className="max-w-md w-full bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-6">
+      <div
+        className="max-w-md w-full bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-6">
         <h2 className="text-lg font-semibold text-red-700 dark:text-red-300 mb-2">
           Something went wrong
         </h2>
@@ -103,6 +107,7 @@ function VaultsError({ error }: { error: Error }) {
         </p>
 
         <button
+          type="button"
           onClick={() => window.location.reload()}
           className="px-4 py-2 rounded bg-red-600 text-white hover:bg-red-700"
         >

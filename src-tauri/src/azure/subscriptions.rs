@@ -7,42 +7,37 @@ use azure_core::credentials::TokenCredential;
 
 /// Azure Subscription information
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct Subscription {
     pub id: String,
-    #[serde(rename = "authorizationSource")]
     pub authorization_source: String,
-    #[serde(rename = "managedByTenants")]
-    pub managed_by_tenants: Vec<String>,
-    #[serde(rename = "subscriptionId")]
+    pub managed_by_tenants: Vec<Tenant>,
     pub subscription_id: String,
-    #[serde(rename = "tenantId")]
     pub tenant_id: String,
-    #[serde(rename = "displayName")]
     pub display_name: String,
     pub state: String,
-    #[serde(rename = "subscriptionPolicies")]
     pub subscription_policies: SubscriptionPolicy,
+    pub tags: Option<serde_json::Value>
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Tenant {
+    pub tenant_id: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct SubscriptionListResponse {
     pub value: Vec<Subscription>,
-    pub count: SubscriptionCount,
+    pub next_link: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SubscriptionCount {
-    pub r#type: String,
-    pub value: u32,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct SubscriptionPolicy {
-    #[serde(rename = "locationPlacementId")]
     pub location_placement_id: String,
-    #[serde(rename = "quotaId")]
     pub quota_id: String,
-    #[serde(rename = "spendingLimit")]
     pub spending_limit: String,
 }
 
