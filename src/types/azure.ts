@@ -1,25 +1,4 @@
-export interface Subscription {
-  id: string;
-  authorizationSource: string;
-  managedByTenants: any[];
-  subscriptionId: string;
-  tenantId: string;
-  displayName: string;
-  state: string;
-  subscriptionPolicies: SubscriptionPolicy
-}
+// Re-export all Azure-related types
+export type { KeyVault } from './keyvault'
+export type { Subscription } from './subscriptions'
 
-export interface SubscriptionPolicy {
-  locationPlacementId: string;
-  quotaId: string;
-  spendingLimit: string;
-}
-
-export interface KeyVault {
-  id: string;
-  name: string;
-  location: string;
-  properties: {
-    vaultUri: string;
-  };
-}

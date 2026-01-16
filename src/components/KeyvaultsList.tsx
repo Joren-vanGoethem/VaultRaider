@@ -1,5 +1,5 @@
 ﻿import {Suspense} from 'react'
-import {fetchKeyVaults, fetchKeyVaultsKey} from '../services/azureService'
+import {fetchKeyVaults, fetchKeyvaultsKey} from '../services/azureService'
 import {KeyVaultCard} from './KeyVaultCard'
 import {LoadingSpinner} from './LoadingSpinner'
 import {useSuspenseQuery} from "@tanstack/react-query";
@@ -8,7 +8,7 @@ interface KeyVaultsListProps {
   subscriptionId: string;
 }
 
-export function KeyVaultsList({ subscriptionId }: KeyVaultsListProps) {
+export function KeyvaultsList({ subscriptionId }: KeyVaultsListProps) {
   console.log("render")
   return (
     <Suspense fallback={<VaultsLoadingSpinner />}>
@@ -21,7 +21,7 @@ function Content({ subscriptionId }: KeyVaultsListProps) {
   console.log("render content")
 
   const {data: keyvaults} = useSuspenseQuery ({
-    queryKey: [fetchKeyVaultsKey, subscriptionId],
+    queryKey: [fetchKeyvaultsKey, subscriptionId],
     queryFn: () => fetchKeyVaults(subscriptionId),
   })
 

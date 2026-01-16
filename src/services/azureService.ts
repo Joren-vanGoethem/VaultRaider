@@ -1,9 +1,10 @@
 import {invoke} from '@tauri-apps/api/core';
-import type {Subscription, KeyVault} from '../types/azure';
-import {QueryClient} from "@tanstack/react-query";
+import type {Subscription} from "~/types/subscriptions.ts";
+import {KeyVault, KeyVaultAccess} from "~/types/keyvault.ts";
 
 export const fetchSubscriptionsKey = 'fetch_subscriptions';
-export const fetchKeyVaultsKey = 'fetch_keyvaults';
+export const fetchKeyvaultsKey = 'fetch_keyvaults';
+export const fetchSecretsKey = 'fetch_secrets';
 
 export async function fetchSubscriptions(): Promise<Subscription[]> {
   try {
@@ -15,14 +16,6 @@ export async function fetchSubscriptions(): Promise<Subscription[]> {
   }
 }
 
-export const prefetchSubscriptions = (queryClient: QueryClient) => {
-  queryClient.prefetchQuery({
-    queryKey: [fetchSubscriptions],
-    queryFn: fetchSubscriptions
-  })
-}
-
-
 export async function fetchKeyVaults(subscriptionId: string): Promise<KeyVault[]> {
   try {
     console.log(`Fetching key vaults for subscription ${subscriptionId}`)
@@ -31,5 +24,27 @@ export async function fetchKeyVaults(subscriptionId: string): Promise<KeyVault[]
     const errorMessage = err instanceof Error ? err.message : String(err)
     console.error(`Failed to fetch key vaults for subscription ${subscriptionId}:`, errorMessage)
     return [];
+  }
+}
+
+export async function checkKeyvaultAccess(keyvaultUri: string): Promise<KeyVaultAccess | null> {
+  try {
+    console.log(`Checking key vault access for keyvault ${keyvaultUri}`)
+    return await invoke<KeyVaultAccess>('check_keyvault_access', {keyvaultUri});
+  } catch (err) {
+    const errorMessage = err instanceof Error ? err.message : String(err)
+    console.error(`Failed to check keyvault access for keyvault ${keyvaultUri}:`, errorMessage)
+    return null;
+  }
+}
+
+export async function fetchSecrets(keyvaultUri: string): Promise<void> {
+  try {
+    console.log(`Fetching secrets for keyvault ${keyvaultUri}`)
+    return await invoke('get_secrets', {keyvaultUri});
+  } catch (err) {
+    const errorMessage = err instanceof Error ? err.message : String(err)
+    console.error(`Failed to fetch secrets for keyvault ${keyvaultUri}:`, errorMessage)
+    // return [];
   }
 }

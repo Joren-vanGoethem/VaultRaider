@@ -4,7 +4,7 @@ import {ThemeToggle} from '../components/ThemeToggle'
 import {NavLink} from '../components/NavLink'
 import {UserProfile} from '../components/UserProfile'
 import {AuthProvider, useAuth} from '../contexts/AuthContext'
-import {QueryClient} from "@tanstack/react-query";
+import type {QueryClient} from "@tanstack/react-query";
 import {ReactQueryDevtools} from '@tanstack/react-query-devtools'
 
 function Navigation() {
@@ -26,6 +26,7 @@ function Navigation() {
             <NavLink to="/">Home</NavLink>
             <NavLink to="/dashboard">Dashboard</NavLink>
             <NavLink to="/vaults">Vaults</NavLink>
+            <NavLink to="/secrets">Secrets</NavLink>
             <NavLink to="/about">About</NavLink>
           </div>
           <div className="flex items-center gap-4">

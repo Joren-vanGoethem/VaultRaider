@@ -5,7 +5,7 @@ import {Suspense, useState} from 'react'
 import {fetchSubscriptions, fetchSubscriptionsKey} from '../services/azureService'
 import {LoadingSpinner} from '../components/LoadingSpinner'
 import {SubscriptionSelector} from '../components/SubscriptionSelector'
-import {KeyVaultsList} from '../components/KeyVaultsList'
+import {KeyvaultsList} from '../components/KeyvaultsList.tsx'
 import { useSuspenseQuery} from "@tanstack/react-query";
 
 const subscriptionQueryOptions = { queryKey: [fetchSubscriptionsKey], queryFn: fetchSubscriptions }
@@ -59,7 +59,7 @@ function Vaults() {
             </h2>
 
             {selectedSubscription &&
-                <KeyVaultsList
+                <KeyvaultsList
                     subscriptionId={selectedSubscription}
                 />
             }

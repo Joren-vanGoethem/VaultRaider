@@ -1,4 +1,4 @@
-﻿use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -72,3 +72,14 @@ pub struct Permissions {
     pub certificates: Option<Vec<String>>,
     pub storage: Option<Vec<String>>,
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct KeyVaultAccessCheck {
+    pub vault_uri: String,
+    pub has_access: bool,
+    pub can_list_secrets: bool,
+    pub error_message: Option<String>,
+}
+
+

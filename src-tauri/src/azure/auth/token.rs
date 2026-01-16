@@ -1,10 +1,11 @@
-﻿use std::sync::Arc;
+use std::sync::Arc;
 use azure_core::credentials::TokenCredential;
 use crate::azure::auth::state::AUTH_CREDENTIAL;
 use crate::azure::auth::types::{AuthResult, TokenClaims};
 use crate::azure::auth::user_info::store_user_info;
 use base64::engine::general_purpose::URL_SAFE_NO_PAD as BASE64URL;
 use base64::Engine;
+use log::{info, warn, error};
 
 pub async fn get_token_from_state() -> Result<String, String> {
     let credential = {
@@ -20,6 +21,25 @@ pub async fn get_token_from_state() -> Result<String, String> {
       .await
       .map_err(|e| format!("Failed to get token: {}", e))?;
 
+    Ok(token_response.token.secret().parse().unwrap())
+}
+
+pub async fn get_token_for_scope(scope: &str) -> Result<String, String> {
+    info!("Requesting token for scope: {}", scope);
+    let credential = {
+        let cred_lock = AUTH_CREDENTIAL.lock().await;
+        cred_lock
+          .clone()
+          .ok_or("Not authenticated. Please login first.")?
+    };
+
+    // Get a token for the specified scope
+    let token_response = credential
+      .get_token(&[scope], None)
+      .await
+      .map_err(|e| format!("Failed to get token for scope {}: {}", scope, e))?;
+
+    info!("Successfully obtained token for scope: {}", scope);
     Ok(token_response.token.secret().parse().unwrap())
 }
 
@@ -51,8 +71,6 @@ pub fn extract_user_info_from_token(token: &str) -> Result<(Option<String>, Opti
     Ok((email, claims.name))
 }
 
-
-use log::{info, warn, error};
 
 /// Extracts user info from token and stores credential
 pub async fn store_auth_result(

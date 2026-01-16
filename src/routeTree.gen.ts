@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as VaultsRouteImport } from './routes/vaults'
+import { Route as KeyvaultRouteImport } from './routes/keyvault'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as AboutRouteImport } from './routes/about'
 import { Route as IndexRouteImport } from './routes/index'
@@ -17,6 +18,11 @@ import { Route as IndexRouteImport } from './routes/index'
 const VaultsRoute = VaultsRouteImport.update({
   id: '/vaults',
   path: '/vaults',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const KeyvaultRoute = KeyvaultRouteImport.update({
+  id: '/keyvault',
+  path: '/keyvault',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DashboardRoute = DashboardRouteImport.update({
@@ -39,12 +45,14 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
   '/dashboard': typeof DashboardRoute
+  '/keyvault': typeof KeyvaultRoute
   '/vaults': typeof VaultsRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
   '/dashboard': typeof DashboardRoute
+  '/keyvault': typeof KeyvaultRoute
   '/vaults': typeof VaultsRoute
 }
 export interface FileRoutesById {
@@ -52,20 +60,22 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
   '/dashboard': typeof DashboardRoute
+  '/keyvault': typeof KeyvaultRoute
   '/vaults': typeof VaultsRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/about' | '/dashboard' | '/vaults'
+  fullPaths: '/' | '/about' | '/dashboard' | '/keyvault' | '/vaults'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/about' | '/dashboard' | '/vaults'
-  id: '__root__' | '/' | '/about' | '/dashboard' | '/vaults'
+  to: '/' | '/about' | '/dashboard' | '/keyvault' | '/vaults'
+  id: '__root__' | '/' | '/about' | '/dashboard' | '/keyvault' | '/vaults'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AboutRoute: typeof AboutRoute
   DashboardRoute: typeof DashboardRoute
+  KeyvaultRoute: typeof KeyvaultRoute
   VaultsRoute: typeof VaultsRoute
 }
 
@@ -76,6 +86,13 @@ declare module '@tanstack/react-router' {
       path: '/vaults'
       fullPath: '/vaults'
       preLoaderRoute: typeof VaultsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/keyvault': {
+      id: '/keyvault'
+      path: '/keyvault'
+      fullPath: '/keyvault'
+      preLoaderRoute: typeof KeyvaultRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/dashboard': {
@@ -106,6 +123,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AboutRoute: AboutRoute,
   DashboardRoute: DashboardRoute,
+  KeyvaultRoute: KeyvaultRoute,
   VaultsRoute: VaultsRoute,
 }
 export const routeTree = rootRouteImport

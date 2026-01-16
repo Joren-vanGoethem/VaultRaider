@@ -6,7 +6,7 @@ use crate::azure::auth::interactive_browser::{complete_interactive_browser_login
 use crate::azure::subscriptions::{get_subscriptions, Subscription};
 use crate::azure::auth::types::{AuthResult, DeviceCodeInfo};
 use crate::azure::keyvault::types::{KeyVault};
-use crate::azure::keyvault::client::{get_keyvaults};
+use crate::azure::keyvault::client::{get_keyvaults, check_keyvault_access};
 use crate::azure::keyvault::client::get_secrets;
 
 #[derive(serde::Serialize)]
@@ -94,6 +94,7 @@ pub fn run() {
             azure_logout,
             fetch_subscriptions,
             fetch_keyvaults,
+            check_keyvault_access,
             get_secrets
         ])
         .run(tauri::generate_context!())
