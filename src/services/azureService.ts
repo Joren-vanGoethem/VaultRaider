@@ -2,6 +2,7 @@ import {invoke} from '@tauri-apps/api/core';
 import type {Subscription} from "~/types/subscriptions.ts";
 import {KeyVault, KeyVaultAccess} from "~/types/keyvault.ts";
 import {Secret, SecretBundle} from "~/types/secrets.ts";
+import {RequestQueue} from "./requestQueue.ts";
 
 export const fetchSubscriptionsKey = 'fetch_subscriptions';
 export const fetchKeyvaultsKey = 'fetch_keyvaults';
@@ -47,12 +48,17 @@ export async function fetchSecrets(keyvaultUri: string): Promise<Secret[]> {
   }
 }
 
+// Global request queue for secret fetching (max 5 concurrent requests)
+const secretRequestQueue = new RequestQueue(25);
+
 export async function fetchSecret(keyvaultUri: string, secretName: string, secretVersion: string | undefined = undefined) : Promise<SecretBundle | null> {
-  try {
-    return await invoke('get_secret', {keyvaultUri, secretName, secretVersion});
-  } catch (err) {
-    const errorMessage = err instanceof Error ? err.message : String(err)
-    console.error(`Failed to fetch secret ${secretName} from keyvault ${keyvaultUri}:`, errorMessage)
-    return null;
-  }
+  return secretRequestQueue.add(async () => {
+    try {
+      return await invoke('get_secret', {keyvaultUri, secretName, secretVersion});
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : String(err)
+      console.error(`Failed to fetch secret ${secretName} from keyvault ${keyvaultUri}:`, errorMessage)
+      return null;
+    }
+  });
 }
