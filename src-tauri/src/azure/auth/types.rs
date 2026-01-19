@@ -12,6 +12,13 @@ pub type UserInfo = (String, Option<String>);
 // Public Data Structures
 // ============================================================================
 
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AzureListResponse<T> {
+    pub value: Vec<T>,
+    pub next_link: Option<String>
+}
+
 /// Information returned when initiating device code authentication flow
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DeviceCodeInfo {

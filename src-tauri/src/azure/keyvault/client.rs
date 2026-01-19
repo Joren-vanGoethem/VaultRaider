@@ -1,8 +1,9 @@
 ﻿use log::info;
 use reqwest::header::{HeaderMap, HeaderValue, AUTHORIZATION};
 use crate::azure::auth::token::{get_token_from_state, get_token_for_scope};
+use crate::azure::auth::types::AzureListResponse;
 use crate::azure::keyvault::constants::{get_keyvault_uri, get_secrets_uri, TOKEN_URI, KEYVAULT_TOKEN_SCOPE};
-use crate::azure::keyvault::types::{KeyVault, KeyVaultListResponse, KeyVaultAccessCheck};
+use crate::azure::keyvault::types::{KeyVault, KeyVaultAccessCheck, KeyVaultListResponse};
 
 /// Fetch all Key Vaults for a specific subscription
 pub async fn get_keyvaults(subscription_id: &str) -> Result<Vec<KeyVault>, String> {
@@ -135,45 +136,3 @@ pub async fn check_keyvault_access(keyvault_uri: &str) -> Result<KeyVaultAccessC
   }
 }
 
-#[tauri::command]
-pub async fn get_secrets(keyvault_uri: &str) -> Result<Vec<String>, String> {
-  info!("Fetching secrets...");
-
-  let url = get_secrets_uri(keyvault_uri);
-
-  // Get token for Key Vault data plane, not management API
-  let token = get_token_for_scope(KEYVAULT_TOKEN_SCOPE).await?;
-
-  let client = reqwest::Client::new();
-  let mut headers = HeaderMap::new();
-  headers.insert(
-    AUTHORIZATION,
-    HeaderValue::from_str(&format!("Bearer {}", token))
-      .map_err(|e| format!("Invalid header value: {}", e))?,
-  );
-
-  let response = client
-    .get(&url)
-    .headers(headers.clone())
-    .send()
-    .await
-    .map_err(|e| format!("Failed to send request: {}", e))?;
-
-  if !response.status().is_success() {
-    let error_text = response
-      .text()
-      .await
-      .unwrap_or_else(|_| "Unknown error".to_string());
-    return Err(format!("API request failed: {}", error_text));
-  }
-
-  let body = response.text().await.map_err(|e| format!("Failed to read response body: {}", e))?;
-  info!("Secrets response: {}", body);
-  //
-  // let secrets_list: SecretsResponse = response
-  //   .json()
-  //   .await
-  //   .map_err(|e| format!("Failed to parse response: {}", e))?;
-
-  Err("Not implemented yet".to_string())
-}

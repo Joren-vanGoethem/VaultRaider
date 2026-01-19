@@ -1,11 +1,7 @@
 use serde::{Deserialize, Serialize};
+use crate::azure::auth::types::AzureListResponse;
 
-#[derive(Debug, Clone, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct KeyVaultListResponse {
-    pub value: Vec<KeyVault>,
-    pub next_link: Option<String>
-}
+pub type KeyVaultListResponse = AzureListResponse<KeyVault>;
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
