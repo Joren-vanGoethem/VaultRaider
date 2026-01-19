@@ -81,7 +81,7 @@ function App() {
   }
 
   return (
-    <main className="container">
+    <main>
       <h1>VaultRaider</h1>
       <p className="subtitle">Azure Key Vault Manager</p>
 

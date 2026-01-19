@@ -20,14 +20,17 @@ function Navigation() {
 
   return (
     <div className="flex-none border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm">
-      <div className="container mx-auto px-4 py-4">
+      <div className="px-4 py-3 w-full">
         <nav className="flex items-center justify-between">
-          <div className="flex gap-6">
-            <NavLink to="/">Home</NavLink>
-            <NavLink to="/dashboard">Dashboard</NavLink>
-            <NavLink to="/subscriptions">Subscriptions</NavLink>
-            <NavLink to="/keyvault">Keyvault</NavLink>
-            <NavLink to="/about">About</NavLink>
+          <div className="flex items-center gap-6">
+            <div className="text-lg font-bold text-gray-900 dark:text-gray-100">
+              VaultRaider
+            </div>
+            {isAuthenticated && (
+              <>
+                <NavLink to="/subscriptions">Key Vaults</NavLink>
+              </>
+            )}
           </div>
           <div className="flex items-center gap-4">
             {isAuthenticated && userInfo && (

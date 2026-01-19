@@ -1,5 +1,5 @@
-﻿import { createFileRoute, Link } from '@tanstack/react-router'
-import { useState } from "react";
+﻿import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
+import { useState, useEffect } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { useAuth } from "../contexts/AuthContext";
 import { LoadingSpinner } from "../components/LoadingSpinner";
@@ -26,10 +26,18 @@ export const Route = createFileRoute('/')({
 
 function Index() {
   const { isAuthenticated, userInfo, setAuthenticated, logout } = useAuth();
+  const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState("");
   const [deviceCodeInfo, setDeviceCodeInfo] = useState<DeviceCodeInfo | null>(null);
   const [showDeviceCodeFlow, setShowDeviceCodeFlow] = useState(false);
+
+  // Redirect to subscriptions if already authenticated
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate({ to: '/subscriptions' });
+    }
+  }, [isAuthenticated, navigate]);
 
 
 
