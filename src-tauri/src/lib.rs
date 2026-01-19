@@ -7,7 +7,7 @@ use crate::azure::subscriptions::{get_subscriptions, Subscription};
 use crate::azure::auth::types::{AuthResult, DeviceCodeInfo};
 use crate::azure::keyvault::types::{KeyVault};
 use crate::azure::keyvault::client::{get_keyvaults, check_keyvault_access};
-use crate::azure::keyvault::secret::client::{get_secrets, get_secret};
+use crate::azure::keyvault::secret::client::{get_secrets, get_secret, delete_secret};
 
 #[derive(serde::Serialize)]
 struct UserInfo {
@@ -96,7 +96,8 @@ pub fn run() {
             fetch_keyvaults,
             check_keyvault_access,
             get_secrets,
-            get_secret
+            get_secret,
+            delete_secret
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

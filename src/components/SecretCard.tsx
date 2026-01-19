@@ -1,8 +1,8 @@
-﻿import {useMemo} from 'react'
-import {fetchSecret} from '../services/azureService'
+﻿import {useMemo, useState} from 'react'
+import {fetchSecret, deleteSecret as deleteSecretService} from '../services/azureService'
 import type {Secret, SecretBundle} from '../types/secrets'
 import {LoadingSpinner} from './LoadingSpinner'
-import {useQuery} from '@tanstack/react-query'
+import {useQuery, useMutation, useQueryClient} from '@tanstack/react-query'
 import {TrashIcon} from "lucide-react";
 
 interface SecretCardProps {
@@ -12,6 +12,9 @@ interface SecretCardProps {
 }
 
 export function SecretCard({secret, vaultUri, searchQuery = ''}: SecretCardProps) {
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const queryClient = useQueryClient()
+
   // Helper function to format Unix timestamp to readable date
   const formatDate = (timestamp: number) => {
     return new Date(timestamp * 1000).toLocaleDateString('en-US', {
@@ -39,6 +42,20 @@ export function SecretCard({secret, vaultUri, searchQuery = ''}: SecretCardProps
     gcTime: 30 * 60 * 1000, // Keep in cache for 30 minutes (formerly cacheTime)
   })
 
+  // Mutation for deleting the secret
+  const deleteMutation = useMutation({
+    mutationFn: () => deleteSecretService(vaultUri, secretName),
+    onSuccess: () => {
+      // Invalidate and refetch secrets list
+      queryClient.invalidateQueries({ queryKey: ['secrets', vaultUri] })
+      setShowDeleteModal(false)
+    },
+    onError: (error) => {
+      console.error('Failed to delete secret:', error)
+      alert(`Failed to delete secret: ${error instanceof Error ? error.message : String(error)}`)
+    }
+  })
+
   // Check if this card should be highlighted based on search query
   const isSearchMatch = useMemo(() => {
     if (!searchQuery) return false
@@ -56,8 +73,16 @@ export function SecretCard({secret, vaultUri, searchQuery = ''}: SecretCardProps
     }
   }
 
-  const deleteSecret = async () => {
+  const handleDeleteClick = () => {
+    setShowDeleteModal(true)
+  }
 
+  const handleConfirmDelete = () => {
+    deleteMutation.mutate()
+  }
+
+  const handleCancelDelete = () => {
+    setShowDeleteModal(false)
   }
 
   const errorMessage = error instanceof Error ? error.message : error ? String(error) : null
@@ -93,9 +118,10 @@ export function SecretCard({secret, vaultUri, searchQuery = ''}: SecretCardProps
             <div>
               <button
                 type="button"
-                onClick={() => deleteSecret()}
-                className="text-xs px-2 py-1.5 rounded bg-red-500 hover:bg-red-600 text-red transition-colors font-medium shrink-0"
+                onClick={handleDeleteClick}
+                className="text-xs px-2 py-1.5 rounded bg-red-500 hover:bg-red-600 text-white transition-colors font-medium shrink-0"
                 title="Delete secret"
+                disabled={deleteMutation.isPending}
               >
                 <TrashIcon className="w-4 h-4"/>
               </button>
@@ -150,6 +176,41 @@ export function SecretCard({secret, vaultUri, searchQuery = ''}: SecretCardProps
           <span className="text-gray-900 dark:text-gray-100">{formatDate(secret.attributes.updated)}</span>
         </div>
       </div>
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={handleCancelDelete}>
+          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md mx-4 shadow-xl" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
+              Delete Secret
+            </h3>
+            <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+              Are you sure you want to delete the secret <span className="font-mono font-semibold text-gray-900 dark:text-gray-100">"{secretName}"</span>?
+              {secret.attributes.recoveryLevel?.includes('Recoverable')
+                ? ' This secret can be recovered after deletion.'
+                : ' This action cannot be undone.'}
+            </p>
+            <div className="flex gap-3 justify-end">
+              <button
+                type="button"
+                onClick={handleCancelDelete}
+                className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded transition-colors"
+                disabled={deleteMutation.isPending}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmDelete}
+                className="px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled={deleteMutation.isPending}
+              >
+                {deleteMutation.isPending ? 'Deleting...' : 'Delete'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
