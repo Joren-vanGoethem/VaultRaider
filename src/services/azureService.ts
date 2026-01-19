@@ -49,7 +49,7 @@ export async function fetchSecrets(keyvaultUri: string): Promise<Secret[]> {
 }
 
 // Global request queue for secret fetching (max 5 concurrent requests)
-const secretRequestQueue = new RequestQueue(25);
+const secretRequestQueue = new RequestQueue(5);
 
 export async function fetchSecret(keyvaultUri: string, secretName: string, secretVersion: string | undefined = undefined) : Promise<SecretBundle | null> {
   return secretRequestQueue.add(async () => {
@@ -70,6 +70,16 @@ export async function deleteSecret(keyvaultUri: string, secretName: string): Pro
   } catch (err) {
     const errorMessage = err instanceof Error ? err.message : String(err)
     console.error(`Failed to delete secret ${secretName} for keyvault ${keyvaultUri}:`, errorMessage)
+    return [];
+  }
+}
+
+export async function createSecret(keyvaultUri: string, secretName: string, secretValue: string): Promise<Secret[]> {
+  try {
+    return await invoke('create_secret', {keyvaultUri, secretName, secretValue});
+  } catch (err) {
+    const errorMessage = err instanceof Error ? err.message : String(err)
+    console.error(`Failed to create secret ${secretName} for keyvault ${keyvaultUri}:`, errorMessage)
     return [];
   }
 }

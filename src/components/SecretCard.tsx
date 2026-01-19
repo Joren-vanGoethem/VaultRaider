@@ -42,6 +42,7 @@ export function SecretCard({secret, vaultUri, searchQuery = ''}: SecretCardProps
     gcTime: 30 * 60 * 1000, // Keep in cache for 30 minutes (formerly cacheTime)
   })
 
+  // TODO@JOREN: test delete functionality
   // Mutation for deleting the secret
   const deleteMutation = useMutation({
     mutationFn: () => deleteSecretService(vaultUri, secretName),

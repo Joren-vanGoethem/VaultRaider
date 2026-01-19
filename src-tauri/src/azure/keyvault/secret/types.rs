@@ -28,7 +28,6 @@ pub struct SecretBundle {
   pub value: String,
 }
 
-
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct DeletedSecretBundle {
@@ -37,4 +36,17 @@ pub struct DeletedSecretBundle {
   pub value: String,
   pub scheduled_purge_date: u64,
   pub recovery_id: u64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct KeyvaultError {
+  pub error: KeyvaultErrorDetail,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct KeyvaultErrorDetail {
+  pub code: String,
+  pub message: String,
 }

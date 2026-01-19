@@ -3,9 +3,10 @@ import {PageHeader} from '../components/PageHeader'
 import {ArrowLeftIcon} from '../components/icons'
 import {Suspense, useState, useMemo} from 'react'
 import {LoadingSpinner} from '../components/LoadingSpinner'
-import {fetchSecrets, fetchSecretsKey} from '../services/azureService'
+import {fetchSecrets, fetchSecretsKey, createSecret} from '../services/azureService'
 import {SecretCard} from '../components/SecretCard'
-import {useSuspenseQuery} from '@tanstack/react-query'
+import {useSuspenseQuery, useMutation, useQueryClient} from '@tanstack/react-query'
+import {PlusIcon} from 'lucide-react'
 
 type KeyvaultSearch = {
   vaultUri: string
@@ -35,12 +36,51 @@ function SecretsLoadingSpinner() {
 function Keyvaults() {
   const { vaultUri, name } = Route.useSearch()
   const [searchQuery, setSearchQuery] = useState('')
+  const [showCreateModal, setShowCreateModal] = useState(false)
+  const [newSecretName, setNewSecretName] = useState('')
+  const [newSecretValue, setNewSecretValue] = useState('')
+  const queryClient = useQueryClient()
 
   // Use React Query to fetch secrets list
   const { data: secrets } = useSuspenseQuery({
     queryKey: [fetchSecretsKey, vaultUri],
     queryFn: () => fetchSecrets(vaultUri),
   })
+
+  // Mutation for creating a new secret
+  const createMutation = useMutation({
+    mutationFn: () => createSecret(vaultUri, newSecretName, newSecretValue),
+    onSuccess: () => {
+      // Invalidate and refetch secrets list
+      queryClient.invalidateQueries({ queryKey: [fetchSecretsKey, vaultUri] })
+      setShowCreateModal(false)
+      setNewSecretName('')
+      setNewSecretValue('')
+    },
+    onError: (error) => {
+      console.error('Failed to create secret:', error)
+      alert(`Failed to create secret: ${error instanceof Error ? error.message : String(error)}`)
+    }
+  })
+
+  const handleCreateClick = () => {
+    setShowCreateModal(true)
+  }
+
+  const handleConfirmCreate = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!newSecretName.trim() || !newSecretValue.trim()) {
+      alert('Secret name and value are required')
+      return
+    }
+    createMutation.mutate()
+  }
+
+  const handleCancelCreate = () => {
+    setShowCreateModal(false)
+    setNewSecretName('')
+    setNewSecretValue('')
+  }
 
   // Helper function to extract secret name from ID
   const getSecretName = (id: string) => {
@@ -69,9 +109,20 @@ function Keyvaults() {
           <PageHeader>{name}</PageHeader>
 
           <div className="card mb-6">
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-4">
-              Secrets
-            </h2>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+                Secrets
+              </h2>
+              <button
+                type="button"
+                onClick={handleCreateClick}
+                className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-lg transition-colors"
+                title="Add new secret"
+              >
+                <PlusIcon className="w-4 h-4" />
+                Add Secret
+              </button>
+            </div>
 
             {secrets.length > 0 && (
               <div className="mb-4">
@@ -156,6 +207,66 @@ function Keyvaults() {
             </Link>
           </div>
         </div>
+
+        {/* Create Secret Modal */}
+        {showCreateModal && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={handleCancelCreate}>
+            <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4 shadow-xl" onClick={(e) => e.stopPropagation()}>
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
+                Create New Secret
+              </h3>
+              <form onSubmit={handleConfirmCreate}>
+                <div className="mb-4">
+                  <label htmlFor="secretName" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Secret Name
+                  </label>
+                  <input
+                    type="text"
+                    id="secretName"
+                    value={newSecretName}
+                    onChange={(e) => setNewSecretName(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-green-500 dark:focus:ring-green-400 focus:border-transparent"
+                    placeholder="my-secret-name"
+                    disabled={createMutation.isPending}
+                    required
+                  />
+                </div>
+                <div className="mb-6">
+                  <label htmlFor="secretValue" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Secret Value
+                  </label>
+                  <textarea
+                    id="secretValue"
+                    value={newSecretValue}
+                    onChange={(e) => setNewSecretValue(e.target.value)}
+                    rows={4}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-green-500 dark:focus:ring-green-400 focus:border-transparent resize-none"
+                    placeholder="Enter secret value..."
+                    disabled={createMutation.isPending}
+                    required
+                  />
+                </div>
+                <div className="flex gap-3 justify-end">
+                  <button
+                    type="button"
+                    onClick={handleCancelCreate}
+                    className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors"
+                    disabled={createMutation.isPending}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-4 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    disabled={createMutation.isPending}
+                  >
+                    {createMutation.isPending ? 'Creating...' : 'Create Secret'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
       </div>
     </Suspense>
   )
