@@ -1,10 +1,10 @@
 ﻿import {createFileRoute} from '@tanstack/react-router'
 import {PageHeader} from '../components/PageHeader'
-import {Suspense, useState, useMemo, useEffect} from 'react'
-import {fetchSubscriptions, fetchSubscriptionsKey} from '../services/azureService'
+import {Suspense, useState, useMemo, useEffect, useRef} from 'react'
+import {fetchSubscriptions, fetchSubscriptionsKey, fetchKeyVaults, fetchKeyvaultsKey} from '../services/azureService'
 import {LoadingSpinner} from '../components/LoadingSpinner'
 import {KeyvaultsList} from '../components/KeyvaultsList.tsx'
-import { useSuspenseQuery} from "@tanstack/react-query";
+import { useSuspenseQuery, useQueries} from "@tanstack/react-query";
 
 const subscriptionQueryOptions = { queryKey: [fetchSubscriptionsKey], queryFn: fetchSubscriptions }
 
@@ -21,10 +21,20 @@ export const Route = createFileRoute('/subscriptions')({
       subscriptionId: search.subscriptionId as string | undefined,
     }
   },
-  loader: ({
+  loader: async ({
     context: { queryClient },
   }) => {
-    queryClient.prefetchQuery(subscriptionQueryOptions)
+    // Fetch subscriptions and prefetch key vaults in the background
+    // We don't await the key vault queries so the UI shows immediately
+    queryClient.prefetchQuery(subscriptionQueryOptions).then((subscriptions) => {
+      // Prefetch key vaults for all subscriptions in parallel (non-blocking)
+      subscriptions.forEach((sub) => {
+        queryClient.prefetchQuery({
+          queryKey: [fetchKeyvaultsKey, sub.subscriptionId],
+          queryFn: () => fetchKeyVaults(sub.subscriptionId),
+        });
+      });
+    });
   },
 })
 
@@ -39,6 +49,37 @@ function VaultsLoadingSpinner() {
 function Subscriptions() {
   const { subscriptionId: urlSubscriptionId } = Route.useSearch()
   const subscriptions = useSuspenseQuery(subscriptionQueryOptions).data || [];
+
+  // Fetch all key vaults for all subscriptions
+  const keyvaultQueries = useQueries({
+    queries: subscriptions.map((sub) => ({
+      queryKey: [fetchKeyvaultsKey, sub.subscriptionId],
+      queryFn: () => fetchKeyVaults(sub.subscriptionId),
+    })),
+  });
+
+  // Check if all queries are loaded
+  const allQueriesLoaded = keyvaultQueries.every(query => query.isSuccess || query.isError);
+  const anyQueriesLoading = keyvaultQueries.some(query => query.isLoading);
+
+  // Create a map of subscription ID to key vault count and loading state
+  const keyvaultCounts = useMemo(() => {
+    const counts = new Map<string, number>();
+    subscriptions.forEach((sub, index) => {
+      const data = keyvaultQueries[index]?.data || [];
+      counts.set(sub.subscriptionId, data.length);
+    });
+    return counts;
+  }, [subscriptions, keyvaultQueries]);
+
+  const keyvaultLoadingStates = useMemo(() => {
+    const states = new Map<string, boolean>();
+    subscriptions.forEach((sub, index) => {
+      states.set(sub.subscriptionId, keyvaultQueries[index]?.isLoading || false);
+    });
+    return states;
+  }, [subscriptions, keyvaultQueries]);
+
   const defaultSubscriptionId = useMemo(() =>
     urlSubscriptionId || subscriptions[0]?.subscriptionId,
     [urlSubscriptionId, subscriptions]
@@ -46,12 +87,26 @@ function Subscriptions() {
 
   const [selectedSubscription, setSelectedSubscription] = useState<string | undefined>(defaultSubscriptionId)
 
-  // Set the default subscription when subscriptions load or URL changes
+  // Track if we've done the initial setup
+  const isInitialMount = useRef(true);
+  const prevUrlSubscriptionIdRef = useRef(urlSubscriptionId);
+
+  // Update selected subscription when URL parameter changes
   useEffect(() => {
-    if (defaultSubscriptionId && defaultSubscriptionId !== selectedSubscription) {
-      setSelectedSubscription(defaultSubscriptionId)
+    // On initial mount, set the default
+    if (isInitialMount.current) {
+      if (defaultSubscriptionId) {
+        setSelectedSubscription(defaultSubscriptionId);
+      }
+      isInitialMount.current = false;
+      prevUrlSubscriptionIdRef.current = urlSubscriptionId;
     }
-  }, [defaultSubscriptionId, selectedSubscription])
+    // If URL subscription changed, update to it
+    else if (urlSubscriptionId && urlSubscriptionId !== prevUrlSubscriptionIdRef.current) {
+      setSelectedSubscription(urlSubscriptionId);
+      prevUrlSubscriptionIdRef.current = urlSubscriptionId;
+    }
+  }, [urlSubscriptionId, defaultSubscriptionId])
 
   const selectedSubscriptionName = useMemo(() => {
     return subscriptions.find(s => s.subscriptionId === selectedSubscription)?.displayName || 'Select subscription'
@@ -76,11 +131,21 @@ function Subscriptions() {
                   onChange={(e) => setSelectedSubscription(e.target.value)}
                   className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500 dark:focus:ring-primary-400 min-w-[300px]"
                 >
-                  {subscriptions.map((sub) => (
-                    <option key={sub.subscriptionId} value={sub.subscriptionId}>
-                      {sub.displayName}
-                    </option>
-                  ))}
+                  {subscriptions.map((sub) => {
+                    const count = keyvaultCounts.get(sub.subscriptionId) || 0;
+                    const isLoading = keyvaultLoadingStates.get(sub.subscriptionId) || false;
+                    const hasKeyvaults = count > 0;
+
+                    return (
+                      <option
+                        key={sub.subscriptionId}
+                        value={sub.subscriptionId}
+                        disabled={!isLoading && !hasKeyvaults}
+                      >
+                        {isLoading ? '⏳' : hasKeyvaults ? '✓' : '✗'} {sub.displayName} {isLoading ? '(loading...)' : `(${count} ${count === 1 ? 'vault' : 'vaults'})`}
+                      </option>
+                    );
+                  })}
                 </select>
               </div>
             )}
@@ -90,6 +155,28 @@ function Subscriptions() {
             <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4">
               Key Vaults in {selectedSubscriptionName}
             </h2>
+
+            {anyQueriesLoading && (
+              <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                <p className="text-sm text-blue-800 dark:text-blue-300 flex items-center gap-2">
+                  <LoadingSpinner size="sm" />
+                  Loading key vaults for all subscriptions...
+                </p>
+              </div>
+            )}
+
+            {allQueriesLoaded && selectedSubscription && keyvaultCounts.get(selectedSubscription) === 0 && (
+              <div className="mb-4 p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
+                <p className="text-sm text-yellow-800 dark:text-yellow-300">
+                  ⚠️ This subscription has no accessible Key Vaults. This could be due to:
+                </p>
+                <ul className="mt-2 text-sm text-yellow-700 dark:text-yellow-400 list-disc list-inside space-y-1">
+                  <li>No Key Vaults exist in this subscription</li>
+                  <li>Insufficient permissions to access Key Vaults</li>
+                  <li>Network or firewall restrictions</li>
+                </ul>
+              </div>
+            )}
 
             {selectedSubscription &&
                 <KeyvaultsList
