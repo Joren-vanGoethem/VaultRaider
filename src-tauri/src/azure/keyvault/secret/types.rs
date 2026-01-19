@@ -27,3 +27,14 @@ pub struct SecretBundle {
   pub attributes: SecretAttributes,
   pub value: String,
 }
+
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DeletedSecretBundle {
+  pub id: String,
+  pub attributes: SecretAttributes,
+  pub value: String,
+  pub scheduled_purge_date: u64,
+  pub recovery_id: u64,
+}

@@ -133,7 +133,7 @@ function Keyvaults() {
                 </button>
               </div>
             ) : (
-              <div className="space-y-3">
+              <div className="space-y-2">
                 {filteredSecrets.map((secret) => (
                   <SecretCard
                     key={secret.id}

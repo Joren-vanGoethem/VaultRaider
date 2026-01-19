@@ -3,6 +3,7 @@ import {fetchSecret} from '../services/azureService'
 import type {Secret, SecretBundle} from '../types/secrets'
 import {LoadingSpinner} from './LoadingSpinner'
 import {useQuery} from '@tanstack/react-query'
+import {TrashIcon} from "lucide-react";
 
 interface SecretCardProps {
   secret: Secret
@@ -55,11 +56,15 @@ export function SecretCard({secret, vaultUri, searchQuery = ''}: SecretCardProps
     }
   }
 
+  const deleteSecret = async () => {
+
+  }
+
   const errorMessage = error instanceof Error ? error.message : error ? String(error) : null
 
   return (
     <div
-      className={`border rounded-lg p-4 transition-colors ${
+      className={`border rounded-lg p-3 transition-colors ${
         loading 
           ? 'border-yellow-400 dark:border-yellow-500 bg-yellow-50/30 dark:bg-yellow-900/10' 
           : errorMessage
@@ -69,83 +74,80 @@ export function SecretCard({secret, vaultUri, searchQuery = ''}: SecretCardProps
           : 'border-gray-200 dark:border-gray-700 hover:border-primary-500 dark:hover:border-primary-400'
       }`}
     >
-      <div className="flex items-start justify-between mb-3">
-        <div className="flex-1">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
-            {secretName}
-          </h3>
-          <p className="text-xs text-gray-500 dark:text-gray-400 mb-3 font-mono break-all">
+      {/* Header: Name and ID */}
+      <div className="flex items-start justify-between mb-2">
+        <div className="flex-1 min-w-0">
+          <div className="flex justify-between items-center mb-1">
+            <div className="flex items-center gap-2 mb-1">
+              <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100 truncate">
+                {secretName}
+              </h3>
+              <span className={`text-xs px-1.5 py-0.5 rounded ${
+                secret.attributes.enabled 
+                  ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400' 
+                  : 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400'
+              }`}>
+                {secret.attributes.enabled ? 'Enabled' : 'Disabled'}
+              </span>
+            </div>
+            <div>
+              <button
+                type="button"
+                onClick={() => deleteSecret()}
+                className="text-xs px-2 py-1.5 rounded bg-red-500 hover:bg-red-600 text-red transition-colors font-medium shrink-0"
+                title="Delete secret"
+              >
+                <TrashIcon className="w-4 h-4"/>
+              </button>
+            </div>
+          </div>
+          <p className="text-xs text-gray-500 dark:text-gray-400 font-mono truncate" title={secret.id}>
             {secret.id}
           </p>
         </div>
       </div>
 
-      {/* Secret Value Section */}
-      <div className="mb-3 p-3 bg-gray-50 dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700">
-        <div className="flex items-center justify-between mb-2">
-          <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Secret Value:</span>
-          {loading && (
-            <div className="flex items-center gap-2">
-              <LoadingSpinner size="sm" />
-              <span className="text-xs text-gray-500 dark:text-gray-400">Loading...</span>
-            </div>
-          )}
-        </div>
-
-        {errorMessage && (
-          <div className="text-sm text-red-600 dark:text-red-400">
+      {/* Secret Value Section - Compact */}
+      {/*<div className="mb-2 p-2 bg-gray-50 dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700">*/}
+        {loading ? (
+          <div className="flex items-center gap-2 py-1">
+            <LoadingSpinner size="sm" />
+            <span className="text-xs text-gray-500 dark:text-gray-400">Loading value...</span>
+          </div>
+        ) : errorMessage ? (
+          <div className="text-xs text-red-600 dark:text-red-400 py-1">
             {errorMessage}
           </div>
-        )}
-
-        {!loading && !errorMessage && secretBundle && (
-          <div>
-            <div className="flex items-center gap-2 mb-2 w-full">
-              <div className="p-2 w-full bg-white dark:bg-gray-900 rounded border border-gray-300 dark:border-gray-600 font-mono text-sm break-all">
-                {secretBundle.value}
-              </div>
-              <button
-                type="button"
-                onClick={() => copyToClipboard(secretBundle.value)}
-                className="text-sm p-2 rounded min-w-max bg-gray-500 hover:bg-gray-600 text-white transition-colors font-medium"
-                title="Copy secret value to clipboard"
-              >
-                📋 Copy
-              </button>
+        ) : secretBundle ? (
+          <div className="flex items-start gap-2">
+            <div className="flex-1 min-w-0 p-1.5 bg-white dark:bg-gray-900 rounded border border-gray-300 dark:border-gray-600 font-mono text-xs break-all max-h-20 overflow-y-auto">
+              {secretBundle.value}
             </div>
+            <button
+              type="button"
+              onClick={() => copyToClipboard(secretBundle.value)}
+              className="text-xs px-2 py-1.5 rounded bg-gray-500 hover:bg-gray-600 text-white transition-colors font-medium shrink-0"
+              title="Copy secret value to clipboard"
+            >
+              📋
+            </button>
           </div>
-        )}
-      </div>
+        ) : null}
+      {/*</div>*/}
 
-      {/* Attributes Grid */}
-      <div className="grid grid-cols-2 gap-3 text-sm">
-        <div>
-          <span className="text-gray-600 dark:text-gray-400">Status:</span>
-          <span className={`ml-2 font-medium ${
-            secret.attributes.enabled 
-              ? 'text-green-600 dark:text-green-400' 
-              : 'text-red-600 dark:text-red-400'
-          }`}>
-            {secret.attributes.enabled ? 'Enabled' : 'Disabled'}
-          </span>
+      {/* Attributes - Compact Inline */}
+      <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-600 dark:text-gray-400">
+        <div className="flex items-center gap-1">
+          <span className="text-gray-500 dark:text-gray-500">Recovery:</span>
+          <span className="text-gray-900 dark:text-gray-100">{secret.attributes.recoveryLevel}</span>
         </div>
-        <div>
-          <span className="text-gray-600 dark:text-gray-400">Recovery Level:</span>
-          <span className="ml-2 text-gray-900 dark:text-gray-100">
-            {secret.attributes.recoveryLevel}
-          </span>
+        <div className="flex items-center gap-1">
+          <span className="text-gray-500 dark:text-gray-500">Created:</span>
+          <span className="text-gray-900 dark:text-gray-100">{formatDate(secret.attributes.created)}</span>
         </div>
-        <div>
-          <span className="text-gray-600 dark:text-gray-400">Created:</span>
-          <span className="ml-2 text-gray-900 dark:text-gray-100">
-            {formatDate(secret.attributes.created)}
-          </span>
-        </div>
-        <div>
-          <span className="text-gray-600 dark:text-gray-400">Updated:</span>
-          <span className="ml-2 text-gray-900 dark:text-gray-100">
-            {formatDate(secret.attributes.updated)}
-          </span>
+        <div className="flex items-center gap-1">
+          <span className="text-gray-500 dark:text-gray-500">Updated:</span>
+          <span className="text-gray-900 dark:text-gray-100">{formatDate(secret.attributes.updated)}</span>
         </div>
       </div>
     </div>
