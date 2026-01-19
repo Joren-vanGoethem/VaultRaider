@@ -9,7 +9,6 @@ interface KeyVaultsListProps {
 }
 
 export function KeyvaultsList({ subscriptionId }: KeyVaultsListProps) {
-  console.log("render")
   return (
     <Suspense fallback={<VaultsLoadingSpinner />}>
       <Content subscriptionId={subscriptionId} />
@@ -18,7 +17,6 @@ export function KeyvaultsList({ subscriptionId }: KeyVaultsListProps) {
 }
 
 function Content({ subscriptionId }: KeyVaultsListProps) {
-  console.log("render content")
 
   const {data: keyvaults} = useSuspenseQuery ({
     queryKey: [fetchKeyvaultsKey, subscriptionId],

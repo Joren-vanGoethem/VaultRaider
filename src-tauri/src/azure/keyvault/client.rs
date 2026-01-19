@@ -2,10 +2,11 @@
 use reqwest::header::{HeaderMap, HeaderValue, AUTHORIZATION};
 use crate::azure::auth::token::{get_token_from_state, get_token_for_scope};
 use crate::azure::auth::types::AzureListResponse;
-use crate::azure::keyvault::constants::{get_keyvault_uri, get_secrets_uri, TOKEN_URI, KEYVAULT_TOKEN_SCOPE};
+use crate::azure::keyvault::constants::{get_keyvault_uri, TOKEN_URI, KEYVAULT_TOKEN_SCOPE};
+use crate::azure::keyvault::secret::constants::get_secrets_uri;
 use crate::azure::keyvault::types::{KeyVault, KeyVaultAccessCheck, KeyVaultListResponse};
 
-/// Fetch all Key Vaults for a specific subscription
+/// Fetch all Key Subscriptions for a specific subscription
 pub async fn get_keyvaults(subscription_id: &str) -> Result<Vec<KeyVault>, String> {
   info!("Fetching keyvaults...");
 
@@ -23,7 +24,7 @@ pub async fn get_keyvaults(subscription_id: &str) -> Result<Vec<KeyVault>, Strin
   Ok(kv_list)
 }
 
-/// Fetch all Key Vaults for a specific subscription recursively using nextLink property
+/// Fetch all Key Subscriptions for a specific subscription recursively using nextLink property
 async fn fetch_keyvaults(subscription_id: &str, url: String, client: reqwest::Client, headers: HeaderMap) -> Result<Vec<KeyVault>, String> {
   let response = client
     .get(&url)

@@ -25,8 +25,8 @@ function Navigation() {
           <div className="flex gap-6">
             <NavLink to="/">Home</NavLink>
             <NavLink to="/dashboard">Dashboard</NavLink>
-            <NavLink to="/vaults">Vaults</NavLink>
-            <NavLink to="/secrets">Secrets</NavLink>
+            <NavLink to="/subscriptions">Subscriptions</NavLink>
+            <NavLink to="/keyvault">Keyvault</NavLink>
             <NavLink to="/about">About</NavLink>
           </div>
           <div className="flex items-center gap-4">

@@ -1,9 +1,11 @@
 import {createFileRoute, Link} from '@tanstack/react-router'
 import {PageHeader} from '../components/PageHeader'
 import {ArrowLeftIcon} from '../components/icons'
-import {Suspense, useEffect} from 'react'
+import {Suspense, useEffect, useState} from 'react'
 import {LoadingSpinner} from '../components/LoadingSpinner'
 import {fetchSecrets} from '../services/azureService'
+import type {Secret} from '../types/secrets'
+import {SecretCard} from '../components/SecretCard'
 
 type KeyvaultSearch = {
   vaultUri: string
@@ -32,11 +34,17 @@ function SecretsLoadingSpinner() {
 
 function Keyvaults() {
   const { vaultUri, name } = Route.useSearch()
+  const [secrets, setSecrets] = useState<Secret[]>([])
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     // Fetch secrets when component mounts or vaultUri changes
     if (vaultUri) {
-      fetchSecrets(vaultUri)
+      setLoading(true)
+      fetchSecrets(vaultUri).then((data) => {
+        setSecrets(data)
+        setLoading(false)
+      })
     }
   }, [vaultUri])
 
@@ -51,14 +59,26 @@ function Keyvaults() {
               Secrets
             </h2>
 
-            <div className="text-center py-8">
-              <p className="text-gray-600 dark:text-gray-400">
-                Loading secrets for this Key Vault...
-              </p>
-              <p className="text-sm text-gray-500 dark:text-gray-500 mt-2">
-                (Backend implementation pending)
-              </p>
-            </div>
+            {loading ? (
+              <div className="text-center py-8">
+                <LoadingSpinner size="md" />
+                <p className="text-gray-600 dark:text-gray-400 mt-4">
+                  Loading secrets list...
+                </p>
+              </div>
+            ) : secrets.length === 0 ? (
+              <div className="text-center py-8">
+                <p className="text-gray-600 dark:text-gray-400">
+                  No secrets found in this Key Vault
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {secrets.map((secret) => (
+                  <SecretCard key={secret.id} secret={secret} vaultUri={vaultUri} />
+                ))}
+              </div>
+            )}
           </div>
 
           <div className="mt-6 text-center">

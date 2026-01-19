@@ -17,5 +17,13 @@ pub struct SecretAttributes {
   pub created: u64,
   pub updated: u64,
   pub recovery_level: String,
-  pub recoverable_days: u16,
+  pub recoverable_days: u8,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SecretBundle {
+  pub id: String,
+  pub attributes: SecretAttributes,
+  pub value: String,
 }

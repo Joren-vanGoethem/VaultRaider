@@ -1,7 +1,7 @@
 ﻿import {createFileRoute, Link} from '@tanstack/react-router'
 import {PageHeader} from '../components/PageHeader'
 import {ArrowLeftIcon} from '../components/icons'
-import {Suspense, useState} from 'react'
+import {Suspense, useState, useMemo, useEffect} from 'react'
 import {fetchSubscriptions, fetchSubscriptionsKey} from '../services/azureService'
 import {LoadingSpinner} from '../components/LoadingSpinner'
 import {SubscriptionSelector} from '../components/SubscriptionSelector'
@@ -10,8 +10,8 @@ import { useSuspenseQuery} from "@tanstack/react-query";
 
 const subscriptionQueryOptions = { queryKey: [fetchSubscriptionsKey], queryFn: fetchSubscriptions }
 
-export const Route = createFileRoute('/vaults')({
-  component: Vaults,
+export const Route = createFileRoute('/subscriptions')({
+  component: Subscriptions,
   pendingComponent: VaultsLoadingSpinner,
   errorComponent: VaultsError,
   // beforeLoad: () => {
@@ -35,11 +35,18 @@ function VaultsLoadingSpinner() {
   )
 }
 
-function Vaults() {
+function Subscriptions() {
   const subscriptions = useSuspenseQuery(subscriptionQueryOptions).data || [];
-  const defaultSubscriptionId = subscriptions[0]?.subscriptionId;
+  const defaultSubscriptionId = useMemo(() => subscriptions[0]?.subscriptionId, [subscriptions]);
 
-  const [selectedSubscription, setSelectedSubscription] = useState(defaultSubscriptionId)
+  const [selectedSubscription, setSelectedSubscription] = useState<string | undefined>(defaultSubscriptionId)
+
+  // Set the default subscription when subscriptions load
+  useEffect(() => {
+    if (!selectedSubscription && defaultSubscriptionId) {
+      setSelectedSubscription(defaultSubscriptionId)
+    }
+  }, [defaultSubscriptionId, selectedSubscription])
 
   return (
     <Suspense fallback={<VaultsLoadingSpinner/>}>
