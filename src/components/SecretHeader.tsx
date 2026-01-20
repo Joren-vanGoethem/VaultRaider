@@ -1,14 +1,16 @@
-﻿import {TrashIcon} from 'lucide-react'
+﻿import {TrashIcon, EditIcon} from 'lucide-react'
 
 interface SecretHeaderProps {
   name: string
   id: string
   enabled: boolean
   onDelete: () => void
+  onEdit?: () => void
   isDeleting?: boolean
+  hasValue?: boolean
 }
 
-export function SecretHeader({ name, id, enabled, onDelete, isDeleting = false }: SecretHeaderProps) {
+export function SecretHeader({ name, id, enabled, onDelete, onEdit, isDeleting = false, hasValue = false }: SecretHeaderProps) {
   return (
     <div className="flex items-start justify-between mb-2">
       <div className="flex-1 min-w-0">
@@ -25,7 +27,18 @@ export function SecretHeader({ name, id, enabled, onDelete, isDeleting = false }
               {enabled ? 'Enabled' : 'Disabled'}
             </span>
           </div>
-          <div>
+          <div className="flex gap-2">
+            {onEdit && hasValue && (
+              <button
+                type="button"
+                onClick={onEdit}
+                className="text-xs px-2 py-1.5 rounded bg-blue-500 hover:bg-blue-600 text-white transition-colors font-medium shrink-0"
+                title="Edit secret"
+                disabled={isDeleting}
+              >
+                <EditIcon className="w-4 h-4"/>
+              </button>
+            )}
             <button
               type="button"
               onClick={onDelete}

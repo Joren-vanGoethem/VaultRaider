@@ -1,5 +1,5 @@
 ﻿import {useMemo, useState} from 'react'
-import {fetchSecret, deleteSecret as deleteSecretService, fetchSecretsKey} from '../services/azureService'
+import {fetchSecret, deleteSecret as deleteSecretService, updateSecret, fetchSecretsKey} from '../services/azureService'
 import type {Secret, SecretBundle} from '../types/secrets'
 import {useQuery, useMutation, useQueryClient} from '@tanstack/react-query'
 import {useToast} from '../contexts/ToastContext'
@@ -17,7 +17,9 @@ interface SecretCardProps {
 
 export function SecretCard({secret, vaultUri, searchQuery = '', shouldLoad = false}: SecretCardProps) {
   const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [showEditModal, setShowEditModal] = useState(false)
   const [manualLoad, setManualLoad] = useState(false)
+  const [editValue, setEditValue] = useState('')
   const queryClient = useQueryClient()
   const { showSuccess, showError } = useToast()
 
@@ -111,6 +113,25 @@ export function SecretCard({secret, vaultUri, searchQuery = '', shouldLoad = fal
     }
   })
 
+  // Mutation for updating the secret
+  const updateMutation = useMutation({
+    mutationFn: (newValue: string) => updateSecret(vaultUri, secretName, newValue),
+    onSuccess: () => {
+      showSuccess(`Secret "${secretName}" updated successfully`)
+      setShowEditModal(false)
+      setEditValue('')
+      // Invalidate both the secrets list and the individual secret cache
+      queryClient.invalidateQueries({ queryKey: [fetchSecretsKey, vaultUri] })
+      queryClient.invalidateQueries({ queryKey: ['secret', vaultUri, secretName] })
+    },
+    onError: (error) => {
+      const errorMsg = error instanceof Error ? error.message : String(error)
+      console.error('Failed to update secret:', errorMsg)
+      showError('Failed to update secret', errorMsg)
+      setShowEditModal(false)
+    }
+  })
+
   // Check if this card should be highlighted based on search query
   const isSearchMatch = useMemo(() => {
     if (!searchQuery) return false
@@ -140,6 +161,24 @@ export function SecretCard({secret, vaultUri, searchQuery = '', shouldLoad = fal
     setShowDeleteModal(false)
   }
 
+  const handleEditClick = () => {
+    setEditValue(secretBundle?.value || '')
+    setShowEditModal(true)
+  }
+
+  const handleConfirmEdit = () => {
+    if (!editValue.trim()) {
+      showError('Invalid input', 'Secret value cannot be empty')
+      return
+    }
+    updateMutation.mutate(editValue)
+  }
+
+  const handleCancelEdit = () => {
+    setShowEditModal(false)
+    setEditValue('')
+  }
+
   const handleLoadSecret = () => {
     setManualLoad(true)
   }
@@ -163,7 +202,9 @@ export function SecretCard({secret, vaultUri, searchQuery = '', shouldLoad = fal
         id={secret.id}
         enabled={secret.attributes.enabled}
         onDelete={handleDeleteClick}
+        onEdit={handleEditClick}
         isDeleting={deleteMutation.isPending}
+        hasValue={!!secretBundle?.value}
       />
 
       <SecretValue
@@ -193,6 +234,59 @@ export function SecretCard({secret, vaultUri, searchQuery = '', shouldLoad = fal
             : 'This action cannot be undone.'
         }
       />
+
+      {/* Edit Secret Modal */}
+      {showEditModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={handleCancelEdit}>
+          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4 shadow-xl" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
+              Edit Secret
+            </h3>
+            <form onSubmit={(e) => { e.preventDefault(); handleConfirmEdit(); }}>
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Secret Name
+                </label>
+                <input
+                  type="text"
+                  value={secretName}
+                  disabled
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 font-mono text-sm"
+                />
+              </div>
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Secret Value
+                </label>
+                <textarea
+                  value={editValue}
+                  onChange={(e) => setEditValue(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 font-mono text-sm min-h-25 resize-y"
+                  placeholder="Enter secret value"
+                  autoFocus
+                />
+              </div>
+              <div className="flex gap-3 justify-end">
+                <button
+                  type="button"
+                  onClick={handleCancelEdit}
+                  className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded transition-colors"
+                  disabled={updateMutation.isPending}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  disabled={updateMutation.isPending}
+                >
+                  {updateMutation.isPending ? 'Updating...' : 'Update'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

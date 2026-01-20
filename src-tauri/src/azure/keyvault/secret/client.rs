@@ -196,3 +196,59 @@ pub async fn create_secret(keyvault_uri: &str, secret_name: &str, secret_value: 
 
   Ok(created_secret)
 }
+
+
+#[tauri::command]
+pub async fn update_secret(keyvault_uri: &str, secret_name: &str, secret_value: &str) -> Result<SecretBundle, String> {
+  info!("Updating secret {}...", secret_name);
+
+  let url = create_secret_uri(keyvault_uri, secret_name);
+
+  // Get token for Key Vault data plane, not management API
+  let token = get_token_for_scope(KEYVAULT_TOKEN_SCOPE).await?;
+
+  let client = reqwest::Client::new();
+  let mut headers = HeaderMap::new();
+  headers.insert(
+    AUTHORIZATION,
+    HeaderValue::from_str(&format!("Bearer {}", token))
+      .map_err(|e| format!("Invalid header value: {}", e))?,
+  );
+
+  headers.insert(
+    CONTENT_TYPE,
+    HeaderValue::from_static("application/json"),
+  );
+
+  let body = format!("{{\"value\": \"{}\"}}", secret_value);
+
+  info!("Secret body: {}...", body.clone());
+
+  let response = client
+    .put(url)
+    .headers(headers.clone())
+    .body(body)
+    .send()
+    .await
+    .map_err(|e| format!("Failed to send request: {}", e))?;
+
+  info!("Update secret request sent...");
+
+
+  if !response.status().is_success() {
+    let error_text = response
+      .text()
+      .await
+      .unwrap_or_else(|_| "Unknown error".to_string());
+    return Err(format!("API request failed: {}", error_text));
+  }
+
+  info!("Secret updated {}...", secret_name);
+
+  let created_secret: SecretBundle = response
+    .json()
+    .await
+    .map_err(|e| format!("Failed to parse response: {}", e))?;
+
+  Ok(created_secret)
+}

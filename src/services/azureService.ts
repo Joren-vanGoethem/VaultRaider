@@ -100,3 +100,14 @@ export async function createSecret(keyvaultUri: string, secretName: string, secr
     return [];
   }
 }
+
+export async function updateSecret(keyvaultUri: string, secretName: string, secretValue: string): Promise<SecretBundle[]> {
+  try {
+    console.log(`Updating secret ${secretName} with value ${secretValue} in keyvault ${keyvaultUri}...`);
+    return await invoke('update_secret', {keyvaultUri, secretName, secretValue});
+  } catch (err) {
+    const errorMessage = err instanceof Error ? err.message : String(err)
+    console.error(`Failed to update secret ${secretName} for keyvault ${keyvaultUri}:`, errorMessage)
+    return [];
+  }
+}
