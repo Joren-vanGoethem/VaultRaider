@@ -7,6 +7,7 @@ import {fetchSecrets, fetchSecretsKey, createSecret} from '../services/azureServ
 import {SecretCard} from '../components/SecretCard'
 import {useSuspenseQuery, useMutation, useQueryClient} from '@tanstack/react-query'
 import {PlusIcon, DownloadIcon} from 'lucide-react'
+import {useToast} from '../contexts/ToastContext'
 
 type KeyvaultSearch = {
   vaultUri: string
@@ -43,6 +44,7 @@ function Keyvaults() {
   const [newSecretValue, setNewSecretValue] = useState('')
   const [loadAll, setLoadAll] = useState(false)
   const queryClient = useQueryClient()
+  const { showSuccess, showError } = useToast()
 
   // Use React Query to fetch secrets list
   const { data: secrets } = useSuspenseQuery({
@@ -59,10 +61,12 @@ function Keyvaults() {
       setShowCreateModal(false)
       setNewSecretName('')
       setNewSecretValue('')
+      showSuccess(`Secret "${newSecretName}" created successfully`)
     },
     onError: (error) => {
-      console.error('Failed to create secret:', error)
-      alert(`Failed to create secret: ${error instanceof Error ? error.message : String(error)}`)
+      const errorMsg = error instanceof Error ? error.message : String(error)
+      console.error('Failed to create secret:', errorMsg)
+      showError('Failed to create secret', errorMsg)
     }
   })
 

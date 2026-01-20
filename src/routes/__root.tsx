@@ -4,6 +4,7 @@ import {ThemeToggle} from '../components/ThemeToggle'
 import {NavLink} from '../components/NavLink'
 import {UserProfile} from '../components/UserProfile'
 import {AuthProvider, useAuth} from '../contexts/AuthContext'
+import {ToastProvider} from '../contexts/ToastContext'
 import type {QueryClient} from "@tanstack/react-query";
 import {ReactQueryDevtools} from '@tanstack/react-query-devtools'
 
@@ -49,15 +50,16 @@ export const Route = createRootRouteWithContext<{
 }>()({
   component: () => (
     <AuthProvider>
-      <div className="flex flex-col min-h-screen">
-        <Navigation/>
-        <main className="flex-1">
-          <Outlet/>
-        </main>
-        <ReactQueryDevtools/>
-        <TanStackRouterDevtools position="bottom-right"/>
-
-      </div>
+      <ToastProvider>
+        <div className="flex flex-col min-h-screen">
+          <Navigation/>
+          <main className="flex-1">
+            <Outlet/>
+          </main>
+          <ReactQueryDevtools/>
+          <TanStackRouterDevtools position="bottom-right"/>
+        </div>
+      </ToastProvider>
     </AuthProvider>
   ),
 })

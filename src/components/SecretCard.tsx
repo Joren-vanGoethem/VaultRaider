@@ -1,9 +1,10 @@
 ﻿import {useMemo, useState} from 'react'
-import {fetchSecret, deleteSecret as deleteSecretService} from '../services/azureService'
+import {fetchSecret, deleteSecret as deleteSecretService, fetchSecretsKey} from '../services/azureService'
 import type {Secret, SecretBundle} from '../types/secrets'
 import {LoadingSpinner} from './LoadingSpinner'
 import {useQuery, useMutation, useQueryClient} from '@tanstack/react-query'
-import {TrashIcon, DownloadIcon, CheckCircle, XCircle} from "lucide-react";
+import {TrashIcon, DownloadIcon} from "lucide-react";
+import {useToast} from '../contexts/ToastContext'
 
 interface SecretCardProps {
   secret: Secret
@@ -15,10 +16,8 @@ interface SecretCardProps {
 export function SecretCard({secret, vaultUri, searchQuery = '', shouldLoad = false}: SecretCardProps) {
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [manualLoad, setManualLoad] = useState(false)
-  const [showSuccessToast, setShowSuccessToast] = useState(false)
-  const [showErrorToast, setShowErrorToast] = useState(false)
-  const [errorMessage, setErrorMessage] = useState('')
   const queryClient = useQueryClient()
+  const { showSuccess, showError } = useToast()
 
   // Helper function to format Unix timestamp to readable date
   const formatDate = (timestamp: number) => {
@@ -57,13 +56,13 @@ export function SecretCard({secret, vaultUri, searchQuery = '', shouldLoad = fal
     mutationFn: () => deleteSecretService(vaultUri, secretName),
     onMutate: async () => {
       // Cancel any outgoing refetches
-      await queryClient.cancelQueries({ queryKey: ['secrets', vaultUri] })
+      await queryClient.cancelQueries({ queryKey: [fetchSecretsKey, vaultUri] })
 
       // Snapshot the previous value
-      const previousSecrets = queryClient.getQueryData(['secrets', vaultUri])
+      const previousSecrets = queryClient.getQueryData([fetchSecretsKey, vaultUri])
 
       // Optimistically update to remove the secret
-      queryClient.setQueryData(['secrets', vaultUri], (old: any) => {
+      queryClient.setQueryData([fetchSecretsKey, vaultUri], (old: any) => {
         if (!old) return old
         return old.filter((s: any) => s.id !== secret.id)
       })
@@ -76,32 +75,25 @@ export function SecretCard({secret, vaultUri, searchQuery = '', shouldLoad = fal
       if (typeof data === 'string') {
         // If we got a string instead of a Secret, treat it as an error
         console.error('Unexpected string response from delete:', data)
-        setErrorMessage(data)
-        setShowErrorToast(true)
+        showError('Failed to delete secret', data)
         setShowDeleteModal(false)
 
         // Rollback the optimistic update
-        queryClient.invalidateQueries({ queryKey: ['secrets', vaultUri] })
-
-        setTimeout(() => setShowErrorToast(false), 5000)
+        queryClient.invalidateQueries({ queryKey: [fetchSecretsKey, vaultUri] })
         return
       }
 
+      showSuccess(`Secret "${secretName}" deleted successfully`)
       setShowDeleteModal(false)
-      setShowSuccessToast(true)
-      // Hide success toast after 3 seconds
-      setTimeout(() => setShowSuccessToast(false), 3000)
       // Refetch to ensure consistency
-      queryClient.invalidateQueries({ queryKey: ['secrets', vaultUri] })
+      queryClient.invalidateQueries({ queryKey: [fetchSecretsKey, vaultUri] })
     },
     onError: (error, _variables, context) => {
-      // Rollback on error
-      if (context?.previousSecrets) {
-        queryClient.setQueryData(['secrets', vaultUri], context.previousSecrets)
-      }
-
-      // Parse the error message to extract the actual error details
+            // Parse the error message to extract the actual error details
       let errorMsg = error instanceof Error ? error.message : String(error)
+
+      console.error('Failed to delete secret:', errorMsg)
+      showError('Failed to delete secret', errorMsg)
 
       // Try to extract the error message from the Azure API error response
       try {
@@ -121,13 +113,12 @@ export function SecretCard({secret, vaultUri, searchQuery = '', shouldLoad = fal
         console.error('Failed to parse error message:', parseError)
       }
 
-      console.error('Failed to delete secret:', errorMsg)
-      setErrorMessage(errorMsg)
-      setShowErrorToast(true)
-      setShowDeleteModal(false)
+      // Rollback on error
+      if (context?.previousSecrets) {
+        queryClient.setQueryData([fetchSecretsKey, vaultUri], context.previousSecrets)
+      }
 
-      // Hide error toast after 5 seconds
-      setTimeout(() => setShowErrorToast(false), 5000)
+      setShowDeleteModal(false)
     }
   })
 
@@ -297,25 +288,6 @@ export function SecretCard({secret, vaultUri, searchQuery = '', shouldLoad = fal
                 {deleteMutation.isPending ? 'Deleting...' : 'Delete'}
               </button>
             </div>
-          </div>
-        </div>
-      )}
-
-      {/* Success Toast */}
-      {showSuccessToast && (
-        <div className="fixed bottom-4 right-4 bg-green-600 text-white px-6 py-3 rounded-lg shadow-lg z-50 flex items-center gap-2 animate-in slide-in-from-bottom">
-          <CheckCircle className="w-5 h-5" />
-          <span className="font-medium">Secret "{secretName}" deleted successfully</span>
-        </div>
-      )}
-
-      {/* Error Toast */}
-      {showErrorToast && (
-        <div className="fixed bottom-4 right-4 bg-red-600 text-white px-6 py-3 rounded-lg shadow-lg z-50 flex items-center gap-2 max-w-md animate-in slide-in-from-bottom">
-          <XCircle className="w-5 h-5 shrink-0" />
-          <div>
-            <div className="font-medium">Failed to delete secret</div>
-            <div className="text-sm text-red-100 mt-1">{errorMessage}</div>
           </div>
         </div>
       )}
