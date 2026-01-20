@@ -3,16 +3,18 @@ import {fetchSecret, deleteSecret as deleteSecretService} from '../services/azur
 import type {Secret, SecretBundle} from '../types/secrets'
 import {LoadingSpinner} from './LoadingSpinner'
 import {useQuery, useMutation, useQueryClient} from '@tanstack/react-query'
-import {TrashIcon} from "lucide-react";
+import {TrashIcon, DownloadIcon} from "lucide-react";
 
 interface SecretCardProps {
   secret: Secret
   vaultUri: string
   searchQuery?: string
+  shouldLoad?: boolean
 }
 
-export function SecretCard({secret, vaultUri, searchQuery = ''}: SecretCardProps) {
+export function SecretCard({secret, vaultUri, searchQuery = '', shouldLoad = false}: SecretCardProps) {
   const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [manualLoad, setManualLoad] = useState(false)
   const queryClient = useQueryClient()
 
   // Helper function to format Unix timestamp to readable date
@@ -34,10 +36,14 @@ export function SecretCard({secret, vaultUri, searchQuery = ''}: SecretCardProps
 
   const secretName = getSecretName(secret.id)
 
-  // Use React Query to fetch the secret value
+  // Determine if we should fetch the secret value
+  const shouldFetch = shouldLoad || manualLoad
+
+  // Use React Query to fetch the secret value - only when enabled
   const { data: secretBundle, isLoading: loading, error } = useQuery<SecretBundle | null>({
     queryKey: ['secret', vaultUri, secretName],
-    queryFn: () => fetchSecret(vaultUri, secretName),
+    queryFn: ({ signal }) => fetchSecret(vaultUri, secretName, undefined, signal),
+    enabled: shouldFetch, // Only fetch when explicitly requested
     staleTime: 5 * 60 * 1000, // Consider data fresh for 5 minutes
     gcTime: 30 * 60 * 1000, // Keep in cache for 30 minutes (formerly cacheTime)
   })
@@ -84,6 +90,10 @@ export function SecretCard({secret, vaultUri, searchQuery = ''}: SecretCardProps
 
   const handleCancelDelete = () => {
     setShowDeleteModal(false)
+  }
+
+  const handleLoadSecret = () => {
+    setManualLoad(true)
   }
 
   const errorMessage = error instanceof Error ? error.message : error ? String(error) : null
@@ -135,32 +145,42 @@ export function SecretCard({secret, vaultUri, searchQuery = ''}: SecretCardProps
       </div>
 
       {/* Secret Value Section - Compact */}
-      {/*<div className="mb-2 p-2 bg-gray-50 dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700">*/}
-        {loading ? (
-          <div className="flex items-center gap-2 py-1">
-            <LoadingSpinner size="sm" />
-            <span className="text-xs text-gray-500 dark:text-gray-400">Loading value...</span>
+      {loading ? (
+        <div className="flex items-center gap-2 py-1 mb-2">
+          <LoadingSpinner size="sm" />
+          <span className="text-xs text-gray-500 dark:text-gray-400">Loading value...</span>
+        </div>
+      ) : errorMessage ? (
+        <div className="text-xs text-red-600 dark:text-red-400 py-1 mb-2">
+          {errorMessage}
+        </div>
+      ) : secretBundle ? (
+        <div className="flex items-start gap-2 mb-2">
+          <div className="flex-1 min-w-0 p-1.5 bg-white dark:bg-gray-900 rounded border border-gray-300 dark:border-gray-600 font-mono text-xs break-all max-h-20 overflow-y-auto">
+            {secretBundle.value}
           </div>
-        ) : errorMessage ? (
-          <div className="text-xs text-red-600 dark:text-red-400 py-1">
-            {errorMessage}
-          </div>
-        ) : secretBundle ? (
-          <div className="flex items-start gap-2">
-            <div className="flex-1 min-w-0 p-1.5 bg-white dark:bg-gray-900 rounded border border-gray-300 dark:border-gray-600 font-mono text-xs break-all max-h-20 overflow-y-auto">
-              {secretBundle.value}
-            </div>
-            <button
-              type="button"
-              onClick={() => copyToClipboard(secretBundle.value)}
-              className="text-xs px-2 py-1.5 rounded bg-gray-500 hover:bg-gray-600 text-white transition-colors font-medium shrink-0"
-              title="Copy secret value to clipboard"
-            >
-              📋
-            </button>
-          </div>
-        ) : null}
-      {/*</div>*/}
+          <button
+            type="button"
+            onClick={() => copyToClipboard(secretBundle.value)}
+            className="text-xs px-2 py-1.5 rounded bg-gray-500 hover:bg-gray-600 text-white transition-colors font-medium shrink-0"
+            title="Copy secret value to clipboard"
+          >
+            📋
+          </button>
+        </div>
+      ) : (
+        <div className="mb-2">
+          <button
+            type="button"
+            onClick={handleLoadSecret}
+            className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded bg-blue-500 hover:bg-blue-600 text-white transition-colors font-medium"
+            title="Load secret value"
+          >
+            <DownloadIcon className="w-3 h-3" />
+            Load Value
+          </button>
+        </div>
+      )}
 
       {/* Attributes - Compact Inline */}
       <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-600 dark:text-gray-400">

@@ -6,7 +6,7 @@ import {LoadingSpinner} from '../components/LoadingSpinner'
 import {fetchSecrets, fetchSecretsKey, createSecret} from '../services/azureService'
 import {SecretCard} from '../components/SecretCard'
 import {useSuspenseQuery, useMutation, useQueryClient} from '@tanstack/react-query'
-import {PlusIcon} from 'lucide-react'
+import {PlusIcon, DownloadIcon} from 'lucide-react'
 
 type KeyvaultSearch = {
   vaultUri: string
@@ -39,6 +39,7 @@ function Keyvaults() {
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [newSecretName, setNewSecretName] = useState('')
   const [newSecretValue, setNewSecretValue] = useState('')
+  const [loadAll, setLoadAll] = useState(false)
   const queryClient = useQueryClient()
 
   // Use React Query to fetch secrets list
@@ -82,6 +83,10 @@ function Keyvaults() {
     setNewSecretValue('')
   }
 
+  const handleLoadAll = () => {
+    setLoadAll(true)
+  }
+
   // Helper function to extract secret name from ID
   const getSecretName = (id: string) => {
     const parts = id.split('/')
@@ -113,15 +118,28 @@ function Keyvaults() {
               <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
                 Secrets
               </h2>
-              <button
-                type="button"
-                onClick={handleCreateClick}
-                className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-lg transition-colors"
-                title="Add new secret"
-              >
-                <PlusIcon className="w-4 h-4" />
-                Add Secret
-              </button>
+              <div className="flex gap-2">
+                {secrets.length > 0 && !loadAll && (
+                  <button
+                    type="button"
+                    onClick={handleLoadAll}
+                    className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
+                    title="Load all secret values"
+                  >
+                    <DownloadIcon className="w-4 h-4" />
+                    Load All Values
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={handleCreateClick}
+                  className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-lg transition-colors"
+                  title="Add new secret"
+                >
+                  <PlusIcon className="w-4 h-4" />
+                  Add Secret
+                </button>
+              </div>
             </div>
 
             {secrets.length > 0 && (
@@ -156,10 +174,10 @@ function Keyvaults() {
               </div>
             )}
 
-            {secrets.length > 5 && (
+            {secrets.length > 0 && !loadAll && (
               <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
                 <p className="text-sm text-blue-800 dark:text-blue-300">
-                  ℹ️ Secret values are loaded progressively (max 25 concurrent requests) to maintain performance.
+                  ℹ️ Secret values are not loaded by default. Click "Load Value" on individual secrets or "Load All Values" to fetch them.
                 </p>
               </div>
             )}
@@ -191,6 +209,7 @@ function Keyvaults() {
                     secret={secret}
                     vaultUri={vaultUri}
                     searchQuery={searchQuery}
+                    shouldLoad={loadAll}
                   />
                 ))}
               </div>

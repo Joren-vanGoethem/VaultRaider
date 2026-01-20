@@ -48,14 +48,36 @@ export async function fetchSecrets(keyvaultUri: string): Promise<Secret[]> {
   }
 }
 
-// Global request queue for secret fetching (max 5 concurrent requests)
-const secretRequestQueue = new RequestQueue(5);
+// Global request queue for secret fetching (max 10 concurrent requests)
+const secretRequestQueue = new RequestQueue(10);
 
-export async function fetchSecret(keyvaultUri: string, secretName: string, secretVersion: string | undefined = undefined) : Promise<SecretBundle | null> {
+export async function fetchSecret(
+  keyvaultUri: string,
+  secretName: string,
+  secretVersion: string | undefined = undefined,
+  signal?: AbortSignal
+): Promise<SecretBundle | null> {
   return secretRequestQueue.add(async () => {
+    // Check if already cancelled before starting
+    if (signal?.aborted) {
+      throw new Error('Request cancelled');
+    }
+
     try {
-      return await invoke('get_secret', {keyvaultUri, secretName, secretVersion});
+      const result = await invoke<SecretBundle>('get_secret', {keyvaultUri, secretName, secretVersion});
+
+      // Check if cancelled after invoke
+      if (signal?.aborted) {
+        throw new Error('Request cancelled');
+      }
+
+      return result;
     } catch (err) {
+      // Don't log cancellation errors
+      if (signal?.aborted) {
+        throw new Error('Request cancelled');
+      }
+
       const errorMessage = err instanceof Error ? err.message : String(err)
       console.error(`Failed to fetch secret ${secretName} from keyvault ${keyvaultUri}:`, errorMessage)
       return null;
