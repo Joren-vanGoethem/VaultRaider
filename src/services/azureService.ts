@@ -96,8 +96,9 @@ export async function deleteSecret(keyvaultUri: string, secretName: string): Pro
   }
 }
 
-export async function createSecret(keyvaultUri: string, secretName: string, secretValue: string): Promise<Secret[]> {
+export async function createSecret(keyvaultUri: string, secretName: string, secretValue: string): Promise<SecretBundle[]> {
   try {
+    console.log(`Creating secret ${secretName} with value ${secretValue} in keyvault ${keyvaultUri}...`);
     return await invoke('create_secret', {keyvaultUri, secretName, secretValue});
   } catch (err) {
     const errorMessage = err instanceof Error ? err.message : String(err)

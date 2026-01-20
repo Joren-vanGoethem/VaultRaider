@@ -11,6 +11,7 @@ import {PlusIcon, DownloadIcon} from 'lucide-react'
 type KeyvaultSearch = {
   vaultUri: string
   name: string
+  subscriptionId?: string
 }
 
 export const Route = createFileRoute('/keyvault')({
@@ -21,6 +22,7 @@ export const Route = createFileRoute('/keyvault')({
     return {
       vaultUri: search.vaultUri as string,
       name: search.name as string,
+      subscriptionId: search.subscriptionId as string | undefined,
     }
   },
 })
@@ -34,7 +36,7 @@ function SecretsLoadingSpinner() {
 }
 
 function Keyvaults() {
-  const { vaultUri, name } = Route.useSearch()
+  const { vaultUri, name, subscriptionId } = Route.useSearch()
   const [searchQuery, setSearchQuery] = useState('')
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [newSecretName, setNewSecretName] = useState('')
@@ -111,7 +113,17 @@ function Keyvaults() {
     <Suspense fallback={<SecretsLoadingSpinner/>}>
       <div className="h-full px-4 py-4">
         <div className="max-w-4xl mx-auto">
-          <PageHeader>{name}</PageHeader>
+          <div className="flex items-center justify-start gap-10">
+            <Link
+              to="/subscriptions"
+              search={subscriptionId ? { subscriptionId } : undefined}
+              className="inline-flex items-center gap-2 text-primary-500 hover:text-primary-600 dark:text-primary-400 dark:hover:text-primary-300 font-medium transition-colors"
+            >
+              <ArrowLeftIcon/>
+              Back to Vaults
+            </Link>
+            <PageHeader>{name}</PageHeader>
+          </div>
 
           <div className="card mb-6">
             <div className="flex items-center justify-between mb-4">
@@ -217,13 +229,7 @@ function Keyvaults() {
           </div>
 
           <div className="mt-6 text-center">
-            <Link
-              to="/subscriptions"
-              className="inline-flex items-center gap-2 text-primary-500 hover:text-primary-600 dark:text-primary-400 dark:hover:text-primary-300 font-medium transition-colors"
-            >
-              <ArrowLeftIcon/>
-              Back to Vaults
-            </Link>
+
           </div>
         </div>
 

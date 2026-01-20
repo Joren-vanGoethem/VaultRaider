@@ -30,7 +30,7 @@ function Content({ subscriptionId }: KeyVaultsListProps) {
   return (
     <div className="grid gap-4">
       {keyvaults.map(v => (
-        <KeyVaultCard key={v.id} vault={v} />
+        <KeyVaultCard key={v.id} vault={v} subscriptionId={subscriptionId} />
       ))}
     </div>
   )

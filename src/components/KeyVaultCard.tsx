@@ -6,9 +6,10 @@ import { CheckCircle, XCircle, Loader2 } from 'lucide-react'
 
 interface KeyVaultCardProps {
   vault: KeyVault
+  subscriptionId: string
 }
 
-export function KeyVaultCard({ vault }: KeyVaultCardProps) {
+export function KeyVaultCard({ vault, subscriptionId }: KeyVaultCardProps) {
   const { data: accessInfo, isLoading } = useQuery({
     queryKey: ['keyvault-access', vault.properties.vaultUri],
     queryFn: () => checkKeyvaultAccess(vault.properties.vaultUri),
@@ -45,7 +46,7 @@ export function KeyVaultCard({ vault }: KeyVaultCardProps) {
   return (
     <Link
       to="/keyvault"
-      search={{ vaultUri: vault.properties.vaultUri, name: vault.name }}
+      search={{ vaultUri: vault.properties.vaultUri, name: vault.name, subscriptionId }}
       className="block p-4 rounded-lg bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 hover:border-primary-500 dark:hover:border-primary-400 hover:shadow-md transition-all cursor-pointer"
     >
       <div className="flex justify-between items-start">

@@ -1,9 +1,9 @@
 ﻿use log::info;
-use reqwest::header::{HeaderMap, HeaderValue, AUTHORIZATION};
+use reqwest::header::{HeaderMap, HeaderValue, AUTHORIZATION, CONTENT_TYPE};
 use crate::azure::auth::token::get_token_for_scope;
 use crate::azure::keyvault::constants::KEYVAULT_TOKEN_SCOPE;
 use crate::azure::keyvault::secret::constants::{create_secret_uri, delete_secret_uri, get_secret_version_uri, get_secrets_uri};
-use crate::azure::keyvault::secret::types::{DeletedSecretBundle, Secret, SecretBundle, SecretListResponse};
+use crate::azure::keyvault::secret::types::{Secret, SecretBundle, SecretListResponse};
 
 #[tauri::command]
 pub async fn get_secrets(keyvault_uri: &str) -> Result<Vec<Secret>, String> {
@@ -102,7 +102,7 @@ pub async fn get_secret(keyvault_uri: &str, secret_name: &str, secret_version: O
 }
 
 #[tauri::command]
-pub async fn delete_secret(keyvault_uri: &str, secret_name: &str) -> Result<DeletedSecretBundle, String> {
+pub async fn delete_secret(keyvault_uri: &str, secret_name: &str) -> Result<Secret, String> {
   info!("Deleting secret {}...", secret_name);
 
   let url = delete_secret_uri(keyvault_uri, secret_name);
@@ -133,7 +133,7 @@ pub async fn delete_secret(keyvault_uri: &str, secret_name: &str) -> Result<Dele
     return Err(format!("API request failed: {}", error_text));
   }
 
-  let deleted_secret: DeletedSecretBundle = response
+  let deleted_secret: Secret = response
     .json()
     .await
     .map_err(|e| format!("Failed to parse response: {}", e))?;
@@ -159,8 +159,15 @@ pub async fn create_secret(keyvault_uri: &str, secret_name: &str, secret_value: 
       .map_err(|e| format!("Invalid header value: {}", e))?,
   );
 
+  headers.insert(
+    CONTENT_TYPE,
+    HeaderValue::from_static("application/json"),
+  );
+
   let body = format!("{{\"value\": \"{}\"}}", secret_value);
 
+  info!("Secret body: {}...", body.clone());
+  
   let response = client
     .put(url)
     .headers(headers.clone())
@@ -169,6 +176,9 @@ pub async fn create_secret(keyvault_uri: &str, secret_name: &str, secret_value: 
     .await
     .map_err(|e| format!("Failed to send request: {}", e))?;
 
+  info!("Create secret request sent...");
+  
+  
   if !response.status().is_success() {
     let error_text = response
       .text()
@@ -176,6 +186,8 @@ pub async fn create_secret(keyvault_uri: &str, secret_name: &str, secret_value: 
       .unwrap_or_else(|_| "Unknown error".to_string());
     return Err(format!("API request failed: {}", error_text));
   }
+
+  info!("Secret added {}...", secret_name);
 
   let created_secret: SecretBundle = response
     .json()
