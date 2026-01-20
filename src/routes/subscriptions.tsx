@@ -5,6 +5,7 @@ import {fetchSubscriptions, fetchSubscriptionsKey, fetchKeyVaults, fetchKeyvault
 import {LoadingSpinner} from '../components/LoadingSpinner'
 import {KeyvaultsList} from '../components/KeyvaultsList.tsx'
 import { useSuspenseQuery, useQueries} from "@tanstack/react-query";
+import {Subscription} from "~/types/subscriptions.ts";
 
 const subscriptionQueryOptions = { queryKey: [fetchSubscriptionsKey], queryFn: fetchSubscriptions }
 
@@ -28,7 +29,8 @@ export const Route = createFileRoute('/subscriptions')({
     // We don't await the key vault queries so the UI shows immediately
     queryClient.prefetchQuery(subscriptionQueryOptions).then((subscriptions) => {
       // Prefetch key vaults for all subscriptions in parallel (non-blocking)
-      subscriptions.forEach((sub) => {
+      // TODO@JOREN: do some proper type mapping
+      (subscriptions as unknown as Subscription[]).forEach((sub) => {
         queryClient.prefetchQuery({
           queryKey: [fetchKeyvaultsKey, sub.subscriptionId],
           queryFn: () => fetchKeyVaults(sub.subscriptionId),
@@ -40,7 +42,7 @@ export const Route = createFileRoute('/subscriptions')({
 
 function VaultsLoadingSpinner() {
   return (
-    <div className="h-full flex items-center justify-center">
+    <div className="h-full flex items-center justify-center p-10">
       <LoadingSpinner size="md"/>
     </div>
   )

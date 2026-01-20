@@ -30,7 +30,7 @@ export const Route = createFileRoute('/keyvault')({
 
 function SecretsLoadingSpinner() {
   return (
-    <div className="h-full flex items-center justify-center">
+    <div className="h-full flex items-center justify-center p-10">
       <LoadingSpinner size="md"/>
     </div>
   )
