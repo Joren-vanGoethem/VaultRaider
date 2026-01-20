@@ -86,14 +86,8 @@ export async function fetchSecret(
 }
 
 
-export async function deleteSecret(keyvaultUri: string, secretName: string): Promise<Secret[]> {
-  try {
-    return await invoke('delete_secret', {keyvaultUri, secretName});
-  } catch (err) {
-    const errorMessage = err instanceof Error ? err.message : String(err)
-    console.error(`Failed to delete secret ${secretName} for keyvault ${keyvaultUri}:`, errorMessage)
-    return [];
-  }
+export async function deleteSecret(keyvaultUri: string, secretName: string): Promise<Secret> {
+  return await invoke('delete_secret', {keyvaultUri, secretName});
 }
 
 export async function createSecret(keyvaultUri: string, secretName: string, secretValue: string): Promise<SecretBundle[]> {
