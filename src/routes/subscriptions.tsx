@@ -1,11 +1,14 @@
 ﻿import {createFileRoute} from '@tanstack/react-router'
 import {PageHeader} from '../components/PageHeader'
 import {Suspense, useState, useMemo, useEffect, useRef} from 'react'
-import {fetchSubscriptions, fetchSubscriptionsKey, fetchKeyVaults, fetchKeyvaultsKey} from '../services/azureService'
+import {fetchSubscriptions, fetchSubscriptionsKey, fetchKeyVaults, fetchKeyvaultsKey, createKeyvault} from '../services/azureService'
 import {LoadingSpinner} from '../components/LoadingSpinner'
 import {KeyvaultsList} from '../components/KeyvaultsList.tsx'
-import { useSuspenseQuery, useQueries} from "@tanstack/react-query";
+import { useSuspenseQuery, useQueries, useMutation, useQueryClient } from "@tanstack/react-query";
 import {Subscription} from "~/types/subscriptions.ts";
+import {CreateKeyvaultModal} from '../components/CreateKeyvaultModal'
+import {useToast} from '../contexts/ToastContext'
+import {PlusIcon} from 'lucide-react'
 
 const subscriptionQueryOptions = { queryKey: [fetchSubscriptionsKey], queryFn: fetchSubscriptions }
 
@@ -51,12 +54,15 @@ function VaultsLoadingSpinner() {
 function Subscriptions() {
   const { subscriptionId: urlSubscriptionId } = Route.useSearch()
   const subscriptions = useSuspenseQuery(subscriptionQueryOptions).data || [];
+  const queryClient = useQueryClient()
+  const { showSuccess, showError } = useToast()
+  const [showCreateModal, setShowCreateModal] = useState(false)
 
   // Fetch all key vaults for all subscriptions
   const keyvaultQueries = useQueries({
     queries: subscriptions.map((sub) => ({
       queryKey: [fetchKeyvaultsKey, sub.subscriptionId],
-      queryFn: () => fetchKeyVaults(sub.subscriptionId),
+      queryFn: () => fetchKeyVaults(sub.subscriptionId)
     })),
   });
 
@@ -114,6 +120,29 @@ function Subscriptions() {
     return subscriptions.find(s => s.subscriptionId === selectedSubscription)?.displayName || 'Select subscription'
   }, [subscriptions, selectedSubscription])
 
+  // Mutation for creating a new key vault
+  const createKeyvaultMutation = useMutation({
+    mutationFn: ({ resourceGroup, keyvaultName }: { resourceGroup: string; keyvaultName: string }) => {
+      if (!selectedSubscription) throw new Error('No subscription selected')
+      return createKeyvault(selectedSubscription, resourceGroup, keyvaultName)
+    },
+    onSuccess: (keyvault) => {
+      // Invalidate and refetch keyvaults list for the selected subscription
+      queryClient.invalidateQueries({ queryKey: [fetchKeyvaultsKey, selectedSubscription] })
+      setShowCreateModal(false)
+      showSuccess(`Key Vault "${keyvault?.name}" created successfully`)
+    },
+    onError: (error) => {
+      const errorMsg = error instanceof Error ? error.message : String(error)
+      console.error('Failed to create key vault:', errorMsg)
+      showError('Failed to create Key Vault', errorMsg)
+    }
+  })
+
+  const handleCreateKeyvault = (resourceGroup: string, keyvaultName: string) => {
+    createKeyvaultMutation.mutate({ resourceGroup, keyvaultName })
+  }
+
   return (
     <Suspense fallback={<VaultsLoadingSpinner/>}>
       <div className="h-full px-4 py-4">
@@ -136,15 +165,13 @@ function Subscriptions() {
                   {subscriptions.map((sub) => {
                     const count = keyvaultCounts.get(sub.subscriptionId) || 0;
                     const isLoading = keyvaultLoadingStates.get(sub.subscriptionId) || false;
-                    const hasKeyvaults = count > 0;
 
                     return (
                       <option
                         key={sub.subscriptionId}
                         value={sub.subscriptionId}
-                        disabled={!isLoading && !hasKeyvaults}
                       >
-                        {isLoading ? '⏳' : hasKeyvaults ? '✓' : '✗'} {sub.displayName} {isLoading ? '(loading...)' : `(${count} ${count === 1 ? 'vault' : 'vaults'})`}
+                        {isLoading ? '⏳' : count > 0 ? '✓' : '○'} {sub.displayName} {isLoading ? '(loading...)' : `(${count} ${count === 1 ? 'vault' : 'vaults'})`}
                       </option>
                     );
                   })}
@@ -154,9 +181,22 @@ function Subscriptions() {
           </div>
 
           <div className="card">
-            <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4">
-              Key Vaults in {selectedSubscriptionName}
-            </h2>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">
+                Key Vaults in {selectedSubscriptionName}
+              </h2>
+              {selectedSubscription && (
+                <button
+                  type="button"
+                  onClick={() => setShowCreateModal(true)}
+                  className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-lg transition-colors"
+                  title="Create new Key Vault"
+                >
+                  <PlusIcon className="w-4 h-4" />
+                  Create Key Vault
+                </button>
+              )}
+            </div>
 
             {anyQueriesLoading && (
               <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
@@ -170,10 +210,9 @@ function Subscriptions() {
             {allQueriesLoaded && selectedSubscription && keyvaultCounts.get(selectedSubscription) === 0 && (
               <div className="mb-4 p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
                 <p className="text-sm text-yellow-800 dark:text-yellow-300">
-                  ⚠️ This subscription has no accessible Key Vaults. This could be due to:
+                  ⚠️ No Key Vaults found in this subscription. You can create a new Key Vault using the button above, or this could be due to:
                 </p>
                 <ul className="mt-2 text-sm text-yellow-700 dark:text-yellow-400 list-disc list-inside space-y-1">
-                  <li>No Key Vaults exist in this subscription</li>
                   <li>Insufficient permissions to access Key Vaults</li>
                   <li>Network or firewall restrictions</li>
                 </ul>
@@ -188,6 +227,18 @@ function Subscriptions() {
           </div>
         </div>
       </div>
+
+      {/* Create Key Vault Modal */}
+      {selectedSubscription && (
+        <CreateKeyvaultModal
+          isOpen={showCreateModal}
+          onConfirm={handleCreateKeyvault}
+          onCancel={() => setShowCreateModal(false)}
+          subscriptionId={selectedSubscription}
+          subscriptionName={selectedSubscriptionName}
+          isCreating={createKeyvaultMutation.isPending}
+        />
+      )}
     </Suspense>
 
   )

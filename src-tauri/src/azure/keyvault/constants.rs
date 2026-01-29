@@ -3,7 +3,7 @@ pub const KEYVAULT_TOKEN_SCOPE: &str = "https://vault.azure.net/.default";
 
 pub fn get_keyvault_uri(subscription_id: &str) -> String {
     format!(
-        "https://management.azure.com/subscriptions/{}/providers/Microsoft.KeyVault/vaults?api-version=2025-05-01", subscription_id
+        "https://management.azure.com/subscriptions/{}/providers/Microsoft.KeyVault/vaults?api-version=2024-11-01", subscription_id
     )
 }
 

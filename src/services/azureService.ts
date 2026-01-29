@@ -9,6 +9,7 @@ export const fetchResourceGroupsKey = 'fetch_resourcegroups';
 export const fetchSubscriptionsKey = 'fetch_subscriptions';
 export const fetchKeyvaultsKey = 'fetch_keyvaults';
 export const fetchSecretsKey = 'fetch_secrets';
+export const createKeyvaultKey = 'create_keyvault';
 
 export async function fetchResourceGroups(subscriptionId: string): Promise<ResourceGroup[]> {
   try {

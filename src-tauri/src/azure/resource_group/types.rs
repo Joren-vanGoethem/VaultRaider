@@ -9,10 +9,10 @@ pub type ResourceGroupListResponse = AzureListResponse<ResourceGroup>;
 pub struct ResourceGroup {
   pub id: String,
   pub location: String,
-  pub managedBy: String,
+  pub managedBy: Option<String>,
   pub name: String,
   pub properties: Properties,
-  pub tags: Tags,
+  pub tags: Option<Tags>,
   pub r#type: String,
 }
 
