@@ -3,8 +3,8 @@
 //! This module provides a reusable function for handling Azure's
 //! paginated API responses that use the `nextLink` pattern.
 
-use log::{debug, info};
 use serde::de::DeserializeOwned;
+use tracing::{debug, info};
 
 use crate::azure::auth::types::AzureListResponse;
 use crate::azure::http::client::AzureHttpClient;
@@ -55,25 +55,25 @@ where
 
     while let Some(url) = current_url {
         page_count += 1;
-        debug!("Fetching page {} from: {}", page_count, url);
+        debug!(page = page_count, url = %url, "Fetching page");
 
         let response: AzureListResponse<T> = client.get(&url).await?;
         let items_count = response.value.len();
         
-        debug!("Page {} returned {} item(s)", page_count, items_count);
+        debug!(page = page_count, items = items_count, "Page fetched");
         results.extend(response.value);
 
         current_url = response.next_link;
         
         if current_url.is_some() {
-            debug!("Next page link found, continuing...");
+            debug!("Next page link found, continuing pagination");
         }
     }
 
     info!(
-        "Pagination complete: fetched {} total item(s) across {} page(s)",
-        results.len(),
-        page_count
+        total_items = results.len(),
+        pages = page_count,
+        "Pagination complete"
     );
 
     Ok(results)
@@ -126,26 +126,26 @@ where
 
     while let Some(url) = current_url {
         page_count += 1;
-        debug!("Fetching page {} from: {}", page_count, url);
+        debug!(page = page_count, url = %url, "Fetching page");
 
         let response: R = client.get(&url).await?;
         let items = extract_items(&response);
         let items_count = items.len();
         
-        debug!("Page {} returned {} item(s)", page_count, items_count);
+        debug!(page = page_count, items = items_count, "Page fetched");
         results.extend(items);
 
         current_url = extract_next_link(&response);
         
         if current_url.is_some() {
-            debug!("Next page link found, continuing...");
+            debug!("Next page link found, continuing pagination");
         }
     }
 
     info!(
-        "Pagination complete: fetched {} total item(s) across {} page(s)",
-        results.len(),
-        page_count
+        total_items = results.len(),
+        pages = page_count,
+        "Pagination complete"
     );
 
     Ok(results)

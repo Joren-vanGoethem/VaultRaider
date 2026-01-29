@@ -1,4 +1,4 @@
-﻿# VaultRaider Codebase Improvement Roadmap
+﻿﻿# VaultRaider Codebase Improvement Roadmap
 
 This document outlines actionable steps to improve the VaultRaider codebase focusing on **reusability**, **readability**, and **observability**.
 
@@ -172,38 +172,40 @@ pub struct GlobalTokenProvider;
 
 ## 2. Readability Improvements
 
-### 2.1 Reorganize Module Structure
+### 2.1 Reorganize Module Structure ✅
 
-**Current Structure Issues:**
+**Problem:** 
 - `auth/auth.rs` has redundant naming
 - Commands are mixed with business logic in `lib.rs`
 - Constants are scattered across modules
 
-**Proposed Structure:**
+**Solution:** Reorganized into a clean layered architecture.
+
+**New Structure (IMPLEMENTED):**
 ```
 src/
 ├── lib.rs                    # App entry point only
-├── error.rs                  # Unified error types
+├── config.rs                 # Centralized configuration and URL builders
 ├── commands/                 # Tauri commands (thin wrappers)
 │   ├── mod.rs
 │   ├── auth.rs
 │   ├── keyvault.rs
-│   └── subscription.rs
+│   ├── subscription.rs
+│   └── resource_group.rs
 ├── azure/
 │   ├── mod.rs
 │   ├── http/                 # Reusable HTTP utilities
 │   │   ├── mod.rs
 │   │   ├── client.rs
+│   │   ├── error.rs
 │   │   └── pagination.rs
 │   ├── auth/
 │   │   ├── mod.rs
-│   │   ├── provider.rs       # Renamed from auth.rs
-│   │   ├── cli.rs
-│   │   ├── device_code.rs
+│   │   ├── service.rs        # Renamed from auth.rs
+│   │   ├── provider.rs
 │   │   ├── interactive.rs    # Renamed from interactive_browser.rs
-│   │   ├── service_principal.rs
-│   │   ├── state.rs
-│   │   └── token.rs
+│   │   ├── device_code.rs
+│   │   └── ...
 │   ├── keyvault/
 │   │   ├── mod.rs
 │   │   ├── service.rs        # Business logic
@@ -220,9 +222,13 @@ src/
 │       ├── mod.rs
 │       ├── service.rs
 │       └── types.rs
-└── config/
-    └── mod.rs                # All constants centralized
 ```
+
+**Key Improvements:**
+- Commands in `commands/` module (thin wrappers calling services)
+- Business logic in `service.rs` files
+- All constants centralized in `config.rs` with URL builder functions
+- Backwards-compatible re-exports for gradual migration
 
 ### 2.2 Separate Commands from Business Logic
 
@@ -311,43 +317,87 @@ lazy_static! {
 
 ## 3. Observability & Error Handling
 
-### 3.1 Structured Logging with Context
+### 3.1 Structured Logging with Context ✅
 
 **Problem:** Current logging lacks context like request IDs, user info, and operation timing.
 
-**Solution:** Implement structured logging with `tracing` instead of `log`.
+**Solution:** Implemented structured logging with `tracing` instead of `log`.
 
+**Dependencies Added (Cargo.toml):**
 ```toml
-# Cargo.toml additions
-[dependencies]
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["json", "env-filter"] }
+uuid = { version = "1.0", features = ["v4"] }
 ```
 
+**Telemetry Module Created (`src/telemetry.rs`):**
 ```rust
-// src/azure/keyvault/service.rs
-use tracing::{info, error, debug, instrument, Span};
+// Initializes tracing with environment-based filtering
+pub fn init() {
+    let env_filter = EnvFilter::try_from_default_env()
+        .unwrap_or_else(|_| EnvFilter::new("vaultraider=info,warn"));
 
+    let fmt_layer = fmt::layer()
+        .with_target(true)
+        .with_thread_ids(true)
+        .with_file(true)
+        .with_line_number(true)
+        .with_span_events(FmtSpan::CLOSE);
+
+    tracing_subscriber::registry()
+        .with(env_filter)
+        .with(fmt_layer)
+        .init();
+}
+```
+
+**Service Methods Instrumented:**
+```rust
+// Example from keyvault/service.rs
 #[instrument(
-    name = "get_keyvaults",
+    name = "keyvault.list",
     skip(subscription_id),
     fields(
         subscription_id = %subscription_id,
-        vault_count = tracing::field::Empty
+        vault_count = tracing::field::Empty,
+        otel.kind = "client",
     )
 )]
-pub async fn get_keyvaults(subscription_id: &str) -> Result<Vec<KeyVault>, VaultRaiderError> {
-    info!("Starting keyvault fetch");
-    
-    let vaults = fetch_keyvaults_internal(subscription_id).await?;
-    
-    // Record the count in the span
-    Span::current().record("vault_count", vaults.len());
-    
-    info!(count = vaults.len(), "Successfully fetched keyvaults");
-    Ok(vaults)
+pub async fn get_keyvaults(subscription_id: &str) -> Result<Vec<KeyVault>, String> {
+    info!("Fetching keyvaults");
+    // ...
+    Span::current().record("vault_count", kv_list.len());
+    info!(count = kv_list.len(), "Successfully retrieved keyvaults");
+    Ok(kv_list)
 }
 ```
+
+**HTTP Client Instrumented with Request IDs:**
+```rust
+#[instrument(
+    name = "azure_http_request",
+    skip(self, body),
+    fields(
+        request_id = %uuid::Uuid::new_v4(),
+        http.method = %method,
+        http.url = %url,
+        http.status_code = tracing::field::Empty,
+        response_size_bytes = tracing::field::Empty,
+    )
+)]
+async fn request<T, B>(&self, method: Method, url: &str, body: Option<&B>) -> Result<T, AzureHttpError>
+```
+
+**Files Updated:**
+- `src/telemetry.rs` - New telemetry initialization module
+- `src/lib.rs` - Calls `telemetry::init()` on startup
+- `src/azure/http/client.rs` - HTTP requests with request IDs and timing
+- `src/azure/http/pagination.rs` - Pagination with structured logging
+- `src/azure/keyvault/service.rs` - Key Vault operations instrumented
+- `src/azure/keyvault/secret/service.rs` - Secret operations instrumented
+- `src/azure/subscription/service.rs` - Subscription operations instrumented
+- `src/azure/resource_group/service.rs` - Resource group operations instrumented
+- `src/azure/auth/provider.rs` - Token acquisition instrumented
 
 ### 3.2 Implement Request/Response Logging Middleware
 
@@ -679,12 +729,12 @@ pub fn run() {
 - [x] Implement generic HTTP client wrapper (Implemented in `src/azure/http/`)
 - [x] Add generic pagination handler (Implemented in `src/azure/http/pagination.rs`)
 - [x] Extract token management into a trait (Implemented in `src/azure/auth/provider.rs`)
-- [ ] Reorganize module structure
+- [x] Reorganize module structure (Implemented with `commands/`, `config.rs`, service layers)
 
 ### Phase 2: Observability (Week 3-4)
-- [ ] Migrate from `log` to `tracing`
-- [ ] Add structured logging with context
-- [ ] Implement request/response logging middleware
+- [x] Migrate from `log` to `tracing` (Implemented in all service modules)
+- [x] Add structured logging with context (Implemented with `#[instrument]` macros)
+- [x] Implement request/response logging middleware (Implemented in `http/client.rs`)
 - [ ] Add documentation comments to public APIs
 
 ### Phase 3: OpenTelemetry (Week 5-6)

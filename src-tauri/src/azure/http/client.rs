@@ -3,7 +3,7 @@
 //! This module provides a generic HTTP client wrapper that handles:
 //! - Bearer token authentication
 //! - Common headers (Content-Type, etc.)
-//! - Request/response logging
+//! - Request/response logging with tracing
 //! - Error handling with detailed context
 //! - Automatic JSON serialization/deserialization
 //!
@@ -18,18 +18,18 @@
 //! let vaults: Vec<KeyVault> = client.get(&url).await?;
 //! ```
 
-use log::{debug, error};
 use reqwest::header::{HeaderMap, HeaderValue, AUTHORIZATION, CONTENT_TYPE};
 use reqwest::{Client, Method, Response};
 use serde::de::DeserializeOwned;
 use serde::Serialize;
+use tracing::{debug, error, info, instrument, Span};
 
 use super::error::AzureHttpError;
 
 /// A reusable HTTP client for making authenticated requests to Azure APIs.
 ///
 /// The client handles common concerns like authentication headers, JSON
-/// serialization, error handling, and logging.
+/// serialization, error handling, and structured logging with tracing.
 #[derive(Clone)]
 pub struct AzureHttpClient {
     client: Client,
@@ -78,7 +78,7 @@ impl AzureHttpClient {
         self.base_headers.insert(
             AUTHORIZATION,
             HeaderValue::from_str(&format!("Bearer {}", token)).map_err(|e| {
-                error!("Invalid authorization header value: {}", e);
+                error!(error = %e, "Invalid authorization header value");
                 AzureHttpError::InvalidHeader(e.to_string())
             })?,
         );
@@ -237,6 +237,17 @@ impl AzureHttpClient {
     }
 
     /// Internal method to perform a request and deserialize the response.
+    #[instrument(
+        name = "azure_http_request",
+        skip(self, body),
+        fields(
+            request_id = %uuid::Uuid::new_v4(),
+            http.method = %method,
+            http.url = %url,
+            http.status_code = tracing::field::Empty,
+            response_size_bytes = tracing::field::Empty,
+        )
+    )]
     async fn request<T, B>(
         &self,
         method: Method,
@@ -249,11 +260,16 @@ impl AzureHttpClient {
     {
         let response_text = self.request_text(method, url, body).await?;
 
-        debug!("Response body length: {} bytes", response_text.len());
+        let response_size = response_text.len();
+        Span::current().record("response_size_bytes", response_size);
+        debug!(response_size_bytes = response_size, "Response received");
 
         serde_json::from_str(&response_text).map_err(|e| {
-            error!("Failed to parse response: {}", e);
-            error!("Response body: {}", response_text);
+            error!(
+                error = %e,
+                response_preview = %response_text.chars().take(500).collect::<String>(),
+                "Failed to parse JSON response"
+            );
             AzureHttpError::ParseError {
                 message: e.to_string(),
                 body: Some(response_text),
@@ -275,7 +291,7 @@ impl AzureHttpClient {
         let response = self.check_status(response).await?;
 
         response.text().await.map_err(|e| {
-            error!("Failed to read response body: {}", e);
+            error!(error = %e, "Failed to read response body");
             AzureHttpError::ResponseBodyError(e.to_string())
         })
     }
@@ -290,7 +306,7 @@ impl AzureHttpClient {
     where
         B: Serialize,
     {
-        debug!("Sending {} request to: {}", method, url);
+        debug!(method = %method, url = %url, "Sending HTTP request");
 
         let mut request = self.client.request(method.clone(), url);
         request = request.headers(self.base_headers.clone());
@@ -299,15 +315,15 @@ impl AzureHttpClient {
         if let Some(body) = body {
             request = request.header(CONTENT_TYPE, "application/json");
             let body_json = serde_json::to_string(body).map_err(|e| {
-                error!("Failed to serialize request body: {}", e);
+                error!(error = %e, "Failed to serialize request body");
                 AzureHttpError::SerializationError(e.to_string())
             })?;
-            debug!("Request body: {}", body_json);
+            debug!(body_size = body_json.len(), "Request body serialized");
             request = request.body(body_json);
         }
 
         request.send().await.map_err(|e| {
-            error!("Failed to send request to {}: {}", url, e);
+            error!(error = %e, url = %url, "HTTP request failed");
             AzureHttpError::NetworkError(e.to_string())
         })
     }
@@ -315,20 +331,27 @@ impl AzureHttpClient {
     /// Internal method to check response status and return error for non-success codes.
     async fn check_status(&self, response: Response) -> Result<Response, AzureHttpError> {
         let status = response.status();
-        debug!("Response status: {}", status);
+        Span::current().record("http.status_code", status.as_u16());
+        
+        debug!(status = %status, "Response status received");
 
         if !status.is_success() {
             let error_text = response
                 .text()
                 .await
                 .unwrap_or_else(|_| "Unknown error".to_string());
-            error!("API request failed with status {}: {}", status, error_text);
+            error!(
+                status = status.as_u16(),
+                error = %error_text,
+                "API request failed"
+            );
             return Err(AzureHttpError::ApiError {
                 status: status.as_u16(),
                 message: error_text,
             });
         }
 
+        info!(status = status.as_u16(), "Request completed successfully");
         Ok(response)
     }
 }

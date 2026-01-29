@@ -1,96 +1,33 @@
+//! VaultRaider - Azure Key Vault Management Application
+//!
+//! This is the main library entry point for the Tauri application.
+
 mod azure;
+mod commands;
+mod config;
+mod telemetry;
 
-use crate::azure::auth::auth::{get_user_info, is_authenticated, login, logout};
-use crate::azure::auth::device_code::*;
-use crate::azure::auth::interactive_browser::{
-    complete_interactive_browser_login, start_interactive_browser_login,
+use commands::auth::{
+    azure_login, azure_logout, check_auth, complete_browser_login, complete_device_code,
+    get_current_user, start_browser_login, start_device_code,
 };
-use crate::azure::auth::types::{AuthResult, DeviceCodeInfo};
-use crate::azure::keyvault::client::{check_keyvault_access, create_keyvault, get_keyvaults};
-use crate::azure::keyvault::secret::client::{
-    create_secret, delete_secret, get_secret, get_secrets, update_secret,
+use commands::keyvault::{
+  check_keyvault_access, create_keyvault, create_secret, delete_secret,
+  get_secret, get_secrets, update_secret, fetch_keyvaults,
 };
-use crate::azure::keyvault::types::KeyVault;
-use crate::azure::resource_group::client::get_resource_groups;
-use crate::azure::subscriptions::{get_subscriptions, Subscription};
-
-#[derive(serde::Serialize)]
-struct UserInfo {
-    email: String,
-    name: Option<String>,
-}
-
-// Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
-
-/// Tauri command to start Azure login (tries Azure CLI first, then Device Code Flow)
-#[tauri::command]
-async fn azure_login() -> Result<AuthResult, String> {
-    login().await
-}
-
-/// Tauri command to explicitly start device code flow
-#[tauri::command]
-async fn start_device_code() -> Result<DeviceCodeInfo, String> {
-    start_device_code_login().await
-}
-
-/// Tauri command to complete device code authentication
-#[tauri::command]
-async fn complete_device_code() -> Result<AuthResult, String> {
-    complete_device_code_login().await
-}
-
-/// Tauri command to start interactive browser authentication (RECOMMENDED - no secret needed!)
-#[tauri::command]
-async fn start_browser_login() -> Result<DeviceCodeInfo, String> {
-    start_interactive_browser_login().await
-}
-
-/// Tauri command to complete browser authentication with authorization code
-#[tauri::command]
-async fn complete_browser_login(auth_code: String, state: String) -> Result<AuthResult, String> {
-    complete_interactive_browser_login().await
-}
-
-/// Tauri command to check authentication status
-#[tauri::command]
-async fn check_auth() -> bool {
-    is_authenticated().await
-}
-
-/// Tauri command to get current user info
-#[tauri::command]
-async fn get_current_user() -> Option<UserInfo> {
-    get_user_info()
-        .await
-        .map(|(email, name)| UserInfo { email, name })
-}
-
-/// Tauri command to logout
-#[tauri::command]
-async fn azure_logout() -> Result<String, String> {
-    logout().await;
-    Ok("Logged out successfully".to_string())
-}
-
-/// Tauri command to fetch Azure subscriptions
-#[tauri::command]
-async fn fetch_subscriptions() -> Result<Vec<Subscription>, String> {
-    get_subscriptions().await
-}
-
-/// Tauri command to fetch Azure Key Subscriptions for a subscription
-#[tauri::command]
-async fn fetch_keyvaults(subscription_id: String) -> Result<Vec<KeyVault>, String> {
-    get_keyvaults(&subscription_id).await
-}
+use commands::resource_group::cmd_get_resource_groups;
+use commands::subscription::fetch_subscriptions;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    // Initialize structured logging with tracing
+    telemetry::init();
+
     tauri::Builder::default()
-        .plugin(tauri_plugin_log::Builder::new().build())
+        // .plugin(tauri_plugin_log::Builder::new().build())
         .plugin(tauri_plugin_opener::init())
         .invoke_handler(tauri::generate_handler![
+            // Auth commands
             azure_login,
             start_device_code,
             complete_device_code,
@@ -99,16 +36,20 @@ pub fn run() {
             check_auth,
             get_current_user,
             azure_logout,
+            // Subscription commands
             fetch_subscriptions,
+            // Key Vault commands
             fetch_keyvaults,
             check_keyvault_access,
+            create_keyvault,
+            // Secret commands
             get_secrets,
             get_secret,
             delete_secret,
             create_secret,
             update_secret,
-            create_keyvault,
-            get_resource_groups
+            // Resource Group commands
+            cmd_get_resource_groups,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

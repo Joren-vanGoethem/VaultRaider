@@ -6,7 +6,7 @@
 use std::sync::Arc;
 use async_trait::async_trait;
 use azure_core::credentials::TokenCredential;
-use log::{debug, error, info};
+use tracing::{debug, error, info, instrument};
 
 use crate::azure::http::AzureHttpError;
 
@@ -106,21 +106,21 @@ impl TokenProvider for CredentialTokenProvider {
     }
 
     async fn get_token_for_scope(&self, scope: &str) -> Result<String, AzureHttpError> {
-        debug!("Requesting token for scope: {}", scope);
+        debug!(scope = %scope, "Requesting token");
 
         let token_response = self
             .credential
             .get_token(&[scope], None)
             .await
             .map_err(|e| {
-                error!("Failed to get token for scope {}: {}", scope, e);
+                error!(scope = %scope, error = %e, "Failed to get token");
                 AzureHttpError::TokenError(format!(
                     "Failed to get token for scope {}: {}",
                     scope, e
                 ))
             })?;
 
-        info!("Successfully obtained token for scope: {}", scope);
+        info!(scope = %scope, "Successfully obtained token");
         Ok(token_response.token.secret().to_string())
     }
 
@@ -165,8 +165,13 @@ impl TokenProvider for GlobalTokenProvider {
         self.get_token_for_scope(KEYVAULT_SCOPE).await
     }
 
+    #[instrument(
+        name = "token.get_for_scope",
+        skip(self),
+        fields(scope = %scope)
+    )]
     async fn get_token_for_scope(&self, scope: &str) -> Result<String, AzureHttpError> {
-        debug!("Requesting token for scope: {} (from global state)", scope);
+        debug!("Requesting token from global state");
 
         let credential = {
             let cred_lock = AUTH_CREDENTIAL.lock().await;
@@ -180,14 +185,14 @@ impl TokenProvider for GlobalTokenProvider {
             .get_token(&[scope], None)
             .await
             .map_err(|e| {
-                error!("Failed to get token for scope {}: {}", scope, e);
+                error!(error = %e, "Failed to get token");
                 AzureHttpError::TokenError(format!(
                     "Failed to get token for scope {}: {}",
                     scope, e
                 ))
             })?;
 
-        info!("Successfully obtained token for scope: {}", scope);
+        info!("Successfully obtained token");
         Ok(token_response.token.secret().to_string())
     }
 
