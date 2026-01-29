@@ -3,10 +3,22 @@ import type {Subscription} from "~/types/subscriptions.ts";
 import {KeyVault, KeyVaultAccess} from "~/types/keyvault.ts";
 import {Secret, SecretBundle} from "~/types/secrets.ts";
 import {RequestQueue} from "./requestQueue.ts";
+import {ResourceGroup} from "~/types/resourceGroups.ts";
 
+export const fetchResourceGroupsKey = 'fetch_resourcegroups';
 export const fetchSubscriptionsKey = 'fetch_subscriptions';
 export const fetchKeyvaultsKey = 'fetch_keyvaults';
 export const fetchSecretsKey = 'fetch_secrets';
+
+export async function fetchResourceGroups(subscriptionId: string): Promise<ResourceGroup[]> {
+  try {
+    return await invoke<ResourceGroup[]>('get_resource_groups', {subscriptionId});
+  } catch (err) {
+    const errorMessage = err instanceof Error ? err.message : String(err)
+    console.error('Failed to fetch resource groups:', errorMessage)
+    return []
+  }
+}
 
 export async function fetchSubscriptions(): Promise<Subscription[]> {
   try {
@@ -25,6 +37,16 @@ export async function fetchKeyVaults(subscriptionId: string): Promise<KeyVault[]
     const errorMessage = err instanceof Error ? err.message : String(err)
     console.error(`Failed to fetch key vaults for subscription ${subscriptionId}:`, errorMessage)
     return [];
+  }
+}
+
+export async function createKeyvault(subscriptionId: string, resourceGroup: string, keyvaultName: string): Promise<KeyVault | null> {
+  try {
+    return await invoke<KeyVault>('create_keyvault', {subscriptionId, resourceGroup, keyvaultName});
+  } catch (err) {
+    const errorMessage = err instanceof Error ? err.message : String(err)
+    console.error(`Failed to create keyvault ${keyvaultName} in resource group ${resourceGroup}:`, errorMessage)
+    throw new Error(errorMessage);
   }
 }
 
