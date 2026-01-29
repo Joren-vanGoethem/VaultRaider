@@ -2,12 +2,17 @@ mod azure;
 
 use crate::azure::auth::auth::{get_user_info, is_authenticated, login, logout};
 use crate::azure::auth::device_code::*;
-use crate::azure::auth::interactive_browser::{complete_interactive_browser_login, start_interactive_browser_login};
-use crate::azure::subscriptions::{get_subscriptions, Subscription};
+use crate::azure::auth::interactive_browser::{
+    complete_interactive_browser_login, start_interactive_browser_login,
+};
 use crate::azure::auth::types::{AuthResult, DeviceCodeInfo};
-use crate::azure::keyvault::types::{KeyVault};
-use crate::azure::keyvault::client::{get_keyvaults, check_keyvault_access};
-use crate::azure::keyvault::secret::client::{get_secrets, get_secret, delete_secret, create_secret, update_secret};
+use crate::azure::keyvault::client::{check_keyvault_access, create_keyvault, get_keyvaults};
+use crate::azure::keyvault::secret::client::{
+    create_secret, delete_secret, get_secret, get_secrets, update_secret,
+};
+use crate::azure::keyvault::types::KeyVault;
+use crate::azure::resource_group::client::get_resource_groups;
+use crate::azure::subscriptions::{get_subscriptions, Subscription};
 
 #[derive(serde::Serialize)]
 struct UserInfo {
@@ -56,7 +61,9 @@ async fn check_auth() -> bool {
 /// Tauri command to get current user info
 #[tauri::command]
 async fn get_current_user() -> Option<UserInfo> {
-    get_user_info().await.map(|(email, name)| UserInfo { email, name })
+    get_user_info()
+        .await
+        .map(|(email, name)| UserInfo { email, name })
 }
 
 /// Tauri command to logout
@@ -99,7 +106,9 @@ pub fn run() {
             get_secret,
             delete_secret,
             create_secret,
-            update_secret
+            update_secret,
+            create_keyvault,
+            get_resource_groups
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

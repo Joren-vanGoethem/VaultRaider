@@ -141,7 +141,6 @@ pub async fn delete_secret(keyvault_uri: &str, secret_name: &str) -> Result<Secr
   Ok(deleted_secret)
 }
 
-
 #[tauri::command]
 pub async fn create_secret(keyvault_uri: &str, secret_name: &str, secret_value: &str) -> Result<SecretBundle, String> {
   info!("Adding secret {}...", secret_name);

@@ -1,10 +1,12 @@
 ﻿use log::info;
-use reqwest::header::{HeaderMap, HeaderValue, AUTHORIZATION};
+use reqwest::header::{HeaderMap, HeaderValue, AUTHORIZATION, CONTENT_TYPE};
 use crate::azure::auth::token::{get_token_from_state, get_token_for_scope};
 use crate::azure::auth::types::AzureListResponse;
-use crate::azure::keyvault::constants::{get_keyvault_uri, TOKEN_URI, KEYVAULT_TOKEN_SCOPE};
+use crate::azure::keyvault::constants::{get_keyvault_uri, MANAGEMENT_TOKEN_SCOPE, KEYVAULT_TOKEN_SCOPE, create_keyvault_uri};
 use crate::azure::keyvault::secret::constants::get_secrets_uri;
-use crate::azure::keyvault::types::{KeyVault, KeyVaultAccessCheck, KeyVaultListResponse};
+use crate::azure::keyvault::types::{CreateVaultRequest, KeyVault, KeyVaultAccessCheck, KeyVaultListResponse};
+
+// https://learn.microsoft.com/en-us/rest/api/keyvault/secrets/get-secrets/get-secrets?view=rest-keyvault-secrets-2025-07-01&tabs=HTTP
 
 /// Fetch all Key Subscriptions for a specific subscription
 pub async fn get_keyvaults(subscription_id: &str) -> Result<Vec<KeyVault>, String> {
@@ -137,3 +139,61 @@ pub async fn check_keyvault_access(keyvault_uri: &str) -> Result<KeyVaultAccessC
   }
 }
 
+#[tauri::command]
+pub async fn create_keyvault(subscription_id: &str, resource_group: &str, keyvault_name: &str) -> Result<KeyVault, String> {
+  let url = create_keyvault_uri(subscription_id, resource_group, keyvault_name);
+
+  // Get token for Key Vault data plane, not management API
+  let token = get_token_for_scope(KEYVAULT_TOKEN_SCOPE).await?;
+
+  let client = reqwest::Client::new();
+  let mut headers = HeaderMap::new();
+  headers.insert(
+    AUTHORIZATION,
+    HeaderValue::from_str(&format!("Bearer {}", token))
+      .map_err(|e| format!("Invalid header value: {}", e))?,
+  );
+
+  headers.insert(
+    CONTENT_TYPE,
+    HeaderValue::from_static("application/json"),
+  );
+
+  let body = CreateVaultRequest {
+    location: "europe-north".to_string()
+  };
+
+  let jsonBody = serde_json::to_string(&body).unwrap_or_else(|_| "".to_string());
+
+  info!("body: {}...", jsonBody.clone());
+
+  let response = client
+    .put(url)
+    .headers(headers.clone())
+    .body(jsonBody)
+    .send()
+    .await
+    .map_err(|e| format!("Failed to send request: {}", e))?;
+
+  info!("Create vault request sent...");
+
+
+  if !response.status().is_success() {
+    let error_text = response
+      .text()
+      .await
+      .unwrap_or_else(|_| "Unknown error".to_string());
+    return Err(format!("API request failed: {}", error_text));
+  }
+
+  info!("Keyvault added {}...", keyvault_name);
+
+  let created_vault: crate::azure::keyvault::types::KeyVault = response
+    .json()
+    .await
+    .map_err(|e| format!("Failed to parse response: {}", e))?;
+
+  Ok(created_vault)
+  // Err("Not implemented".to_string())
+
+}

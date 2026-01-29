@@ -78,4 +78,8 @@ pub struct KeyVaultAccessCheck {
     pub error_message: Option<String>,
 }
 
-
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CreateVaultRequest {
+    pub(crate) location: String
+}

@@ -17,7 +17,7 @@ pub async fn get_token_from_state() -> Result<String, String> {
 
     // Get a token for the Azure Management API
     let token_response = credential
-      .get_token(&[crate::azure::keyvault::constants::TOKEN_URI], None)
+      .get_token(&[crate::azure::keyvault::constants::MANAGEMENT_TOKEN_SCOPE], None)
       .await
       .map_err(|e| format!("Failed to get token: {}", e))?;
 
