@@ -661,7 +661,7 @@ pub fn run() {
 ### Phase 1: Foundation (Week 1-2)
 - [x] Create unified error types with `thiserror` (Implemented as `AzureHttpError`)
 - [x] Implement generic HTTP client wrapper (Implemented in `src/azure/http/`)
-- [ ] Add generic pagination handler
+- [x] Add generic pagination handler (Implemented in `src/azure/http/pagination.rs`)
 - [ ] Reorganize module structure
 
 ### Phase 2: Observability (Week 3-4)

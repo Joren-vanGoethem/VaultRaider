@@ -1,13 +1,13 @@
 use log::{debug, error, info};
 
 use crate::azure::auth::token::{get_token_for_scope, get_token_from_state};
-use crate::azure::http::AzureHttpClient;
+use crate::azure::http::{fetch_all_paginated, AzureHttpClient};
 use crate::azure::keyvault::constants::{
     create_keyvault_uri, get_keyvault_uri, KEYVAULT_TOKEN_SCOPE, MANAGEMENT_TOKEN_SCOPE,
 };
 use crate::azure::keyvault::secret::constants::get_secrets_uri;
 use crate::azure::keyvault::types::{
-    CreateVaultRequest, KeyVault, KeyVaultAccessCheck, KeyVaultListResponse, Properties,
+    CreateVaultRequest, KeyVault, KeyVaultAccessCheck, Properties,
 };
 
 // https://learn.microsoft.com/en-us/rest/api/keyvault/secrets/get-secrets/get-secrets?view=rest-keyvault-secrets-2025-07-01&tabs=HTTP
@@ -31,47 +31,15 @@ pub async fn get_keyvaults(subscription_id: &str) -> Result<Vec<KeyVault>, Strin
     let url = get_keyvault_uri(subscription_id);
     info!("Calling Azure API: {}", url);
 
-    let kv_list = fetch_keyvaults(&url, &client).await?;
+    let kv_list = fetch_all_paginated::<KeyVault>(&url, &client)
+        .await
+        .map_err(|e| {
+            error!("Failed to fetch keyvaults: {}", e);
+            e.to_string()
+        })?;
 
     info!("Successfully retrieved {} keyvault(s)", kv_list.len());
     Ok(kv_list)
-}
-
-/// Fetch all Key Vaults for a specific subscription recursively using nextLink property
-async fn fetch_keyvaults(url: &str, client: &AzureHttpClient) -> Result<Vec<KeyVault>, String> {
-    debug!("Fetching keyvaults from: {}", url);
-
-    let kv_list: KeyVaultListResponse = client.get(url).await.map_err(|e| {
-        error!("Failed to fetch keyvaults: {}", e);
-        e.to_string()
-    })?;
-
-    let current_count = kv_list.value.len();
-    debug!("Parsed {} keyvault(s) from current page", current_count);
-
-    if kv_list.next_link.is_none() {
-        info!(
-            "No pagination link found. Returning {} keyvault(s)",
-            current_count
-        );
-        Ok(kv_list.value)
-    } else {
-        let next_url = kv_list.next_link.unwrap();
-        info!(
-            "Pagination detected. Current batch: {} items. Following next link...",
-            current_count
-        );
-        debug!("Next URL: {}", next_url);
-
-        let mut results = vec![];
-        results.extend(kv_list.value);
-
-        let more_results = Box::pin(fetch_keyvaults(&next_url, client)).await?;
-
-        results.extend(more_results);
-        info!("Total keyvaults collected: {}", results.len());
-        Ok(results)
-    }
 }
 
 /// Check if we have access to a specific Key Vault by attempting to list secrets

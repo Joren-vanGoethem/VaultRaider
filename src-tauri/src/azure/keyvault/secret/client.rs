@@ -2,12 +2,12 @@
 use serde::Serialize;
 
 use crate::azure::auth::token::get_token_for_scope;
-use crate::azure::http::AzureHttpClient;
+use crate::azure::http::{fetch_all_paginated, AzureHttpClient};
 use crate::azure::keyvault::constants::KEYVAULT_TOKEN_SCOPE;
 use crate::azure::keyvault::secret::constants::{
     create_secret_uri, delete_secret_uri, get_secret_version_uri, get_secrets_uri,
 };
-use crate::azure::keyvault::secret::types::{Secret, SecretBundle, SecretListResponse};
+use crate::azure::keyvault::secret::types::{Secret, SecretBundle};
 
 /// Request body for creating/updating a secret
 #[derive(Serialize)]
@@ -23,26 +23,13 @@ pub async fn get_secrets(keyvault_uri: &str) -> Result<Vec<Secret>, String> {
     let token = get_token_for_scope(KEYVAULT_TOKEN_SCOPE).await?;
     let client = AzureHttpClient::with_token(&token).map_err(|e| e.to_string())?;
 
-    let secret_list = fetch_secrets(url, &client).await?;
+    let secret_list = fetch_all_paginated::<Secret>(&url, &client)
+        .await
+        .map_err(|e| e.to_string())?;
 
     Ok(secret_list)
 }
 
-async fn fetch_secrets(url: String, client: &AzureHttpClient) -> Result<Vec<Secret>, String> {
-    let secrets_list: SecretListResponse = client.get(&url).await.map_err(|e| e.to_string())?;
-
-    if secrets_list.next_link.is_none() {
-        Ok(secrets_list.value)
-    } else {
-        let next_url = secrets_list.next_link.unwrap();
-        let mut results = vec![];
-        results.extend(secrets_list.value);
-
-        let more_results = Box::pin(fetch_secrets(next_url, client)).await?;
-        results.extend(more_results);
-        Ok(results)
-    }
-}
 
 #[tauri::command]
 pub async fn get_secret(
