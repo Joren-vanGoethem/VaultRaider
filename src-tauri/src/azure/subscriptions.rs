@@ -1,9 +1,8 @@
-use crate::azure::auth::constants::ARM_SCOPE;
-use crate::azure::auth::state::AUTH_CREDENTIAL;
-use reqwest::header::{HeaderMap, HeaderValue, AUTHORIZATION};
+use log::{error, info};
 use serde::{Deserialize, Serialize};
 
-use azure_core::credentials::TokenCredential;
+use crate::azure::auth::token::get_token_from_state;
+use crate::azure::http::AzureHttpClient;
 
 /// Azure Subscription information
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -41,64 +40,21 @@ pub struct SubscriptionPolicy {
     pub spending_limit: String,
 }
 
-use log::{error, info};
-use crate::azure::auth::token::get_token_from_state;
-
 /// Fetch all subscriptions for the authenticated user
 pub async fn get_subscriptions() -> Result<Vec<Subscription>, String> {
     info!("Fetching subscriptions...");
-    
-    let client = reqwest::Client::new();
-    let mut headers = HeaderMap::new();
-    headers.insert(
-        AUTHORIZATION,
-        HeaderValue::from_str(&format!("Bearer {}", get_token_from_state().await?)).map_err(
-            |e| {
-                error!("Invalid header value for Authorization: {}", e);
-                format!("Invalid header value: {}", e)
-            },
-        )?,
-    );
 
-    let response = client
-        .get("https://management.azure.com/subscriptions?api-version=2022-12-01")
-        .headers(headers)
-        .send()
-        .await
-        .map_err(|e| {
-            error!("Failed to send ARM API request: {}", e);
-            format!("Failed to send request: {}", e)
-        })?;
+    let token = get_token_from_state().await?;
+    let client = AzureHttpClient::new()
+        .with_bearer_token(&token)
+        .map_err(|e| e.to_string())?;
 
-    if !response.status().is_success() {
-        let status = response.status();
-        let error_text = response
-            .text()
-            .await
-            .unwrap_or_else(|_| "Unknown error".to_string());
-        error!(
-            "ARM API request failed with status {}: {}",
-            status, error_text
-        );
-        return Err(format!("API request failed: {}", error_text));
-    }
+    let url = "https://management.azure.com/subscriptions?api-version=2022-12-01";
 
-    let body = response.text().await.map_err(|e| {
-        error!("Failed to read ARM response body: {}", e);
-        format!("Failed to read response body: {}", e)
+    let sub_list: SubscriptionListResponse = client.get(url).await.map_err(|e| {
+        error!("Failed to fetch subscriptions: {}", e);
+        e.to_string()
     })?;
-
-    let mut deserializer = serde_json::Deserializer::from_str(&body);
-
-    let sub_list: SubscriptionListResponse = serde_path_to_error::deserialize(&mut deserializer)
-        .map_err(|e| {
-            error!(
-                "Failed to parse ARM subscriptions JSON at {}: {}",
-                e.path(),
-                e
-            );
-            format!("JSON parse error at {}: {}", e.path(), e)
-        })?;
 
     info!(
         "Successfully fetched {} subscriptions",

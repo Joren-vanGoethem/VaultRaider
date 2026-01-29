@@ -1,253 +1,125 @@
 ﻿use log::info;
-use reqwest::header::{HeaderMap, HeaderValue, AUTHORIZATION, CONTENT_TYPE};
+use serde::Serialize;
+
 use crate::azure::auth::token::get_token_for_scope;
+use crate::azure::http::AzureHttpClient;
 use crate::azure::keyvault::constants::KEYVAULT_TOKEN_SCOPE;
-use crate::azure::keyvault::secret::constants::{create_secret_uri, delete_secret_uri, get_secret_version_uri, get_secrets_uri};
+use crate::azure::keyvault::secret::constants::{
+    create_secret_uri, delete_secret_uri, get_secret_version_uri, get_secrets_uri,
+};
 use crate::azure::keyvault::secret::types::{Secret, SecretBundle, SecretListResponse};
+
+/// Request body for creating/updating a secret
+#[derive(Serialize)]
+struct SecretValue {
+    value: String,
+}
 
 #[tauri::command]
 pub async fn get_secrets(keyvault_uri: &str) -> Result<Vec<Secret>, String> {
-  info!("Fetching secrets...");
+    info!("Fetching secrets...");
 
-  let url = get_secrets_uri(keyvault_uri);
+    let url = get_secrets_uri(keyvault_uri);
+    let token = get_token_for_scope(KEYVAULT_TOKEN_SCOPE).await?;
+    let client = AzureHttpClient::with_token(&token).map_err(|e| e.to_string())?;
 
-  // Get token for Key Vault data plane, not management API
-  let token = get_token_for_scope(KEYVAULT_TOKEN_SCOPE).await?;
+    let secret_list = fetch_secrets(url, &client).await?;
 
-  let client = reqwest::Client::new();
-  let mut headers = HeaderMap::new();
-  headers.insert(
-    AUTHORIZATION,
-    HeaderValue::from_str(&format!("Bearer {}", token))
-      .map_err(|e| format!("Invalid header value: {}", e))?,
-  );
-
-  let secret_list = fetch_secrets(url, client, headers).await?;
-
-  Ok(secret_list)
+    Ok(secret_list)
 }
 
-async fn fetch_secrets(url: String, client: reqwest::Client, headers: HeaderMap) -> Result<Vec<Secret>, String> {
-  let response = client
-    .get(url)
-    .headers(headers.clone())
-    .send()
-    .await
-    .map_err(|e| format!("Failed to send request: {}", e))?;
+async fn fetch_secrets(url: String, client: &AzureHttpClient) -> Result<Vec<Secret>, String> {
+    let secrets_list: SecretListResponse = client.get(&url).await.map_err(|e| e.to_string())?;
 
-  if !response.status().is_success() {
-    let error_text = response
-      .text()
-      .await
-      .unwrap_or_else(|_| "Unknown error".to_string());
-    return Err(format!("API request failed: {}", error_text));
-  }
+    if secrets_list.next_link.is_none() {
+        Ok(secrets_list.value)
+    } else {
+        let next_url = secrets_list.next_link.unwrap();
+        let mut results = vec![];
+        results.extend(secrets_list.value);
 
-  let secrets_list: SecretListResponse = response
-    .json()
-    .await
-    .map_err(|e| format!("Failed to parse response: {}", e))?;
-
-  if (secrets_list.next_link.is_none()) {
-    Ok(secrets_list.value)
-  } else {
-    let next_url = secrets_list.next_link.unwrap();
-    let mut results = vec![];
-    results.extend(secrets_list.value);
-
-    let more_results = Box::pin(fetch_secrets(next_url, client, headers)).await?;
-    results.extend(more_results);
-    Ok(results)
-  }
+        let more_results = Box::pin(fetch_secrets(next_url, client)).await?;
+        results.extend(more_results);
+        Ok(results)
+    }
 }
 
 #[tauri::command]
-pub async fn get_secret(keyvault_uri: &str, secret_name: &str, secret_version: Option<&str>) -> Result<SecretBundle, String> {
-  info!("Fetching secret {}...", secret_name);
+pub async fn get_secret(
+    keyvault_uri: &str,
+    secret_name: &str,
+    secret_version: Option<&str>,
+) -> Result<SecretBundle, String> {
+    info!("Fetching secret {}...", secret_name);
 
-  let url = get_secret_version_uri(keyvault_uri, secret_name, secret_version);
+    let url = get_secret_version_uri(keyvault_uri, secret_name, secret_version);
+    let token = get_token_for_scope(KEYVAULT_TOKEN_SCOPE).await?;
+    let client = AzureHttpClient::with_token(&token).map_err(|e| e.to_string())?;
 
-  // Get token for Key Vault data plane, not management API
-  let token = get_token_for_scope(KEYVAULT_TOKEN_SCOPE).await?;
+    let secret: SecretBundle = client.get(&url).await.map_err(|e| e.to_string())?;
 
-  let client = reqwest::Client::new();
-  let mut headers = HeaderMap::new();
-  headers.insert(
-    AUTHORIZATION,
-    HeaderValue::from_str(&format!("Bearer {}", token))
-      .map_err(|e| format!("Invalid header value: {}", e))?,
-  );
-
-  let response = client
-    .get(url)
-    .headers(headers.clone())
-    .send()
-    .await
-    .map_err(|e| format!("Failed to send request: {}", e))?;
-
-  if !response.status().is_success() {
-    let error_text = response
-      .text()
-      .await
-      .unwrap_or_else(|_| "Unknown error".to_string());
-    return Err(format!("API request failed: {}", error_text));
-  }
-
-  let secret: SecretBundle = response
-    .json()
-    .await
-    .map_err(|e| format!("Failed to parse response: {}", e))?;
-
-  Ok(secret)
+    Ok(secret)
 }
 
 #[tauri::command]
 pub async fn delete_secret(keyvault_uri: &str, secret_name: &str) -> Result<Secret, String> {
-  info!("Deleting secret {}...", secret_name);
+    info!("Deleting secret {}...", secret_name);
 
-  let url = delete_secret_uri(keyvault_uri, secret_name);
+    let url = delete_secret_uri(keyvault_uri, secret_name);
+    let token = get_token_for_scope(KEYVAULT_TOKEN_SCOPE).await?;
+    let client = AzureHttpClient::with_token(&token).map_err(|e| e.to_string())?;
 
-  // Get token for Key Vault data plane, not management API
-  let token = get_token_for_scope(KEYVAULT_TOKEN_SCOPE).await?;
+    let deleted_secret: Secret = client.delete(&url).await.map_err(|e| e.to_string())?;
 
-  let client = reqwest::Client::new();
-  let mut headers = HeaderMap::new();
-  headers.insert(
-    AUTHORIZATION,
-    HeaderValue::from_str(&format!("Bearer {}", token))
-      .map_err(|e| format!("Invalid header value: {}", e))?,
-  );
-
-  let response = client
-    .delete(url)
-    .headers(headers.clone())
-    .send()
-    .await
-    .map_err(|e| format!("Failed to send request: {}", e))?;
-
-  if !response.status().is_success() {
-    let error_text = response
-      .text()
-      .await
-      .unwrap_or_else(|_| "Unknown error".to_string());
-    return Err(format!("API request failed: {}", error_text));
-  }
-
-  let deleted_secret: Secret = response
-    .json()
-    .await
-    .map_err(|e| format!("Failed to parse response: {}", e))?;
-
-  Ok(deleted_secret)
+    Ok(deleted_secret)
 }
 
 #[tauri::command]
-pub async fn create_secret(keyvault_uri: &str, secret_name: &str, secret_value: &str) -> Result<SecretBundle, String> {
-  info!("Adding secret {}...", secret_name);
+pub async fn create_secret(
+    keyvault_uri: &str,
+    secret_name: &str,
+    secret_value: &str,
+) -> Result<SecretBundle, String> {
+    info!("Adding secret {}...", secret_name);
 
-  let url = create_secret_uri(keyvault_uri, secret_name);
+    let url = create_secret_uri(keyvault_uri, secret_name);
+    let token = get_token_for_scope(KEYVAULT_TOKEN_SCOPE).await?;
+    let client = AzureHttpClient::with_token(&token).map_err(|e| e.to_string())?;
 
-  // Get token for Key Vault data plane, not management API
-  let token = get_token_for_scope(KEYVAULT_TOKEN_SCOPE).await?;
+    let body = SecretValue {
+        value: secret_value.to_string(),
+    };
 
-  let client = reqwest::Client::new();
-  let mut headers = HeaderMap::new();
-  headers.insert(
-    AUTHORIZATION,
-    HeaderValue::from_str(&format!("Bearer {}", token))
-      .map_err(|e| format!("Invalid header value: {}", e))?,
-  );
+    info!("Create secret request sending...");
 
-  headers.insert(
-    CONTENT_TYPE,
-    HeaderValue::from_static("application/json"),
-  );
+    let created_secret: SecretBundle = client.put(&url, &body).await.map_err(|e| e.to_string())?;
 
-  let body = format!("{{\"value\": \"{}\"}}", secret_value);
+    info!("Secret added {}...", secret_name);
 
-  info!("Secret body: {}...", body.clone());
-  
-  let response = client
-    .put(url)
-    .headers(headers.clone())
-    .body(body)
-    .send()
-    .await
-    .map_err(|e| format!("Failed to send request: {}", e))?;
-
-  info!("Create secret request sent...");
-  
-  
-  if !response.status().is_success() {
-    let error_text = response
-      .text()
-      .await
-      .unwrap_or_else(|_| "Unknown error".to_string());
-    return Err(format!("API request failed: {}", error_text));
-  }
-
-  info!("Secret added {}...", secret_name);
-
-  let created_secret: SecretBundle = response
-    .json()
-    .await
-    .map_err(|e| format!("Failed to parse response: {}", e))?;
-
-  Ok(created_secret)
+    Ok(created_secret)
 }
 
-
 #[tauri::command]
-pub async fn update_secret(keyvault_uri: &str, secret_name: &str, secret_value: &str) -> Result<SecretBundle, String> {
-  info!("Updating secret {}...", secret_name);
+pub async fn update_secret(
+    keyvault_uri: &str,
+    secret_name: &str,
+    secret_value: &str,
+) -> Result<SecretBundle, String> {
+    info!("Updating secret {}...", secret_name);
 
-  let url = create_secret_uri(keyvault_uri, secret_name);
+    let url = create_secret_uri(keyvault_uri, secret_name);
+    let token = get_token_for_scope(KEYVAULT_TOKEN_SCOPE).await?;
+    let client = AzureHttpClient::with_token(&token).map_err(|e| e.to_string())?;
 
-  // Get token for Key Vault data plane, not management API
-  let token = get_token_for_scope(KEYVAULT_TOKEN_SCOPE).await?;
+    let body = SecretValue {
+        value: secret_value.to_string(),
+    };
 
-  let client = reqwest::Client::new();
-  let mut headers = HeaderMap::new();
-  headers.insert(
-    AUTHORIZATION,
-    HeaderValue::from_str(&format!("Bearer {}", token))
-      .map_err(|e| format!("Invalid header value: {}", e))?,
-  );
+    info!("Update secret request sending...");
 
-  headers.insert(
-    CONTENT_TYPE,
-    HeaderValue::from_static("application/json"),
-  );
+    let updated_secret: SecretBundle = client.put(&url, &body).await.map_err(|e| e.to_string())?;
 
-  let body = format!("{{\"value\": \"{}\"}}", secret_value);
+    info!("Secret updated {}...", secret_name);
 
-  info!("Secret body: {}...", body.clone());
-
-  let response = client
-    .put(url)
-    .headers(headers.clone())
-    .body(body)
-    .send()
-    .await
-    .map_err(|e| format!("Failed to send request: {}", e))?;
-
-  info!("Update secret request sent...");
-
-
-  if !response.status().is_success() {
-    let error_text = response
-      .text()
-      .await
-      .unwrap_or_else(|_| "Unknown error".to_string());
-    return Err(format!("API request failed: {}", error_text));
-  }
-
-  info!("Secret updated {}...", secret_name);
-
-  let created_secret: SecretBundle = response
-    .json()
-    .await
-    .map_err(|e| format!("Failed to parse response: {}", e))?;
-
-  Ok(created_secret)
+    Ok(updated_secret)
 }
