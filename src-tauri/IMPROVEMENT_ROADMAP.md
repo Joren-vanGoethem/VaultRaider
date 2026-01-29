@@ -134,23 +134,39 @@ impl From<VaultRaiderError> for String {
 }
 ```
 
-### 1.4 Extract Token Management into a Trait
+### 1.4 Extract Token Management into a Trait ✅
 
 **Problem:** Token retrieval logic is scattered and doesn't support different authentication scopes cleanly.
 
-**Solution:** Create a `TokenProvider` trait.
+**Solution:** Created a `TokenProvider` trait in `src/azure/auth/provider.rs`.
 
 ```rust
-// src/azure/auth/provider.rs
+// src/azure/auth/provider.rs (IMPLEMENTED)
 use async_trait::async_trait;
+use crate::azure::http::AzureHttpError;
+
+/// Token scopes
+pub const MANAGEMENT_SCOPE: &str = "https://management.azure.com/.default";
+pub const KEYVAULT_SCOPE: &str = "https://vault.azure.net/.default";
 
 #[async_trait]
 pub trait TokenProvider: Send + Sync {
-    async fn get_management_token(&self) -> Result<String, VaultRaiderError>;
-    async fn get_keyvault_token(&self) -> Result<String, VaultRaiderError>;
-    async fn get_token_for_scope(&self, scope: &str) -> Result<String, VaultRaiderError>;
+    async fn get_management_token(&self) -> Result<String, AzureHttpError>;
+    async fn get_keyvault_token(&self) -> Result<String, AzureHttpError>;
+    async fn get_token_for_scope(&self, scope: &str) -> Result<String, AzureHttpError>;
+    async fn is_authenticated(&self) -> bool;
 }
+
+/// Credential-based implementation
+pub struct CredentialTokenProvider { /* ... */ }
+
+/// Global state-backed implementation (backwards compatible)
+pub struct GlobalTokenProvider;
 ```
+
+**Implementations:**
+- `CredentialTokenProvider` - Wraps an Azure SDK `TokenCredential`
+- `GlobalTokenProvider` - Uses the global `AUTH_CREDENTIAL` state (backwards compatible)
 
 ---
 
@@ -662,6 +678,7 @@ pub fn run() {
 - [x] Create unified error types with `thiserror` (Implemented as `AzureHttpError`)
 - [x] Implement generic HTTP client wrapper (Implemented in `src/azure/http/`)
 - [x] Add generic pagination handler (Implemented in `src/azure/http/pagination.rs`)
+- [x] Extract token management into a trait (Implemented in `src/azure/auth/provider.rs`)
 - [ ] Reorganize module structure
 
 ### Phase 2: Observability (Week 3-4)

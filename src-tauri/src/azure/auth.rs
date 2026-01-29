@@ -3,6 +3,7 @@ mod cli;
 pub(crate) mod constants;
 pub mod device_code;
 pub mod interactive_browser;
+pub mod provider;
 mod service_principal;
 pub(crate) mod state;
 pub mod token;

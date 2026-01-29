@@ -3,44 +3,31 @@ use azure_core::credentials::TokenCredential;
 use crate::azure::auth::state::AUTH_CREDENTIAL;
 use crate::azure::auth::types::{AuthResult, TokenClaims};
 use crate::azure::auth::user_info::store_user_info;
+use crate::azure::auth::provider::{GlobalTokenProvider, TokenProvider};
 use base64::engine::general_purpose::URL_SAFE_NO_PAD as BASE64URL;
 use base64::Engine;
 use log::{info, warn, error};
 
+/// Get a token for Azure Resource Management API.
+///
+/// This is a backwards-compatible wrapper around `GlobalTokenProvider`.
 pub async fn get_token_from_state() -> Result<String, String> {
-    let credential = {
-        let cred_lock = AUTH_CREDENTIAL.lock().await;
-        cred_lock
-          .clone()
-          .ok_or("Not authenticated. Please login first.")?
-    };
-
-    // Get a token for the Azure Management API
-    let token_response = credential
-      .get_token(&[crate::azure::keyvault::constants::MANAGEMENT_TOKEN_SCOPE], None)
-      .await
-      .map_err(|e| format!("Failed to get token: {}", e))?;
-
-    Ok(token_response.token.secret().parse().unwrap())
+    let provider = GlobalTokenProvider::new();
+    provider
+        .get_management_token()
+        .await
+        .map_err(|e| e.to_string())
 }
 
+/// Get a token for a specific scope.
+///
+/// This is a backwards-compatible wrapper around `GlobalTokenProvider`.
 pub async fn get_token_for_scope(scope: &str) -> Result<String, String> {
-    info!("Requesting token for scope: {}", scope);
-    let credential = {
-        let cred_lock = AUTH_CREDENTIAL.lock().await;
-        cred_lock
-          .clone()
-          .ok_or("Not authenticated. Please login first.")?
-    };
-
-    // Get a token for the specified scope
-    let token_response = credential
-      .get_token(&[scope], None)
-      .await
-      .map_err(|e| format!("Failed to get token for scope {}: {}", scope, e))?;
-
-    info!("Successfully obtained token for scope: {}", scope);
-    Ok(token_response.token.secret().parse().unwrap())
+    let provider = GlobalTokenProvider::new();
+    provider
+        .get_token_for_scope(scope)
+        .await
+        .map_err(|e| e.to_string())
 }
 
 /// Decode JWT token without verification to extract user info

@@ -28,6 +28,12 @@ pub enum AzureHttpError {
     
     /// Serialization error when preparing request body
     SerializationError(String),
+    
+    /// Token acquisition or refresh error
+    TokenError(String),
+    
+    /// User is not authenticated
+    NotAuthenticated,
 }
 
 impl fmt::Display for AzureHttpError {
@@ -54,6 +60,12 @@ impl fmt::Display for AzureHttpError {
             }
             AzureHttpError::SerializationError(msg) => {
                 write!(f, "Failed to serialize request body: {}", msg)
+            }
+            AzureHttpError::TokenError(msg) => {
+                write!(f, "Token error: {}", msg)
+            }
+            AzureHttpError::NotAuthenticated => {
+                write!(f, "Not authenticated. Please login first.")
             }
         }
     }
