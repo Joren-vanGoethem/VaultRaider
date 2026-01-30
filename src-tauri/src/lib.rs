@@ -5,7 +5,6 @@
 mod azure;
 mod commands;
 mod config;
-mod telemetry;
 
 use commands::auth::{
     azure_login, azure_logout, check_auth, complete_browser_login, complete_device_code,
@@ -21,10 +20,9 @@ use commands::subscription::fetch_subscriptions;
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     // Initialize structured logging with tracing
-    telemetry::init();
 
     tauri::Builder::default()
-        // .plugin(tauri_plugin_log::Builder::new().build())
+        .plugin(tauri_plugin_log::Builder::new().build())
         .plugin(tauri_plugin_opener::init())
         .invoke_handler(tauri::generate_handler![
             // Auth commands

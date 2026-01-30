@@ -1,6 +1,7 @@
 ﻿//! Key Vault service - business logic for Azure Key Vault operations
 
-use tracing::{debug, error, info, instrument, Span};
+use anyhow::{Context, Result};
+use log::{debug, error, info};
 
 use crate::azure::auth::token::{get_token_for_scope, get_token_from_state};
 use crate::azure::http::{fetch_all_paginated, AzureHttpClient};
@@ -18,44 +19,55 @@ use super::types::{CreateVaultRequest, KeyVault, KeyVaultAccessCheck, Properties
 /// # Returns
 ///
 /// A vector of Key Vault objects or an error.
-#[instrument(
-    name = "keyvault.list",
-    skip(subscription_id),
-    fields(
-        subscription_id = %subscription_id,
-        vault_count = tracing::field::Empty,
-        otel.kind = "client",
-    )
-)]
+///
+/// # Errors
+///
+/// This function will return an error if:
+/// - The user is not authenticated
+/// - The API request fails
+/// - The response cannot be parsed
+// #[instrument(
+//     name = "keyvault.list",
+//     skip(subscription_id),
+//     fields(
+//         subscription_id = %subscription_id,
+//         vault_count = tracing::field::Empty,
+//         otel.kind = "client",
+//     )
+// )]
 pub async fn get_keyvaults(subscription_id: &str) -> Result<Vec<KeyVault>, String> {
+    get_keyvaults_internal(subscription_id)
+        .await
+        .map_err(|e| {
+            error!("Failed to get keyvaults: {}", e);
+            e.to_string()
+        })
+}
+
+async fn get_keyvaults_internal(subscription_id: &str) -> Result<Vec<KeyVault>> {
     info!("Fetching keyvaults");
 
-    let token = get_token_from_state().await.map_err(|e| {
-        error!(error = %e, "Failed to get token from state");
-        e
-    })?;
+    let token = get_token_from_state()
+        .await
+        .map_err(|e| anyhow::anyhow!(e))
+        .context("Failed to retrieve authentication token")?;
 
     debug!("Successfully retrieved authentication token");
 
-    let client = AzureHttpClient::with_token(&token).map_err(|e| {
-        error!(error = %e, "Failed to create HTTP client");
-        e.to_string()
-    })?;
+    let client = AzureHttpClient::with_token(&token)
+        .context("Failed to create HTTP client with token")?;
 
     let url = urls::keyvaults(subscription_id);
-    debug!(url = %url, "Calling Azure API");
+    debug!("Calling Azure API: {}", url);
 
     let kv_list = fetch_all_paginated::<KeyVault>(&url, &client)
         .await
-        .map_err(|e| {
-            error!(error = %e, "Failed to fetch keyvaults");
-            e.to_string()
-        })?;
+        .with_context(|| format!("Failed to fetch keyvaults for subscription {}", subscription_id))?;
 
     // Record the count in the span for observability
-    Span::current().record("vault_count", kv_list.len());
-    info!(count = kv_list.len(), "Successfully retrieved keyvaults");
-    
+    // Span::current().record("vault_count", kv_list.len());
+    info!("Successfully retrieved {} keyvaults", kv_list.len());
+
     Ok(kv_list)
 }
 
@@ -68,18 +80,17 @@ pub async fn get_keyvaults(subscription_id: &str) -> Result<Vec<KeyVault>, Strin
 /// # Returns
 ///
 /// Access check result indicating whether we can access the vault.
-#[instrument(
-    name = "keyvault.check_access",
-    skip(keyvault_uri),
-    fields(
-        keyvault.uri = %keyvault_uri,
-        has_access = tracing::field::Empty,
-        otel.kind = "client",
-    )
-)]
+// #[instrument(
+//     name = "keyvault.check_access",
+//     skip(keyvault_uri),
+//     fields(
+//         keyvault.uri = %keyvault_uri,
+//         has_access = tracing::field::Empty,
+//         otel.kind = "client",
+//     )
+// )]
 pub async fn check_keyvault_access(keyvault_uri: &str) -> Result<KeyVaultAccessCheck, String> {
     info!("Checking access to Key Vault");
-    debug!(scope = %KEYVAULT_SCOPE, "Requesting token");
 
     // Try to get a token for the Key Vault data plane
     let token = match get_token_for_scope(KEYVAULT_SCOPE).await {
@@ -88,7 +99,7 @@ pub async fn check_keyvault_access(keyvault_uri: &str) -> Result<KeyVaultAccessC
             t
         }
         Err(e) => {
-            Span::current().record("has_access", false);
+            // Span::current().record("has_access", false);
             return Ok(KeyVaultAccessCheck {
                 vault_uri: keyvault_uri.to_string(),
                 has_access: false,
@@ -101,7 +112,7 @@ pub async fn check_keyvault_access(keyvault_uri: &str) -> Result<KeyVaultAccessC
     let client = match AzureHttpClient::with_token(&token) {
         Ok(c) => c,
         Err(e) => {
-            Span::current().record("has_access", false);
+            // Span::current().record("has_access", false);
             return Ok(KeyVaultAccessCheck {
                 vault_uri: keyvault_uri.to_string(),
                 has_access: false,
@@ -117,7 +128,7 @@ pub async fn check_keyvault_access(keyvault_uri: &str) -> Result<KeyVaultAccessC
     // Try to list secrets - this will tell us if we have access
     match client.get_text(&url).await {
         Ok(_) => {
-            Span::current().record("has_access", true);
+            // Span::current().record("has_access", true);
             info!("Successfully accessed Key Vault");
             Ok(KeyVaultAccessCheck {
                 vault_uri: keyvault_uri.to_string(),
@@ -127,8 +138,8 @@ pub async fn check_keyvault_access(keyvault_uri: &str) -> Result<KeyVaultAccessC
             })
         }
         Err(e) => {
-            Span::current().record("has_access", false);
-            info!(error = %e, "Access denied to Key Vault");
+            // Span::current().record("has_access", false);
+            info!("Access denied to Key Vault: {}", e);
             Ok(KeyVaultAccessCheck {
                 vault_uri: keyvault_uri.to_string(),
                 has_access: false,
@@ -150,27 +161,55 @@ pub async fn check_keyvault_access(keyvault_uri: &str) -> Result<KeyVaultAccessC
 /// # Returns
 ///
 /// The created Key Vault object or an error.
-#[instrument(
-    name = "keyvault.create",
-    skip(subscription_id, resource_group, keyvault_name),
-    fields(
-        subscription_id = %subscription_id,
-        resource_group = %resource_group,
-        keyvault.name = %keyvault_name,
-        otel.kind = "client",
-    )
-)]
+///
+/// # Errors
+///
+/// This function will return an error if:
+/// - The user is not authenticated
+/// - The resource group doesn't exist
+/// - The API request fails
+// #[instrument(
+//     name = "keyvault.create",
+//     skip(subscription_id, resource_group, keyvault_name),
+//     fields(
+//         subscription_id = %subscription_id,
+//         resource_group = %resource_group,
+//         keyvault.name = %keyvault_name,
+//         otel.kind = "client",
+//     )
+// )]
 pub async fn create_keyvault(
     subscription_id: &str,
     resource_group: &str,
     keyvault_name: &str,
 ) -> Result<KeyVault, String> {
+    create_keyvault_internal(subscription_id, resource_group, keyvault_name)
+        .await
+        .map_err(|e| {
+            error!("Failed to create keyvault: {}", e);
+            e.to_string()
+        })
+}
+
+async fn create_keyvault_internal(
+    subscription_id: &str,
+    resource_group: &str,
+    keyvault_name: &str,
+) -> Result<KeyVault> {
     let url = urls::keyvault(subscription_id, resource_group, keyvault_name);
 
-    let token = get_token_for_scope(MANAGEMENT_SCOPE).await?;
-    let client = AzureHttpClient::with_token(&token).map_err(|e| e.to_string())?;
+    let token = get_token_for_scope(MANAGEMENT_SCOPE)
+        .await
+        .map_err(|e| anyhow::anyhow!(e))
+        .context("Failed to retrieve management token")?;
 
-    let rg = get_resource_group_by_name(subscription_id, resource_group).await?;
+    let client = AzureHttpClient::with_token(&token)
+        .context("Failed to create HTTP client with token")?;
+
+    let rg = get_resource_group_by_name(subscription_id, resource_group)
+        .await
+        .map_err(|e| anyhow::anyhow!(e))
+        .with_context(|| format!("Failed to get resource group '{}'", resource_group))?;
 
     let body = CreateVaultRequest {
         location: rg.location,
@@ -197,12 +236,12 @@ pub async fn create_keyvault(
 
     info!("Creating keyvault");
 
-    let created_vault: KeyVault = client.put(&url, &body).await.map_err(|e| {
-        error!(error = %e, "Failed to create keyvault");
-        e.to_string()
-    })?;
+    let created_vault: KeyVault = client
+        .put(&url, &body)
+        .await
+        .with_context(|| format!("Failed to create keyvault '{}'", keyvault_name))?;
 
-    info!(vault_id = %created_vault.id, "Keyvault created successfully");
+    info!("Keyvault created successfully with id: {}", created_vault.id);
 
     Ok(created_vault)
 }

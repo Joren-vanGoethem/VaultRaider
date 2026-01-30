@@ -4,7 +4,7 @@
 //! paginated API responses that use the `nextLink` pattern.
 
 use serde::de::DeserializeOwned;
-use tracing::{debug, info};
+use log::{debug, info};
 
 use crate::azure::auth::types::AzureListResponse;
 use crate::azure::http::client::AzureHttpClient;
@@ -55,26 +55,22 @@ where
 
     while let Some(url) = current_url {
         page_count += 1;
-        debug!(page = page_count, url = %url, "Fetching page");
+        debug!("Fetching page {} {}", page_count, url);
 
         let response: AzureListResponse<T> = client.get(&url).await?;
         let items_count = response.value.len();
-        
-        debug!(page = page_count, items = items_count, "Page fetched");
+
+        debug!( "Page {} fetched: {} items", page_count, items_count);
         results.extend(response.value);
 
         current_url = response.next_link;
-        
+
         if current_url.is_some() {
             debug!("Next page link found, continuing pagination");
         }
     }
 
-    info!(
-        total_items = results.len(),
-        pages = page_count,
-        "Pagination complete"
-    );
+    info!("Pagination complete, {} items fetched across {} pages", results.len(), page_count);
 
     Ok(results)
 }
@@ -126,27 +122,23 @@ where
 
     while let Some(url) = current_url {
         page_count += 1;
-        debug!(page = page_count, url = %url, "Fetching page");
+        debug!("Fetching page {} {}", page_count, url);
 
         let response: R = client.get(&url).await?;
         let items = extract_items(&response);
         let items_count = items.len();
-        
-        debug!(page = page_count, items = items_count, "Page fetched");
+
+        debug!("Page {} fetched {} items", page_count, items_count);
         results.extend(items);
 
         current_url = extract_next_link(&response);
-        
+
         if current_url.is_some() {
             debug!("Next page link found, continuing pagination");
         }
     }
 
-    info!(
-        total_items = results.len(),
-        pages = page_count,
-        "Pagination complete"
-    );
+    info!("Pagination complete, {} items fetched across {} pages", results.len(), page_count);
 
     Ok(results)
 }
@@ -155,7 +147,7 @@ where
 mod tests {
     // Note: Integration tests would require mocking the HTTP client
     // The functions are tested through the actual API calls in the application
-    
+
     #[test]
     fn test_module_compiles() {
         // This test verifies the module compiles correctly

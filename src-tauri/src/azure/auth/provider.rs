@@ -6,7 +6,7 @@
 use std::sync::Arc;
 use async_trait::async_trait;
 use azure_core::credentials::TokenCredential;
-use tracing::{debug, error, info, instrument};
+use log::{debug, error, info};
 
 use crate::azure::http::AzureHttpError;
 
@@ -106,21 +106,21 @@ impl TokenProvider for CredentialTokenProvider {
     }
 
     async fn get_token_for_scope(&self, scope: &str) -> Result<String, AzureHttpError> {
-        debug!(scope = %scope, "Requesting token");
+        debug!("Requesting token for scope {}", scope);
 
         let token_response = self
             .credential
             .get_token(&[scope], None)
             .await
             .map_err(|e| {
-                error!(scope = %scope, error = %e, "Failed to get token");
+                error!("Failed to get token for scope {}, error: {}", scope, e);
                 AzureHttpError::TokenError(format!(
                     "Failed to get token for scope {}: {}",
                     scope, e
                 ))
             })?;
 
-        info!(scope = %scope, "Successfully obtained token");
+        info!("Successfully obtained token for scope {}", scope);
         Ok(token_response.token.secret().to_string())
     }
 
@@ -165,11 +165,11 @@ impl TokenProvider for GlobalTokenProvider {
         self.get_token_for_scope(KEYVAULT_SCOPE).await
     }
 
-    #[instrument(
-        name = "token.get_for_scope",
-        skip(self),
-        fields(scope = %scope)
-    )]
+    // #[instrument(
+    //     name = "token.get_for_scope",
+    //     skip(self),
+    //     fields(scope = %scope)
+    // )]
     async fn get_token_for_scope(&self, scope: &str) -> Result<String, AzureHttpError> {
         debug!("Requesting token from global state");
 
@@ -185,7 +185,7 @@ impl TokenProvider for GlobalTokenProvider {
             .get_token(&[scope], None)
             .await
             .map_err(|e| {
-                error!(error = %e, "Failed to get token");
+                error!("Failed to get token: {}", e);
                 AzureHttpError::TokenError(format!(
                     "Failed to get token for scope {}: {}",
                     scope, e

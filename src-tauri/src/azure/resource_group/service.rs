@@ -1,6 +1,7 @@
 ﻿//! Resource Group service - business logic for Azure Resource Group operations
 
-use tracing::{debug, error, info, instrument, Span};
+use anyhow::{Context, Result};
+use log::{debug, error, info};
 
 use crate::azure::auth::token::get_token_from_state;
 use crate::azure::http::{fetch_all_paginated, AzureHttpClient};
@@ -17,42 +18,52 @@ use super::types::ResourceGroup;
 /// # Returns
 ///
 /// A vector of ResourceGroup objects or an error.
-#[instrument(
-    name = "resource_group.list",
-    skip(subscription_id),
-    fields(
-        subscription_id = %subscription_id,
-        resource_group_count = tracing::field::Empty,
-        otel.kind = "client",
-    )
-)]
+///
+/// # Errors
+///
+/// This function will return an error if:
+/// - The user is not authenticated
+/// - The API request fails
+// #[instrument(
+//     name = "resource_group.list",
+//     skip(subscription_id),
+//     fields(
+//         subscription_id = %subscription_id,
+//         resource_group_count = tracing::field::Empty,
+//         otel.kind = "client",
+//     )
+// )]
 pub async fn get_resource_groups(subscription_id: &str) -> Result<Vec<ResourceGroup>, String> {
+    get_resource_groups_internal(subscription_id)
+        .await
+        .map_err(|e| {
+            error!("Failed to fetch resource groups: {}", e);
+            e.to_string()
+        })
+}
+
+async fn get_resource_groups_internal(subscription_id: &str) -> Result<Vec<ResourceGroup>> {
     info!("Fetching resource groups");
 
-    let token = get_token_from_state().await.map_err(|e| {
-        error!(error = %e, "Failed to get token from state");
-        e
-    })?;
+    let token = get_token_from_state()
+        .await
+        .map_err(|e| anyhow::anyhow!(e))
+        .context("Failed to retrieve authentication token")?;
 
     debug!("Successfully retrieved authentication token");
 
-    let client = AzureHttpClient::with_token(&token).map_err(|e| {
-        error!(error = %e, "Failed to create HTTP client");
-        e.to_string()
-    })?;
+    let client = AzureHttpClient::with_token(&token)
+        .context("Failed to create HTTP client with token")?;
 
     let url = urls::resource_groups(subscription_id);
-    debug!(url = %url, "Calling Azure API");
+    debug!( "Calling Azure API: {}", url);
 
     let rg_list = fetch_all_paginated::<ResourceGroup>(&url, &client)
         .await
-        .map_err(|e| {
-            error!(error = %e, "Failed to fetch resource groups");
-            e.to_string()
-        })?;
+        .with_context(|| format!("Failed to fetch resource groups for subscription {}", subscription_id))?;
 
-    Span::current().record("resource_group_count", rg_list.len());
-    info!(count = rg_list.len(), "Successfully retrieved resource groups");
+    // Span::current().record("resource_group_count", rg_list.len());
+    info!("Successfully retrieved {} resource groups", rg_list.len());
     Ok(rg_list)
 }
 
@@ -66,37 +77,54 @@ pub async fn get_resource_groups(subscription_id: &str) -> Result<Vec<ResourceGr
 /// # Returns
 ///
 /// The ResourceGroup object or an error.
-#[instrument(
-    name = "resource_group.get",
-    skip(subscription_id, resource_group_name),
-    fields(
-        subscription_id = %subscription_id,
-        resource_group.name = %resource_group_name,
-        otel.kind = "client",
-    )
-)]
+///
+/// # Errors
+///
+/// This function will return an error if:
+/// - The user is not authenticated
+/// - The resource group doesn't exist
+/// - The API request fails
+// #[instrument(
+//     name = "resource_group.get",
+//     skip(subscription_id, resource_group_name),
+//     fields(
+//         subscription_id = %subscription_id,
+//         resource_group.name = %resource_group_name,
+//         otel.kind = "client",
+//     )
+// )]
 pub async fn get_resource_group_by_name(
     subscription_id: &str,
     resource_group_name: &str,
 ) -> Result<ResourceGroup, String> {
+    get_resource_group_by_name_internal(subscription_id, resource_group_name)
+        .await
+        .map_err(|e| {
+            error!("Failed to fetch resource group: {}", e);
+            e.to_string()
+        })
+}
+
+async fn get_resource_group_by_name_internal(
+    subscription_id: &str,
+    resource_group_name: &str,
+) -> Result<ResourceGroup> {
     let url = urls::resource_group(subscription_id, resource_group_name);
 
-    let token = get_token_from_state().await.map_err(|e| {
-        error!(error = %e, "Failed to get token from state");
-        e
-    })?;
+    let token = get_token_from_state()
+        .await
+        .map_err(|e| anyhow::anyhow!(e))
+        .context("Failed to retrieve authentication token")?;
 
     debug!("Successfully retrieved authentication token");
 
-    let client = AzureHttpClient::with_token(&token).map_err(|e| {
-        error!(error = %e, "Failed to create HTTP client");
-        e.to_string()
-    })?;
+    let client = AzureHttpClient::with_token(&token)
+        .context("Failed to create HTTP client with token")?;
 
-    let rg_response: ResourceGroup = client.get(&url).await.map_err(|e| {
-        error!(error = %e, "Failed to fetch resource group");
-        e.to_string()
-    })?;
+    let rg_response: ResourceGroup = client
+        .get(&url)
+        .await
+        .with_context(|| format!("Failed to fetch resource group '{}' in subscription {}", resource_group_name, subscription_id))?;
 
     info!("Resource group fetched successfully");
     Ok(rg_response)
