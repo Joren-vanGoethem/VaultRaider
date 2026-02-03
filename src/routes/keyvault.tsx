@@ -1,6 +1,5 @@
-import {createFileRoute, Link} from '@tanstack/react-router'
+import {createFileRoute} from '@tanstack/react-router'
 import {PageHeader} from '../components/PageHeader'
-import {ArrowLeftIcon} from '../components/icons'
 import {Suspense, useState, useMemo} from 'react'
 import {LoadingSpinner} from '../components/LoadingSpinner'
 import {fetchSecrets, fetchSecretsKey, createSecret} from '../services/azureService'
@@ -37,7 +36,7 @@ function SecretsLoadingSpinner() {
 }
 
 function Keyvaults() {
-  const { vaultUri, name, subscriptionId } = Route.useSearch()
+  const { vaultUri, name } = Route.useSearch()
   const [searchQuery, setSearchQuery] = useState('')
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [newSecretName, setNewSecretName] = useState('')
@@ -117,17 +116,7 @@ function Keyvaults() {
     <Suspense fallback={<SecretsLoadingSpinner/>}>
       <div className="h-full px-4 py-4">
         <div className="max-w-4xl mx-auto">
-          <div className="flex items-center justify-start gap-10">
-            <Link
-              to="/subscriptions"
-              search={subscriptionId ? { subscriptionId } : undefined}
-              className="inline-flex items-center gap-2 text-primary-500 hover:text-primary-600 dark:text-primary-400 dark:hover:text-primary-300 font-medium transition-colors"
-            >
-              <ArrowLeftIcon/>
-              Back to Vaults
-            </Link>
-            <PageHeader>{name}</PageHeader>
-          </div>
+          <PageHeader>{name}</PageHeader>
 
           <div className="card mb-6">
             <div className="flex items-center justify-between mb-4">
