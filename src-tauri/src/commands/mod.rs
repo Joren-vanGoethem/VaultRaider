@@ -5,6 +5,9 @@
 //! between Tauri's requirements and the internal service layer.
 
 pub mod auth;
+pub mod cache;
 pub mod keyvault;
 pub mod subscription;
 pub mod resource_group;
+
+

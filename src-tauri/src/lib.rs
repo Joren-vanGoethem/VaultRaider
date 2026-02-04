@@ -3,12 +3,17 @@
 //! This is the main library entry point for the Tauri application.
 
 mod azure;
+mod cache;
 mod commands;
 mod config;
 
 use commands::auth::{
     azure_login, azure_logout, check_auth, complete_browser_login, complete_device_code,
     get_current_user, start_browser_login, start_device_code,
+};
+use commands::cache::{
+    clear_cache, get_cache_stats, invalidate_keyvaults_cache,
+    invalidate_resource_groups_cache, invalidate_subscriptions_cache, invalidate_vault_cache,
 };
 use commands::keyvault::{
   check_keyvault_access, create_keyvault, create_secret, delete_secret,
@@ -52,6 +57,13 @@ pub fn run() {
             export_secrets,
             // Resource Group commands
             cmd_get_resource_groups,
+            // Cache commands
+            get_cache_stats,
+            clear_cache,
+            invalidate_subscriptions_cache,
+            invalidate_keyvaults_cache,
+            invalidate_resource_groups_cache,
+            invalidate_vault_cache,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
