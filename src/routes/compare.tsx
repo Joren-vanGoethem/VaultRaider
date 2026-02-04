@@ -185,10 +185,16 @@ function CompareVaults() {
   const [targetName, setTargetName] = useState(initialTargetName || '')
   const [selectedTargetSubscription, setSelectedTargetSubscription] = useState(initialTargetSubscriptionId || sourceSubscriptionId || '')
   const [statusFilter, setStatusFilter] = useState<ComparisonStatus | 'all'>('all')
-  const [createWithValueModal, setCreateWithValueModal] = useState<{isOpen: boolean; secretName: string; suggestedValue?: string}>({
+  const [createWithValueModal, setCreateWithValueModal] = useState<{
+    isOpen: boolean
+    secretName: string
+    suggestedValue?: string
+    targetVault: 'source' | 'target'
+  }>({
     isOpen: false,
     secretName: '',
-    suggestedValue: undefined
+    suggestedValue: undefined,
+    targetVault: 'target'
   })
 
   const queryClient = useQueryClient()
@@ -335,6 +341,19 @@ function CompareVaults() {
     }
   })
 
+  // Create secret mutation for source vault
+  const createInSourceMutation = useMutation({
+    mutationFn: ({name, value}: {name: string; value: string}) => createSecret(sourceVaultUri, name, value),
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({queryKey: [fetchSecretsKey, sourceVaultUri]})
+      showSuccess(`Secret "${variables.name}" created in source vault`)
+    },
+    onError: (error, variables) => {
+      const errorMsg = error instanceof Error ? error.message : String(error)
+      showError(`Failed to create secret "${variables.name}"`, errorMsg)
+    }
+  })
+
   // Sync a single secret from source to target
   const handleSyncSecret = async (secretName: string) => {
     // First, get the source value if not already loaded
@@ -358,6 +377,29 @@ function CompareVaults() {
     createMutation.mutate({name: secretName, value: sourceValue})
   }
 
+  // Sync a single secret from target to source
+  const handleSyncSecretToSource = async (secretName: string) => {
+    // First, get the target value if not already loaded
+    let targetValue = queryClient.getQueryData<SecretBundle | null>(['secret', targetVaultUri, secretName])?.value
+
+    if (!targetValue) {
+      try {
+        const targetBundle = await fetchSecret(targetVaultUri, secretName)
+        targetValue = targetBundle?.value
+      } catch (_error) {
+        showError(`Failed to fetch target value for "${secretName}"`)
+        return
+      }
+    }
+
+    if (!targetValue) {
+      showError(`No value found for target secret "${secretName}"`)
+      return
+    }
+
+    createInSourceMutation.mutate({name: secretName, value: targetValue})
+  }
+
   // Create all missing secrets in target
   const handleSyncAllMissing = async () => {
     const missingSecrets = comparedSecrets.filter(s => s.status === 'source-only')
@@ -367,18 +409,33 @@ function CompareVaults() {
     }
   }
 
-  // Open modal to create with custom value
+  // Open modal to create with custom value in target
   const handleCreateWithValue = (secretName: string, suggestedValue?: string) => {
     setCreateWithValueModal({
       isOpen: true,
       secretName,
-      suggestedValue
+      suggestedValue,
+      targetVault: 'target'
+    })
+  }
+
+  // Open modal to create with custom value in source
+  const handleCreateInSource = (secretName: string, suggestedValue?: string) => {
+    setCreateWithValueModal({
+      isOpen: true,
+      secretName,
+      suggestedValue,
+      targetVault: 'source'
     })
   }
 
   const handleConfirmCreateWithValue = (value: string) => {
-    createMutation.mutate({name: createWithValueModal.secretName, value})
-    setCreateWithValueModal({isOpen: false, secretName: '', suggestedValue: undefined})
+    if (createWithValueModal.targetVault === 'source') {
+      createInSourceMutation.mutate({name: createWithValueModal.secretName, value})
+    } else {
+      createMutation.mutate({name: createWithValueModal.secretName, value})
+    }
+    setCreateWithValueModal({isOpen: false, secretName: '', suggestedValue: undefined, targetVault: 'target'})
   }
 
   // Handle target vault selection
@@ -752,6 +809,30 @@ function CompareVaults() {
                                 </button>
                               </>
                             )}
+                            {secret.status === 'target-only' && (
+                              <>
+                                <button
+                                  type="button"
+                                  onClick={() => handleSyncSecretToSource(secret.name)}
+                                  disabled={createMutation.isPending}
+                                  className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-purple-700 dark:text-purple-400 bg-purple-100 dark:bg-purple-900/30 hover:bg-purple-200 dark:hover:bg-purple-900/50 rounded transition-colors disabled:opacity-50"
+                                  title="Copy secret from target to source"
+                                >
+                                  <ArrowLeftIcon className="w-3 h-3"/>
+                                  Sync
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleCreateInSource(secret.name, secret.targetValue ?? undefined)}
+                                  disabled={createMutation.isPending}
+                                  className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded transition-colors disabled:opacity-50"
+                                  title="Create secret in source with custom value"
+                                >
+                                  <PlusIcon className="w-3 h-3"/>
+                                  Custom
+                                </button>
+                              </>
+                            )}
                             {secret.status === 'mismatch' && (
                               <button
                                 type="button"
@@ -788,11 +869,11 @@ function CompareVaults() {
       {/* Create with Value Modal */}
       <CreateWithValueModal
         isOpen={createWithValueModal.isOpen}
-        onClose={() => setCreateWithValueModal({isOpen: false, secretName: '', suggestedValue: undefined})}
+        onClose={() => setCreateWithValueModal({isOpen: false, secretName: '', suggestedValue: undefined, targetVault: 'target'})}
         onConfirm={handleConfirmCreateWithValue}
         secretName={createWithValueModal.secretName}
         suggestedValue={createWithValueModal.suggestedValue}
-        isCreating={createMutation.isPending}
+        isCreating={createMutation.isPending || createInSourceMutation.isPending}
       />
     </Suspense>
   )
