@@ -7,7 +7,7 @@ import {ToastProvider} from '../contexts/ToastContext'
 import {Breadcrumbs} from '../components/Breadcrumbs'
 import type {QueryClient} from "@tanstack/react-query";
 import {ReactQueryDevtools} from '@tanstack/react-query-devtools'
-import {Shield, Home} from 'lucide-react'
+import {Shield} from 'lucide-react'
 
 function Sidebar() {
   const {isAuthenticated, userInfo, logout} = useAuth();
@@ -32,19 +32,6 @@ function Sidebar() {
       {/* Navigation Links - Scrollable */}
       <nav className="flex-1 p-3 overflow-y-auto">
         <ul className="space-y-1">
-          <li>
-            <Link
-              to="/"
-              className="flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-              activeProps={{
-                className: "flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-lg bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400"
-              }}
-              activeOptions={{ exact: true }}
-            >
-              <Home className="w-4 h-4" />
-              Home
-            </Link>
-          </li>
           {isAuthenticated && (
             <li>
               <Link

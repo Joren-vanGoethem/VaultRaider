@@ -1,5 +1,5 @@
 ﻿import { Link, useMatches } from '@tanstack/react-router'
-import { ChevronRight, Home, Key, Shield } from 'lucide-react'
+import { ChevronRight, Key, Shield } from 'lucide-react'
 
 interface BreadcrumbItem {
   label: string
@@ -16,13 +16,6 @@ export function Breadcrumbs() {
 
   // Build breadcrumb items based on current route
   const breadcrumbs: BreadcrumbItem[] = []
-
-  // Always start with Home
-  breadcrumbs.push({
-    label: 'Home',
-    to: '/',
-    icon: <Home className="w-4 h-4" />
-  })
 
   // Check for subscriptions route
   if (currentPath.startsWith('/subscriptions') || currentPath.startsWith('/keyvault')) {
@@ -52,8 +45,8 @@ export function Breadcrumbs() {
     }
   }
 
-  // Don't render if only home
-  if (breadcrumbs.length <= 1) {
+  // Don't render if no breadcrumbs
+  if (breadcrumbs.length === 0) {
     return null
   }
 
