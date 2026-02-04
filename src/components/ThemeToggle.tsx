@@ -1,6 +1,10 @@
 import { useTheme } from '../contexts/ThemeContext';
 
-export function ThemeToggle() {
+interface ThemeToggleProps {
+  isCollapsed?: boolean;
+}
+
+export function ThemeToggle({ isCollapsed = false }: ThemeToggleProps) {
   const { theme, setTheme, effectiveTheme } = useTheme();
 
   const toggleTheme = () => {
@@ -17,7 +21,7 @@ export function ThemeToggle() {
     <button
       type="button"
       onClick={toggleTheme}
-      className="p-2 rounded-lg bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 hover:border-primary-500 transition-colors"
+      className={`p-2 rounded-lg max-w-max bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 hover:border-primary-500 transition-colors ${isCollapsed ? 'mx-auto block' : 'w-full'}`}
       aria-label="Toggle theme"
       title={`Current: ${theme} (${effectiveTheme})`}
     >

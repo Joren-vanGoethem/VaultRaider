@@ -7,10 +7,12 @@ import {ToastProvider} from '../contexts/ToastContext'
 import {Breadcrumbs} from '../components/Breadcrumbs'
 import type {QueryClient} from "@tanstack/react-query";
 import {ReactQueryDevtools} from '@tanstack/react-query-devtools'
-import {Shield} from 'lucide-react'
+import {Shield, ChevronLeft, ChevronRight} from 'lucide-react'
+import {useState} from 'react'
 
 function Sidebar() {
   const {isAuthenticated, userInfo, logout} = useAuth();
+  const [isCollapsed, setIsCollapsed] = useState(false);
 
   const handleLogout = async () => {
     try {
@@ -21,12 +23,27 @@ function Sidebar() {
   };
 
   return (
-    <aside className="sticky top-0 flex-none w-56 border-r border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 flex flex-col h-screen">
-      {/* Logo */}
-      <div className="flex-none p-4 border-b border-gray-200 dark:border-gray-700">
-        <Link to="/" className="text-lg font-bold text-gray-900 dark:text-gray-100 hover:text-primary-500 dark:hover:text-primary-400 transition-colors">
-          VaultRaider
-        </Link>
+    <aside className={`sticky top-0 flex-none border-r border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 flex flex-col h-screen transition-all duration-300 ${isCollapsed ? 'w-16' : 'w-56'}`}>
+      {/* Logo and Toggle */}
+      <div className="flex-none p-3 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+        {!isCollapsed && (
+          <p className="text-lg font-bold text-gray-900 dark:text-gray-100 hover:text-primary-500 dark:hover:text-primary-400 transition-colors">
+            VaultRaider
+          </p>
+        )}
+        <button
+          type="button"
+          onClick={() => setIsCollapsed(!isCollapsed)}
+          className={`p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-gray-600 dark:text-gray-400 ${isCollapsed ? 'mx-auto' : ''}`}
+          aria-label={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          title={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+        >
+          {isCollapsed ? (
+            <ChevronRight className="w-5 h-5" />
+          ) : (
+            <ChevronLeft className="w-5 h-5" />
+          )}
+        </button>
       </div>
 
       {/* Navigation Links - Scrollable */}
@@ -36,13 +53,14 @@ function Sidebar() {
             <li>
               <Link
                 to="/subscriptions"
-                className="flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                className={`flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors ${isCollapsed ? 'justify-center' : ''}`}
                 activeProps={{
-                  className: "flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-lg bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400"
+                  className: `flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-lg bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400 ${isCollapsed ? 'justify-center' : ''}`
                 }}
+                title={isCollapsed ? 'Key Vaults' : ''}
               >
-                <Shield className="w-4 h-4" />
-                Key Vaults
+                <Shield className="w-4 h-4 flex-shrink-0" />
+                {!isCollapsed && <span>Key Vaults</span>}
               </Link>
             </li>
           )}
@@ -51,9 +69,9 @@ function Sidebar() {
 
       {/* Bottom section: User profile & theme toggle - Fixed at bottom */}
       <div className="flex-none p-3 border-t border-gray-200 dark:border-gray-700 space-y-3">
-        <ThemeToggle />
+        <ThemeToggle isCollapsed={isCollapsed} />
         {isAuthenticated && userInfo && (
-          <UserProfile userInfo={userInfo} onLogout={handleLogout} compact />
+          <UserProfile userInfo={userInfo} onLogout={handleLogout} compact={!isCollapsed} isCollapsed={isCollapsed} />
         )}
       </div>
     </aside>
