@@ -71,10 +71,10 @@ interface ComparedSecret {
   status: ComparisonStatus
   sourceSecret?: Secret
   targetSecret?: Secret
-  sourceValue?: string
-  targetValue?: string
-  isLoadingSourceValue?: boolean
-  isLoadingTargetValue?: boolean
+  sourceValue?: string | null
+  targetValue?: string | null
+  sourceValueFetched: boolean
+  targetValueFetched: boolean
 }
 
 interface CreateWithValueModalProps {
@@ -184,7 +184,6 @@ function CompareVaults() {
   const [targetVaultUri, setTargetVaultUri] = useState(initialTargetVaultUri || '')
   const [targetName, setTargetName] = useState(initialTargetName || '')
   const [selectedTargetSubscription, setSelectedTargetSubscription] = useState(initialTargetSubscriptionId || sourceSubscriptionId || '')
-  const [loadValues, setLoadValues] = useState(false)
   const [statusFilter, setStatusFilter] = useState<ComparisonStatus | 'all'>('all')
   const [createWithValueModal, setCreateWithValueModal] = useState<{isOpen: boolean; secretName: string; suggestedValue?: string}>({
     isOpen: false,
@@ -228,9 +227,9 @@ function CompareVaults() {
     return [...new Set([...sourceNames, ...targetNames])].sort()
   }, [sourceSecrets, targetSecrets])
 
-  // Fetch secret values when loadValues is enabled
+  // Fetch secret values automatically when target vault is selected
   const secretValueQueries = useQueries({
-    queries: loadValues ? allSecretNames.flatMap(name => {
+    queries: targetVaultUri ? allSecretNames.flatMap(name => {
       const queries = []
       const sourceSecret = sourceSecrets.find(s => getSecretName(s.id) === name)
       const targetSecret = targetSecrets.find(s => getSecretName(s.id) === name)
@@ -254,8 +253,8 @@ function CompareVaults() {
   })
 
   // Track loading states for secret values
-  const secretValuesLoading = loadValues && secretValueQueries.some(q => q.isLoading)
-  const secretValuesLoaded = loadValues && secretValueQueries.length > 0 && secretValueQueries.every(q => q.isSuccess)
+  const secretValuesLoading = secretValueQueries.some(q => q.isLoading)
+  const secretValuesLoaded = secretValueQueries.length > 0 && secretValueQueries.every(q => q.isSuccess)
   const secretValuesLoadedCount = secretValueQueries.filter(q => q.isSuccess).length
   const secretValuesTotalCount = secretValueQueries.length
 
@@ -268,19 +267,29 @@ function CompareVaults() {
       const sourceSecret = sourceSecrets.find(s => getSecretName(s.id) === name)
       const targetSecret = targetSecrets.find(s => getSecretName(s.id) === name)
 
-      // Get cached values if they exist
+      // Get cached values if they exist - check query state to know if fetch was attempted
+      const sourceQueryState = queryClient.getQueryState(['secret', sourceVaultUri, name])
+      const targetQueryState = queryClient.getQueryState(['secret', targetVaultUri, name])
+
       const sourceValueData = queryClient.getQueryData<SecretBundle | null>(['secret', sourceVaultUri, name])
       const targetValueData = queryClient.getQueryData<SecretBundle | null>(['secret', targetVaultUri, name])
+
+      // A value is "fetched" if the query has completed (success or error)
+      const sourceValueFetched = sourceQueryState?.status === 'success' || sourceQueryState?.status === 'error'
+      const targetValueFetched = targetQueryState?.status === 'success' || targetQueryState?.status === 'error'
 
       let status: ComparisonStatus
       if (sourceSecret && !targetSecret) {
         status = 'source-only'
       } else if (!sourceSecret && targetSecret) {
         status = 'target-only'
-      } else if (loadValues && sourceValueData && targetValueData) {
-        status = sourceValueData.value === targetValueData.value ? 'match' : 'mismatch'
+      } else if (sourceValueFetched && targetValueFetched && sourceValueData && targetValueData) {
+        // Compare values - treat null/undefined as empty string for comparison
+        const srcVal = sourceValueData.value ?? ''
+        const tgtVal = targetValueData.value ?? ''
+        status = srcVal === tgtVal ? 'match' : 'mismatch'
       } else {
-        status = 'match' // Default to match when values aren't loaded
+        status = 'match' // Default to match when values aren't loaded yet
       }
 
       return {
@@ -290,9 +299,11 @@ function CompareVaults() {
         targetSecret,
         sourceValue: sourceValueData?.value,
         targetValue: targetValueData?.value,
+        sourceValueFetched,
+        targetValueFetched,
       }
     })
-  }, [allSecretNames, sourceSecrets, targetSecrets, sourceVaultUri, targetVaultUri, loadValues, queryClient, secretValuesLoaded])
+  }, [allSecretNames, sourceSecrets, targetSecrets, sourceVaultUri, targetVaultUri, queryClient, secretValuesLoaded])
 
   // Summary stats
   const stats = useMemo(() => {
@@ -442,32 +453,21 @@ function CompareVaults() {
             {/* Action Buttons */}
             {targetVaultUri && (
               <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => setLoadValues(!loadValues)}
-                  disabled={secretValuesLoading}
-                  className={`inline-flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
-                    loadValues
-                      ? 'bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-400'
-                      : 'text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600'
-                  } disabled:opacity-50`}
-                  title={secretValuesLoading ? 'Loading values...' : loadValues ? 'Values loaded - click to hide' : 'Load and compare values'}
-                >
-                  {secretValuesLoading ? (
+                {/* Loading Status */}
+                {secretValuesLoading ? (
+                  <div className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-600 dark:text-gray-400">
                     <LoadingSpinner size="sm" />
-                  ) : (
-                    <RefreshCwIcon className={`w-4 h-4 ${secretValuesLoading ? 'animate-spin' : ''}`}/>
-                  )}
-                  {secretValuesLoading
-                    ? `Loading... (${secretValuesLoadedCount}/${secretValuesTotalCount})`
-                    : secretValuesLoaded
-                      ? 'Values Loaded'
-                      : loadValues
-                        ? 'Loading Values...'
-                        : 'Compare Values'}
-                </button>
+                    <span>Loading values... ({secretValuesLoadedCount}/{secretValuesTotalCount})</span>
+                  </div>
+                ) : secretValuesLoaded ? (
+                  <div className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-green-600 dark:text-green-400">
+                    <CheckIcon className="w-4 h-4"/>
+                    <span>All values loaded</span>
+                  </div>
+                ) : null}
 
-                {stats.sourceOnly > 0 && (
+                {/* Only show sync button after target secrets AND values are loaded */}
+                {!loadingTargetSecrets && secretValuesLoaded && stats.sourceOnly > 0 && (
                   <button
                     type="button"
                     onClick={handleSyncAllMissing}
@@ -645,7 +645,7 @@ function CompareVaults() {
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider w-1/5">
                         Secret Name
                       </th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider w-1/12">
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider w-1/6">
                         Status
                       </th>
                       <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider w-2/5">
@@ -662,8 +662,8 @@ function CompareVaults() {
                   <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
                     {filteredSecrets.map((secret) => {
                       // Check if this specific secret's value is still loading
-                      const isSourceValueLoading = loadValues && secret.sourceSecret && !secret.sourceValue
-                      const isTargetValueLoading = loadValues && secret.targetSecret && !secret.targetValue
+                      const isSourceValueLoading = secret.sourceSecret && !secret.sourceValueFetched
+                      const isTargetValueLoading = secret.targetSecret && !secret.targetValueFetched
 
                       return (
                         <tr key={secret.name} className="hover:bg-gray-50 dark:hover:bg-gray-900/50 align-top">
@@ -681,21 +681,21 @@ function CompareVaults() {
                           <td className="px-4 py-3">
                             {secret.sourceSecret ? (
                               <div className="text-sm">
-                                {loadValues ? (
-                                  secret.sourceValue ? (
+                                {secret.sourceValueFetched ? (
+                                  secret.sourceValue != null && secret.sourceValue !== '' ? (
                                     <code className="px-2 py-1 bg-gray-100 dark:bg-gray-900 rounded text-xs font-mono break-all whitespace-pre-wrap block max-h-32 overflow-y-auto">
                                       {secret.sourceValue}
                                     </code>
-                                  ) : isSourceValueLoading ? (
-                                    <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400">
-                                      <LoadingSpinner size="sm" />
-                                      <span className="text-xs">Loading...</span>
-                                    </div>
                                   ) : (
-                                    <span className="text-gray-500 dark:text-gray-400 text-xs italic">Failed to load</span>
+                                    <span className="text-gray-500 dark:text-gray-400 text-xs italic">(empty)</span>
                                   )
+                                ) : isSourceValueLoading ? (
+                                  <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400">
+                                    <LoadingSpinner size="sm" />
+                                    <span className="text-xs">Loading...</span>
+                                  </div>
                                 ) : (
-                                  <span className="text-green-600 dark:text-green-400">✓ Exists</span>
+                                  <span className="text-gray-500 dark:text-gray-400 text-xs italic">Failed to load</span>
                                 )}
                               </div>
                             ) : (
@@ -705,21 +705,21 @@ function CompareVaults() {
                           <td className="px-4 py-3">
                             {secret.targetSecret ? (
                               <div className="text-sm">
-                                {loadValues ? (
-                                  secret.targetValue ? (
+                                {secret.targetValueFetched ? (
+                                  secret.targetValue != null && secret.targetValue !== '' ? (
                                     <code className="px-2 py-1 bg-gray-100 dark:bg-gray-900 rounded text-xs font-mono break-all whitespace-pre-wrap block max-h-32 overflow-y-auto">
                                       {secret.targetValue}
                                     </code>
-                                  ) : isTargetValueLoading ? (
-                                    <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400">
-                                      <LoadingSpinner size="sm" />
-                                      <span className="text-xs">Loading...</span>
-                                    </div>
                                   ) : (
-                                    <span className="text-gray-500 dark:text-gray-400 text-xs italic">Failed to load</span>
+                                    <span className="text-gray-500 dark:text-gray-400 text-xs italic">(empty)</span>
                                   )
+                                ) : isTargetValueLoading ? (
+                                  <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400">
+                                    <LoadingSpinner size="sm" />
+                                    <span className="text-xs">Loading...</span>
+                                  </div>
                                 ) : (
-                                  <span className="text-green-600 dark:text-green-400">✓ Exists</span>
+                                  <span className="text-gray-500 dark:text-gray-400 text-xs italic">Failed to load</span>
                                 )}
                               </div>
                             ) : (
@@ -742,7 +742,7 @@ function CompareVaults() {
                                   </button>
                                   <button
                                     type="button"
-                                    onClick={() => handleCreateWithValue(secret.name, secret.sourceValue)}
+                                    onClick={() => handleCreateWithValue(secret.name, secret.sourceValue ?? undefined)}
                                     disabled={createMutation.isPending}
                                   className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded transition-colors disabled:opacity-50"
                                   title="Create secret with custom value"
