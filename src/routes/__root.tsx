@@ -21,16 +21,16 @@ function Sidebar() {
   };
 
   return (
-    <aside className="flex-none w-56 border-r border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 flex flex-col">
+    <aside className="sticky top-0 flex-none w-56 border-r border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 flex flex-col h-screen">
       {/* Logo */}
-      <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+      <div className="flex-none p-4 border-b border-gray-200 dark:border-gray-700">
         <Link to="/" className="text-lg font-bold text-gray-900 dark:text-gray-100 hover:text-primary-500 dark:hover:text-primary-400 transition-colors">
           VaultRaider
         </Link>
       </div>
 
-      {/* Navigation Links */}
-      <nav className="flex-1 p-3">
+      {/* Navigation Links - Scrollable */}
+      <nav className="flex-1 p-3 overflow-y-auto">
         <ul className="space-y-1">
           <li>
             <Link
@@ -62,8 +62,8 @@ function Sidebar() {
         </ul>
       </nav>
 
-      {/* Bottom section: User profile & theme toggle */}
-      <div className="p-3 border-t border-gray-200 dark:border-gray-700 space-y-3">
+      {/* Bottom section: User profile & theme toggle - Fixed at bottom */}
+      <div className="flex-none p-3 border-t border-gray-200 dark:border-gray-700 space-y-3">
         <ThemeToggle />
         {isAuthenticated && userInfo && (
           <UserProfile userInfo={userInfo} onLogout={handleLogout} compact />

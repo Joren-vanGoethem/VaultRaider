@@ -6,7 +6,16 @@ import {SecretCard} from '../components/SecretCard'
 import {ExportSecretsModal} from '../components/ExportSecretsModal'
 import {ImportSecretsModal} from '../components/ImportSecretsModal'
 import {useSuspenseQuery, useMutation, useQueryClient} from '@tanstack/react-query'
-import {PlusIcon, DownloadIcon, UploadIcon, FileJsonIcon, GitCompareIcon, SearchIcon, XIcon, KeyIcon} from 'lucide-react'
+import {
+  PlusIcon,
+  DownloadIcon,
+  UploadIcon,
+  FileJsonIcon,
+  GitCompareIcon,
+  SearchIcon,
+  XIcon,
+  KeyIcon
+} from 'lucide-react'
 import {useToast} from '../contexts/ToastContext'
 
 type KeyvaultSearch = {
@@ -37,7 +46,7 @@ function SecretsLoadingSpinner() {
 }
 
 function Keyvaults() {
-  const { vaultUri, name } = Route.useSearch()
+  const {vaultUri, name} = Route.useSearch()
   const [searchQuery, setSearchQuery] = useState('')
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [showImportModal, setShowImportModal] = useState(false)
@@ -47,10 +56,10 @@ function Keyvaults() {
   const [newSecretValue, setNewSecretValue] = useState('')
   const [loadAll, setLoadAll] = useState(false)
   const queryClient = useQueryClient()
-  const { showSuccess, showError } = useToast()
+  const {showSuccess, showError} = useToast()
 
   // Use React Query to fetch secrets list
-  const { data: secrets } = useSuspenseQuery({
+  const {data: secrets} = useSuspenseQuery({
     queryKey: [fetchSecretsKey, vaultUri],
     queryFn: () => fetchSecrets(vaultUri),
   })
@@ -60,7 +69,7 @@ function Keyvaults() {
     mutationFn: () => createSecret(vaultUri, newSecretName, newSecretValue),
     onSuccess: () => {
       // Invalidate and refetch secrets list
-      queryClient.invalidateQueries({ queryKey: [fetchSecretsKey, vaultUri] })
+      queryClient.invalidateQueries({queryKey: [fetchSecretsKey, vaultUri]})
       setShowCreateModal(false)
       setNewSecretName('')
       setNewSecretValue('')
@@ -104,7 +113,7 @@ function Keyvaults() {
 
   // Handle import completion
   const handleImportComplete = () => {
-    queryClient.invalidateQueries({ queryKey: [fetchSecretsKey, vaultUri] })
+    queryClient.invalidateQueries({queryKey: [fetchSecretsKey, vaultUri]})
   }
 
   // Filter secrets based on search query
@@ -129,11 +138,12 @@ function Keyvaults() {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="p-2 rounded-lg bg-primary-100 dark:bg-primary-900/30">
-                <KeyIcon className="w-6 h-6 text-primary-600 dark:text-primary-400" />
+                <KeyIcon className="w-6 h-6 text-primary-600 dark:text-primary-400"/>
               </div>
               <div>
                 <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">{name}</h1>
-                <p className="text-sm text-gray-500 dark:text-gray-400">{secrets.length} secret{secrets.length !== 1 ? 's' : ''}</p>
+                <p
+                  className="text-sm text-gray-500 dark:text-gray-400">{secrets.length} secret{secrets.length !== 1 ? 's' : ''}</p>
               </div>
             </div>
 
@@ -146,12 +156,12 @@ function Keyvaults() {
                   className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors"
                   title="Load all secret values"
                 >
-                  <DownloadIcon className="w-4 h-4" />
+                  <DownloadIcon className="w-4 h-4"/>
                   Load All
                 </button>
               )}
 
-              <div className="h-6 w-px bg-gray-300 dark:bg-gray-600 mx-1" />
+              <div className="h-6 w-px bg-gray-300 dark:bg-gray-600 mx-1"/>
 
               <button
                 type="button"
@@ -160,7 +170,7 @@ function Keyvaults() {
                 className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 title="Export secrets to JSON"
               >
-                <FileJsonIcon className="w-4 h-4" />
+                <FileJsonIcon className="w-4 h-4"/>
                 Export
               </button>
 
@@ -170,7 +180,7 @@ function Keyvaults() {
                 className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors"
                 title="Import secrets from file"
               >
-                <UploadIcon className="w-4 h-4" />
+                <UploadIcon className="w-4 h-4"/>
                 Import
               </button>
 
@@ -180,11 +190,11 @@ function Keyvaults() {
                 className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors"
                 title="Compare with another vault"
               >
-                <GitCompareIcon className="w-4 h-4" />
+                <GitCompareIcon className="w-4 h-4"/>
                 Compare
               </button>
 
-              <div className="h-6 w-px bg-gray-300 dark:bg-gray-600 mx-1" />
+              <div className="h-6 w-px bg-gray-300 dark:bg-gray-600 mx-1"/>
 
               <button
                 type="button"
@@ -192,7 +202,7 @@ function Keyvaults() {
                 className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-lg transition-colors"
                 title="Add new secret"
               >
-                <PlusIcon className="w-4 h-4" />
+                <PlusIcon className="w-4 h-4"/>
                 Add Secret
               </button>
             </div>
@@ -205,7 +215,7 @@ function Keyvaults() {
           {secrets.length > 0 && (
             <div className="mb-4">
               <div className="relative max-w-xl">
-                <SearchIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <SearchIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400"/>
                 <input
                   type="text"
                   placeholder="Search secrets by name..."
@@ -220,7 +230,7 @@ function Keyvaults() {
                     className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
                     title="Clear search"
                   >
-                    <XIcon className="w-4 h-4" />
+                    <XIcon className="w-4 h-4"/>
                   </button>
                 )}
               </div>
@@ -232,19 +242,10 @@ function Keyvaults() {
             </div>
           )}
 
-          {/* Info Banner */}
-          {secrets.length > 0 && !loadAll && (
-            <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg max-w-xl">
-              <p className="text-sm text-blue-800 dark:text-blue-300">
-                ℹ️ Secret values are loaded on demand. Click "Load Value" on individual secrets or "Load All" to fetch them.
-              </p>
-            </div>
-          )}
-
           {/* Secrets Grid/List */}
           {secrets.length === 0 ? (
             <div className="text-center py-12">
-              <KeyIcon className="w-12 h-12 mx-auto text-gray-400 dark:text-gray-500 mb-4" />
+              <KeyIcon className="w-12 h-12 mx-auto text-gray-400 dark:text-gray-500 mb-4"/>
               <p className="text-gray-600 dark:text-gray-400 text-lg">
                 No secrets found in this Key Vault
               </p>
@@ -254,7 +255,7 @@ function Keyvaults() {
             </div>
           ) : filteredSecrets.length === 0 ? (
             <div className="text-center py-12">
-              <SearchIcon className="w-12 h-12 mx-auto text-gray-400 dark:text-gray-500 mb-4" />
+              <SearchIcon className="w-12 h-12 mx-auto text-gray-400 dark:text-gray-500 mb-4"/>
               <p className="text-gray-600 dark:text-gray-400">
                 No secrets match "{searchQuery}"
               </p>
@@ -284,13 +285,15 @@ function Keyvaults() {
         {/* Create Secret Modal */}
         {showCreateModal && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={handleCancelCreate}>
-            <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4 shadow-xl" onClick={(e) => e.stopPropagation()}>
+            <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4 shadow-xl"
+                 onClick={(e) => e.stopPropagation()}>
               <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
                 Create New Secret
               </h3>
               <form onSubmit={handleConfirmCreate}>
                 <div className="mb-4">
-                  <label htmlFor="secretName" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  <label htmlFor="secretName"
+                         className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Secret Name
                   </label>
                   <input
@@ -305,7 +308,8 @@ function Keyvaults() {
                   />
                 </div>
                 <div className="mb-6">
-                  <label htmlFor="secretValue" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  <label htmlFor="secretValue"
+                         className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Secret Value
                   </label>
                   <textarea
@@ -353,18 +357,21 @@ function Keyvaults() {
 
         {/* Compare Modal (Placeholder) */}
         {showCompareModal && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setShowCompareModal(false)}>
-            <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-2xl w-full mx-4 shadow-xl" onClick={(e) => e.stopPropagation()}>
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+               onClick={() => setShowCompareModal(false)}>
+            <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-2xl w-full mx-4 shadow-xl"
+                 onClick={(e) => e.stopPropagation()}>
               <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
                 Compare with Another Vault
               </h3>
               <div className="text-center py-8">
-                <GitCompareIcon className="w-12 h-12 mx-auto text-gray-400 dark:text-gray-500 mb-4" />
+                <GitCompareIcon className="w-12 h-12 mx-auto text-gray-400 dark:text-gray-500 mb-4"/>
                 <p className="text-gray-600 dark:text-gray-400">
                   Compare functionality coming soon!
                 </p>
                 <p className="text-sm text-gray-500 dark:text-gray-500 mt-2">
-                  This feature will allow you to compare secrets between vaults, identify missing keys, and sync configurations.
+                  This feature will allow you to compare secrets between vaults, identify missing keys, and sync
+                  configurations.
                 </p>
               </div>
               <div className="flex justify-end mt-6">
