@@ -37,5 +37,6 @@ log = "0.4.29"
 serde_path_to_error = "0.1"
 uuid = { version = "1.0", features = ["v4"] }
 anyhow = "1.0"
+chrono = { version = "0.4", features = ["serde"] }
 
 

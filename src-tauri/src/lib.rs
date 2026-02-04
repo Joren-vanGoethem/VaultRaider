@@ -12,7 +12,7 @@ use commands::auth::{
 };
 use commands::keyvault::{
   check_keyvault_access, create_keyvault, create_secret, delete_secret,
-  get_secret, get_secrets, update_secret, fetch_keyvaults,
+  get_secret, get_secrets, update_secret, fetch_keyvaults, export_secrets,
 };
 use commands::resource_group::cmd_get_resource_groups;
 use commands::subscription::fetch_subscriptions;
@@ -49,6 +49,7 @@ pub fn run() {
             delete_secret,
             create_secret,
             update_secret,
+            export_secrets,
             // Resource Group commands
             cmd_get_resource_groups,
         ])

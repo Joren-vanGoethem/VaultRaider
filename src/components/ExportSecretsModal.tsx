@@ -2,7 +2,7 @@
 import { FileJsonIcon, FolderIcon, XIcon } from 'lucide-react'
 import { save } from '@tauri-apps/plugin-dialog'
 import { writeTextFile } from '@tauri-apps/plugin-fs'
-import { fetchSecret } from '../services/azureService'
+import { exportSecrets } from '../services/azureService'
 import { useToast } from '../contexts/ToastContext'
 import type { Secret } from '../types/secrets'
 
@@ -66,11 +66,6 @@ export function ExportSecretsModal({ isOpen, onClose, vaultName, vaultUri, secre
     }
   }
 
-  const getSecretName = (id: string) => {
-    const parts = id.split('/')
-    return parts[parts.length - 1]
-  }
-
   const handleExport = async () => {
     if (!savePath) {
       showError('No location selected', 'Please select a location to save the file')
@@ -79,89 +74,21 @@ export function ExportSecretsModal({ isOpen, onClose, vaultName, vaultUri, secre
 
     setIsExporting(true)
     try {
-      // Fetch all secret values if needed
-      const secretsWithValues = await Promise.all(
-        secrets.map(async (secret) => {
-          const secretName = getSecretName(secret.id)
-          try {
-            const bundle = options.includeValue ? await fetchSecret(vaultUri, secretName) : null
-            return {
-              name: secretName,
-              value: bundle?.value || '',
-              attributes: secret.attributes,
-            }
-          } catch {
-            return {
-              name: secretName,
-              value: '',
-              attributes: secret.attributes,
-              error: 'Failed to fetch value',
-            }
-          }
-        })
-      )
-
-      let exportContent: string
-
-      switch (format) {
-        case 'full':
-          // Full format with all metadata
-          exportContent = JSON.stringify({
-            vaultName,
-            vaultUri,
-            exportedAt: new Date().toISOString(),
-            secrets: secretsWithValues.map(secret => {
-              const result: Record<string, unknown> = {}
-              if (options.includeName) result.name = secret.name
-              if (options.includeValue) result.value = secret.value
-              if (options.includeAttributes || options.includeEnabled || options.includeCreated || options.includeUpdated || options.includeRecoveryLevel) {
-                const attrs: Record<string, unknown> = {}
-                if (options.includeEnabled) attrs.enabled = secret.attributes.enabled
-                if (options.includeCreated) attrs.created = new Date(secret.attributes.created * 1000).toISOString()
-                if (options.includeUpdated) attrs.updated = new Date(secret.attributes.updated * 1000).toISOString()
-                if (options.includeRecoveryLevel) attrs.recoveryLevel = secret.attributes.recoveryLevel
-                if (Object.keys(attrs).length > 0) result.attributes = attrs
-              }
-              return result
-            }),
-          }, null, 2)
-          break
-
-        case 'simple':
-          // Simple array of name/value pairs
-          exportContent = JSON.stringify({
-            secrets: secretsWithValues.map(secret => ({
-              name: secret.name,
-              value: secret.value,
-            })),
-          }, null, 2)
-          break
-
-        case 'keyValue':
-          // Key-value object format
-          const kvObject: Record<string, string> = {}
-          for (const secret of secretsWithValues) {
-            kvObject[secret.name] = secret.value
-          }
-          exportContent = JSON.stringify(kvObject, null, 2)
-          break
-
-        case 'dotenv':
-          // .env format
-          exportContent = secretsWithValues
-            .map(secret => `${secret.name.toUpperCase().replace(/-/g, '_')}="${secret.value}"`)
-            .join('\n')
-          break
-
-        default:
-          exportContent = JSON.stringify(secretsWithValues, null, 2)
-      }
+      // Call Rust backend to generate export content
+      const exportContent = await exportSecrets(vaultName, vaultUri, {
+        format,
+        includeValue: options.includeValue,
+        includeEnabled: options.includeEnabled,
+        includeCreated: options.includeCreated,
+        includeUpdated: options.includeUpdated,
+        includeRecoveryLevel: options.includeRecoveryLevel,
+      })
 
       await writeTextFile(savePath, exportContent)
       showSuccess(`Exported ${secrets.length} secrets to ${savePath}`)
       onClose()
     } catch (error) {
-      showError('Export failed', error instanceof Error ? error.message : 'Unknown error')
+      showError('Export failed', error instanceof Error ? error.message : String(error))
     } finally {
       setIsExporting(false)
     }

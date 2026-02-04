@@ -134,3 +134,17 @@ export async function updateSecret(keyvaultUri: string, secretName: string, secr
     return [];
   }
 }
+
+export interface ExportOptions {
+  format: 'full' | 'simple' | 'keyValue' | 'dotenv';
+  includeValue: boolean;
+  includeEnabled: boolean;
+  includeCreated: boolean;
+  includeUpdated: boolean;
+  includeRecoveryLevel: boolean;
+}
+
+export async function exportSecrets(vaultName: string, vaultUri: string, options: ExportOptions): Promise<string> {
+  return await invoke<string>('export_secrets', { vaultName, vaultUri, options });
+}
+
