@@ -2,20 +2,15 @@ import {createFileRoute} from '@tanstack/react-router'
 import {Suspense, useState, useMemo} from 'react'
 import {LoadingSpinner} from '../components/LoadingSpinner'
 import {fetchSecrets, fetchSecretsKey, createSecret} from '../services/azureService'
-import {SecretCard} from '../components/SecretCard'
 import {ExportSecretsModal} from '../components/ExportSecretsModal'
 import {ImportSecretsModal} from '../components/ImportSecretsModal'
+import {KeyvaultHeader} from '../components/KeyvaultHeader'
+import {KeyvaultSearchBar} from '../components/KeyvaultSearchBar'
+import {SecretsEmptyState} from '../components/SecretsEmptyState'
+import {SecretsList} from '../components/SecretsList'
+import {CreateSecretModal} from '../components/CreateSecretModal'
+import {CompareVaultsModal} from '../components/CompareVaultsModal'
 import {useSuspenseQuery, useMutation, useQueryClient} from '@tanstack/react-query'
-import {
-  PlusIcon,
-  DownloadIcon,
-  UploadIcon,
-  FileJsonIcon,
-  GitCompareIcon,
-  SearchIcon,
-  XIcon,
-  KeyIcon
-} from 'lucide-react'
 import {useToast} from '../contexts/ToastContext'
 
 type KeyvaultSearch = {
@@ -52,8 +47,6 @@ function Keyvaults() {
   const [showImportModal, setShowImportModal] = useState(false)
   const [showExportModal, setShowExportModal] = useState(false)
   const [showCompareModal, setShowCompareModal] = useState(false)
-  const [newSecretName, setNewSecretName] = useState('')
-  const [newSecretValue, setNewSecretValue] = useState('')
   const [loadAll, setLoadAll] = useState(false)
   const queryClient = useQueryClient()
   const {showSuccess, showError} = useToast()
@@ -66,14 +59,12 @@ function Keyvaults() {
 
   // Mutation for creating a new secret
   const createMutation = useMutation({
-    mutationFn: () => createSecret(vaultUri, newSecretName, newSecretValue),
-    onSuccess: () => {
+    mutationFn: ({name, value}: {name: string; value: string}) => createSecret(vaultUri, name, value),
+    onSuccess: (_data, variables) => {
       // Invalidate and refetch secrets list
       queryClient.invalidateQueries({queryKey: [fetchSecretsKey, vaultUri]})
       setShowCreateModal(false)
-      setNewSecretName('')
-      setNewSecretValue('')
-      showSuccess(`Secret "${newSecretName}" created successfully`)
+      showSuccess(`Secret "${variables.name}" created successfully`)
     },
     onError: (error) => {
       const errorMsg = error instanceof Error ? error.message : String(error)
@@ -82,27 +73,13 @@ function Keyvaults() {
     }
   })
 
-  const handleCreateClick = () => {
-    setShowCreateModal(true)
+  // Handler functions
+  const handleConfirmCreate = (name: string, value: string) => {
+    createMutation.mutate({name, value})
   }
 
-  const handleConfirmCreate = (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!newSecretName.trim() || !newSecretValue.trim()) {
-      alert('Secret name and value are required')
-      return
-    }
-    createMutation.mutate()
-  }
-
-  const handleCancelCreate = () => {
-    setShowCreateModal(false)
-    setNewSecretName('')
-    setNewSecretValue('')
-  }
-
-  const handleLoadAll = () => {
-    setLoadAll(true)
+  const handleImportComplete = () => {
+    queryClient.invalidateQueries({queryKey: [fetchSecretsKey, vaultUri]})
   }
 
   // Helper function to extract secret name from ID
@@ -111,13 +88,7 @@ function Keyvaults() {
     return parts[parts.length - 1]
   }
 
-  // Handle import completion
-  const handleImportComplete = () => {
-    queryClient.invalidateQueries({queryKey: [fetchSecretsKey, vaultUri]})
-  }
-
   // Filter secrets based on search query
-  // Note: Individual secret values are fetched by SecretCard components using React Query
   const filteredSecrets = useMemo(() => {
     return secrets.filter(secret => {
       if (!searchQuery) return true
@@ -134,218 +105,56 @@ function Keyvaults() {
     <Suspense fallback={<SecretsLoadingSpinner/>}>
       <div className="h-full flex flex-col">
         {/* Header */}
-        <div className="flex-none px-6 py-4 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-primary-100 dark:bg-primary-900/30">
-                <KeyIcon className="w-6 h-6 text-primary-600 dark:text-primary-400"/>
-              </div>
-              <div>
-                <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">{name}</h1>
-                <p
-                  className="text-sm text-gray-500 dark:text-gray-400">{secrets.length} secret{secrets.length !== 1 ? 's' : ''}</p>
-              </div>
-            </div>
-
-            {/* Action Buttons */}
-            <div className="flex items-center gap-2">
-              {secrets.length > 0 && !loadAll && (
-                <button
-                  type="button"
-                  onClick={handleLoadAll}
-                  className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors"
-                  title="Load all secret values"
-                >
-                  <DownloadIcon className="w-4 h-4"/>
-                  Load All
-                </button>
-              )}
-
-              <div className="h-6 w-px bg-gray-300 dark:bg-gray-600 mx-1"/>
-
-              <button
-                type="button"
-                onClick={() => setShowExportModal(true)}
-                disabled={secrets.length === 0}
-                className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                title="Export secrets to JSON"
-              >
-                <FileJsonIcon className="w-4 h-4"/>
-                Export
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setShowImportModal(true)}
-                className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors"
-                title="Import secrets from file"
-              >
-                <UploadIcon className="w-4 h-4"/>
-                Import
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setShowCompareModal(true)}
-                className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors"
-                title="Compare with another vault"
-              >
-                <GitCompareIcon className="w-4 h-4"/>
-                Compare
-              </button>
-
-              <div className="h-6 w-px bg-gray-300 dark:bg-gray-600 mx-1"/>
-
-              <button
-                type="button"
-                onClick={handleCreateClick}
-                className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-lg transition-colors"
-                title="Add new secret"
-              >
-                <PlusIcon className="w-4 h-4"/>
-                Add Secret
-              </button>
-            </div>
-          </div>
-        </div>
+        <KeyvaultHeader
+          name={name}
+          secretsCount={secrets.length}
+          loadAll={loadAll}
+          onLoadAll={() => setLoadAll(true)}
+          onExport={() => setShowExportModal(true)}
+          onImport={() => setShowImportModal(true)}
+          onCompare={() => setShowCompareModal(true)}
+          onCreate={() => setShowCreateModal(true)}
+        />
 
         {/* Main Content */}
         <div className="flex-1 overflow-auto p-6">
           {/* Search Bar */}
           {secrets.length > 0 && (
-            <div className="mb-4">
-              <div className="relative max-w-xl">
-                <SearchIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400"/>
-                <input
-                  type="text"
-                  placeholder="Search secrets by name..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full px-4 py-2.5 pl-10 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500 dark:focus:ring-primary-400 focus:border-transparent"
-                />
-                {searchQuery && (
-                  <button
-                    type="button"
-                    onClick={() => setSearchQuery('')}
-                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-                    title="Clear search"
-                  >
-                    <XIcon className="w-4 h-4"/>
-                  </button>
-                )}
-              </div>
-              {searchQuery && (
-                <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
-                  Showing {filteredSecrets.length} of {secrets.length} secret{secrets.length !== 1 ? 's' : ''}
-                </p>
-              )}
-            </div>
+            <KeyvaultSearchBar
+              searchQuery={searchQuery}
+              onSearchChange={setSearchQuery}
+              totalCount={secrets.length}
+              filteredCount={filteredSecrets.length}
+            />
           )}
 
           {/* Secrets Grid/List */}
           {secrets.length === 0 ? (
-            <div className="text-center py-12">
-              <KeyIcon className="w-12 h-12 mx-auto text-gray-400 dark:text-gray-500 mb-4"/>
-              <p className="text-gray-600 dark:text-gray-400 text-lg">
-                No secrets found in this Key Vault
-              </p>
-              <p className="text-gray-500 dark:text-gray-500 text-sm mt-1">
-                Click "Add Secret" to create your first secret
-              </p>
-            </div>
+            <SecretsEmptyState type="no-secrets" />
           ) : filteredSecrets.length === 0 ? (
-            <div className="text-center py-12">
-              <SearchIcon className="w-12 h-12 mx-auto text-gray-400 dark:text-gray-500 mb-4"/>
-              <p className="text-gray-600 dark:text-gray-400">
-                No secrets match "{searchQuery}"
-              </p>
-              <button
-                type="button"
-                onClick={() => setSearchQuery('')}
-                className="mt-3 text-sm text-primary-500 hover:text-primary-600 dark:text-primary-400 dark:hover:text-primary-300"
-              >
-                Clear search
-              </button>
-            </div>
+            <SecretsEmptyState
+              type="no-results"
+              searchQuery={searchQuery}
+              onClearSearch={() => setSearchQuery('')}
+            />
           ) : (
-            <div className="grid gap-3 grid-cols-1 lg:grid-cols-2 2xl:grid-cols-3">
-              {filteredSecrets.map((secret) => (
-                <SecretCard
-                  key={secret.id}
-                  secret={secret}
-                  vaultUri={vaultUri}
-                  searchQuery={searchQuery}
-                  shouldLoad={loadAll}
-                />
-              ))}
-            </div>
+            <SecretsList
+              secrets={filteredSecrets}
+              vaultUri={vaultUri}
+              searchQuery={searchQuery}
+              shouldLoadAll={loadAll}
+            />
           )}
         </div>
 
-        {/* Create Secret Modal */}
-        {showCreateModal && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={handleCancelCreate}>
-            <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4 shadow-xl"
-                 onClick={(e) => e.stopPropagation()}>
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
-                Create New Secret
-              </h3>
-              <form onSubmit={handleConfirmCreate}>
-                <div className="mb-4">
-                  <label htmlFor="secretName"
-                         className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Secret Name
-                  </label>
-                  <input
-                    type="text"
-                    id="secretName"
-                    value={newSecretName}
-                    onChange={(e) => setNewSecretName(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-green-500 dark:focus:ring-green-400 focus:border-transparent"
-                    placeholder="my-secret-name"
-                    disabled={createMutation.isPending}
-                    required
-                  />
-                </div>
-                <div className="mb-6">
-                  <label htmlFor="secretValue"
-                         className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Secret Value
-                  </label>
-                  <textarea
-                    id="secretValue"
-                    value={newSecretValue}
-                    onChange={(e) => setNewSecretValue(e.target.value)}
-                    rows={4}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-green-500 dark:focus:ring-green-400 focus:border-transparent resize-none"
-                    placeholder="Enter secret value..."
-                    disabled={createMutation.isPending}
-                    required
-                  />
-                </div>
-                <div className="flex gap-3 justify-end">
-                  <button
-                    type="button"
-                    onClick={handleCancelCreate}
-                    className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors"
-                    disabled={createMutation.isPending}
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    className="px-4 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                    disabled={createMutation.isPending}
-                  >
-                    {createMutation.isPending ? 'Creating...' : 'Create Secret'}
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        )}
+        {/* Modals */}
+        <CreateSecretModal
+          isOpen={showCreateModal}
+          onClose={() => setShowCreateModal(false)}
+          onConfirm={handleConfirmCreate}
+          isCreating={createMutation.isPending}
+        />
 
-        {/* Import Modal */}
         <ImportSecretsModal
           isOpen={showImportModal}
           onClose={() => setShowImportModal(false)}
@@ -355,39 +164,11 @@ function Keyvaults() {
           onImportComplete={handleImportComplete}
         />
 
-        {/* Compare Modal (Placeholder) */}
-        {showCompareModal && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
-               onClick={() => setShowCompareModal(false)}>
-            <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-2xl w-full mx-4 shadow-xl"
-                 onClick={(e) => e.stopPropagation()}>
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
-                Compare with Another Vault
-              </h3>
-              <div className="text-center py-8">
-                <GitCompareIcon className="w-12 h-12 mx-auto text-gray-400 dark:text-gray-500 mb-4"/>
-                <p className="text-gray-600 dark:text-gray-400">
-                  Compare functionality coming soon!
-                </p>
-                <p className="text-sm text-gray-500 dark:text-gray-500 mt-2">
-                  This feature will allow you to compare secrets between vaults, identify missing keys, and sync
-                  configurations.
-                </p>
-              </div>
-              <div className="flex justify-end mt-6">
-                <button
-                  type="button"
-                  onClick={() => setShowCompareModal(false)}
-                  className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors"
-                >
-                  Close
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
+        <CompareVaultsModal
+          isOpen={showCompareModal}
+          onClose={() => setShowCompareModal(false)}
+        />
 
-        {/* Export Modal */}
         <ExportSecretsModal
           isOpen={showExportModal}
           onClose={() => setShowExportModal(false)}
