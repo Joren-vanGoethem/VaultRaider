@@ -185,6 +185,7 @@ function CompareVaults() {
   const [targetName, setTargetName] = useState(initialTargetName || '')
   const [selectedTargetSubscription, setSelectedTargetSubscription] = useState(initialTargetSubscriptionId || sourceSubscriptionId || '')
   const [loadValues, setLoadValues] = useState(false)
+  const [statusFilter, setStatusFilter] = useState<ComparisonStatus | 'all'>('all')
   const [createWithValueModal, setCreateWithValueModal] = useState<{isOpen: boolean; secretName: string; suggestedValue?: string}>({
     isOpen: false,
     secretName: '',
@@ -252,8 +253,11 @@ function CompareVaults() {
     }) : []
   })
 
-  // Track when secret value queries have completed
-  const secretValuesLoaded = secretValueQueries.length > 0 && secretValueQueries.every(q => q.isSuccess)
+  // Track loading states for secret values
+  const secretValuesLoading = loadValues && secretValueQueries.some(q => q.isLoading)
+  const secretValuesLoaded = loadValues && secretValueQueries.length > 0 && secretValueQueries.every(q => q.isSuccess)
+  const secretValuesLoadedCount = secretValueQueries.filter(q => q.isSuccess).length
+  const secretValuesTotalCount = secretValueQueries.length
 
   // Build comparison data
   // biome-ignore lint/correctness/useExhaustiveDependencies: secretValuesLoaded triggers recomputation when values are fetched
@@ -300,6 +304,12 @@ function CompareVaults() {
       targetOnly: comparedSecrets.filter(s => s.status === 'target-only').length,
     }
   }, [comparedSecrets])
+
+  // Filter secrets based on selected status filter
+  const filteredSecrets = useMemo(() => {
+    if (statusFilter === 'all') return comparedSecrets
+    return comparedSecrets.filter(s => s.status === statusFilter)
+  }, [comparedSecrets, statusFilter])
 
   // Create secret mutation
   const createMutation = useMutation({
@@ -435,15 +445,26 @@ function CompareVaults() {
                 <button
                   type="button"
                   onClick={() => setLoadValues(!loadValues)}
+                  disabled={secretValuesLoading}
                   className={`inline-flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
                     loadValues
                       ? 'bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-400'
                       : 'text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600'
-                  }`}
-                  title={loadValues ? 'Values loaded' : 'Load and compare values'}
+                  } disabled:opacity-50`}
+                  title={secretValuesLoading ? 'Loading values...' : loadValues ? 'Values loaded - click to hide' : 'Load and compare values'}
                 >
-                  <RefreshCwIcon className="w-4 h-4"/>
-                  {loadValues ? 'Values Loaded' : 'Compare Values'}
+                  {secretValuesLoading ? (
+                    <LoadingSpinner size="sm" />
+                  ) : (
+                    <RefreshCwIcon className={`w-4 h-4 ${secretValuesLoading ? 'animate-spin' : ''}`}/>
+                  )}
+                  {secretValuesLoading
+                    ? `Loading... (${secretValuesLoadedCount}/${secretValuesTotalCount})`
+                    : secretValuesLoaded
+                      ? 'Values Loaded'
+                      : loadValues
+                        ? 'Loading Values...'
+                        : 'Compare Values'}
                 </button>
 
                 {stats.sourceOnly > 0 && (
@@ -536,114 +557,193 @@ function CompareVaults() {
             </div>
           ) : (
             <>
-              {/* Summary Stats */}
+              {/* Summary Stats - Clickable Filters */}
               <div className="grid grid-cols-5 gap-4 mb-6">
-                <div className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
+                <button
+                  type="button"
+                  onClick={() => setStatusFilter(statusFilter === 'all' ? 'all' : 'all')}
+                  className={`text-left rounded-lg p-4 border transition-all ${
+                    statusFilter === 'all'
+                      ? 'bg-gray-100 dark:bg-gray-700 border-gray-400 dark:border-gray-500 ring-2 ring-gray-400 dark:ring-gray-500'
+                      : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:border-gray-400 dark:hover:border-gray-500'
+                  }`}
+                >
                   <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">{stats.total}</div>
                   <div className="text-sm text-gray-500 dark:text-gray-400">Total Secrets</div>
-                </div>
-                <div className="bg-green-50 dark:bg-green-900/20 rounded-lg p-4 border border-green-200 dark:border-green-800">
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setStatusFilter(statusFilter === 'match' ? 'all' : 'match')}
+                  className={`text-left rounded-lg p-4 border transition-all ${
+                    statusFilter === 'match'
+                      ? 'bg-green-100 dark:bg-green-900/40 border-green-400 dark:border-green-600 ring-2 ring-green-400 dark:ring-green-600'
+                      : 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800 hover:border-green-400 dark:hover:border-green-600'
+                  }`}
+                >
                   <div className="text-2xl font-bold text-green-700 dark:text-green-400">{stats.matches}</div>
                   <div className="text-sm text-green-600 dark:text-green-500">Matching</div>
-                </div>
-                <div className="bg-yellow-50 dark:bg-yellow-900/20 rounded-lg p-4 border border-yellow-200 dark:border-yellow-800">
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setStatusFilter(statusFilter === 'mismatch' ? 'all' : 'mismatch')}
+                  className={`text-left rounded-lg p-4 border transition-all ${
+                    statusFilter === 'mismatch'
+                      ? 'bg-yellow-100 dark:bg-yellow-900/40 border-yellow-400 dark:border-yellow-600 ring-2 ring-yellow-400 dark:ring-yellow-600'
+                      : 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800 hover:border-yellow-400 dark:hover:border-yellow-600'
+                  }`}
+                >
                   <div className="text-2xl font-bold text-yellow-700 dark:text-yellow-400">{stats.mismatches}</div>
                   <div className="text-sm text-yellow-600 dark:text-yellow-500">Different Values</div>
-                </div>
-                <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4 border border-blue-200 dark:border-blue-800">
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setStatusFilter(statusFilter === 'source-only' ? 'all' : 'source-only')}
+                  className={`text-left rounded-lg p-4 border transition-all ${
+                    statusFilter === 'source-only'
+                      ? 'bg-blue-100 dark:bg-blue-900/40 border-blue-400 dark:border-blue-600 ring-2 ring-blue-400 dark:ring-blue-600'
+                      : 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800 hover:border-blue-400 dark:hover:border-blue-600'
+                  }`}
+                >
                   <div className="text-2xl font-bold text-blue-700 dark:text-blue-400">{stats.sourceOnly}</div>
                   <div className="text-sm text-blue-600 dark:text-blue-500">Missing in Target</div>
-                </div>
-                <div className="bg-purple-50 dark:bg-purple-900/20 rounded-lg p-4 border border-purple-200 dark:border-purple-800">
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setStatusFilter(statusFilter === 'target-only' ? 'all' : 'target-only')}
+                  className={`text-left rounded-lg p-4 border transition-all ${
+                    statusFilter === 'target-only'
+                      ? 'bg-purple-100 dark:bg-purple-900/40 border-purple-400 dark:border-purple-600 ring-2 ring-purple-400 dark:ring-purple-600'
+                      : 'bg-purple-50 dark:bg-purple-900/20 border-purple-200 dark:border-purple-800 hover:border-purple-400 dark:hover:border-purple-600'
+                  }`}
+                >
                   <div className="text-2xl font-bold text-purple-700 dark:text-purple-400">{stats.targetOnly}</div>
                   <div className="text-sm text-purple-600 dark:text-purple-500">Missing in Source</div>
-                </div>
+                </button>
               </div>
+
+              {/* Active Filter Indicator */}
+              {statusFilter !== 'all' && (
+                <div className="mb-4 flex items-center gap-2">
+                  <span className="text-sm text-gray-600 dark:text-gray-400">
+                    Showing {filteredSecrets.length} of {stats.total} secrets
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setStatusFilter('all')}
+                    className="text-sm text-primary-600 dark:text-primary-400 hover:underline"
+                  >
+                    Clear filter
+                  </button>
+                </div>
+              )}
 
               {/* Comparison Table */}
               <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
                 <table className="w-full">
                   <thead>
                     <tr className="bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider w-1/5">
                         Secret Name
                       </th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider w-1/12">
                         Status
                       </th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider w-2/5">
                         {sourceName} (Source)
                       </th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider w-2/5">
                         {targetName} (Target)
                       </th>
-                      <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                      <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider w-32">
                         Actions
                       </th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-                    {comparedSecrets.map((secret) => (
-                      <tr key={secret.name} className="hover:bg-gray-50 dark:hover:bg-gray-900/50">
-                        <td className="px-4 py-3">
-                          <div className="flex items-center gap-2">
-                            {getStatusIcon(secret.status)}
-                            <span className="font-mono text-sm text-gray-900 dark:text-gray-100">
-                              {secret.name}
-                            </span>
-                          </div>
-                        </td>
-                        <td className="px-4 py-3">
-                          {getStatusBadge(secret.status)}
-                        </td>
-                        <td className="px-4 py-3">
-                          {secret.sourceSecret ? (
-                            <div className="text-sm">
-                              {loadValues && secret.sourceValue ? (
-                                <code className="px-2 py-1 bg-gray-100 dark:bg-gray-900 rounded text-xs font-mono truncate max-w-50 block">
-                                  {secret.sourceValue.substring(0, 30)}{secret.sourceValue.length > 30 ? '...' : ''}
-                                </code>
-                              ) : (
-                                <span className="text-green-600 dark:text-green-400">✓ Exists</span>
-                              )}
+                    {filteredSecrets.map((secret) => {
+                      // Check if this specific secret's value is still loading
+                      const isSourceValueLoading = loadValues && secret.sourceSecret && !secret.sourceValue
+                      const isTargetValueLoading = loadValues && secret.targetSecret && !secret.targetValue
+
+                      return (
+                        <tr key={secret.name} className="hover:bg-gray-50 dark:hover:bg-gray-900/50 align-top">
+                          <td className="px-4 py-3">
+                            <div className="flex items-center gap-2">
+                              {getStatusIcon(secret.status)}
+                              <span className="font-mono text-sm text-gray-900 dark:text-gray-100 break-all">
+                                {secret.name}
+                              </span>
                             </div>
-                          ) : (
-                            <span className="text-gray-400 dark:text-gray-500 text-sm">—</span>
-                          )}
-                        </td>
-                        <td className="px-4 py-3">
-                          {secret.targetSecret ? (
-                            <div className="text-sm">
-                              {loadValues && secret.targetValue ? (
-                                <code className="px-2 py-1 bg-gray-100 dark:bg-gray-900 rounded text-xs font-mono truncate max-w-50 block">
-                                  {secret.targetValue.substring(0, 30)}{secret.targetValue.length > 30 ? '...' : ''}
-                                </code>
-                              ) : (
-                                <span className="text-green-600 dark:text-green-400">✓ Exists</span>
-                              )}
-                            </div>
-                          ) : (
-                            <span className="text-gray-400 dark:text-gray-500 text-sm">—</span>
-                          )}
-                        </td>
-                        <td className="px-4 py-3 text-right">
-                          <div className="flex items-center justify-end gap-2">
-                            {secret.status === 'source-only' && (
-                              <>
-                                <button
-                                  type="button"
-                                  onClick={() => handleSyncSecret(secret.name)}
-                                  disabled={createMutation.isPending}
-                                  className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-primary-700 dark:text-primary-400 bg-primary-100 dark:bg-primary-900/30 hover:bg-primary-200 dark:hover:bg-primary-900/50 rounded transition-colors disabled:opacity-50"
-                                  title="Copy secret from source to target"
-                                >
-                                  <CopyIcon className="w-3 h-3"/>
-                                  Sync
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => handleCreateWithValue(secret.name, secret.sourceValue)}
-                                  disabled={createMutation.isPending}
+                          </td>
+                          <td className="px-4 py-3">
+                            {getStatusBadge(secret.status)}
+                          </td>
+                          <td className="px-4 py-3">
+                            {secret.sourceSecret ? (
+                              <div className="text-sm">
+                                {loadValues ? (
+                                  secret.sourceValue ? (
+                                    <code className="px-2 py-1 bg-gray-100 dark:bg-gray-900 rounded text-xs font-mono break-all whitespace-pre-wrap block max-h-32 overflow-y-auto">
+                                      {secret.sourceValue}
+                                    </code>
+                                  ) : isSourceValueLoading ? (
+                                    <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400">
+                                      <LoadingSpinner size="sm" />
+                                      <span className="text-xs">Loading...</span>
+                                    </div>
+                                  ) : (
+                                    <span className="text-gray-500 dark:text-gray-400 text-xs italic">Failed to load</span>
+                                  )
+                                ) : (
+                                  <span className="text-green-600 dark:text-green-400">✓ Exists</span>
+                                )}
+                              </div>
+                            ) : (
+                              <span className="text-gray-400 dark:text-gray-500 text-sm">—</span>
+                            )}
+                          </td>
+                          <td className="px-4 py-3">
+                            {secret.targetSecret ? (
+                              <div className="text-sm">
+                                {loadValues ? (
+                                  secret.targetValue ? (
+                                    <code className="px-2 py-1 bg-gray-100 dark:bg-gray-900 rounded text-xs font-mono break-all whitespace-pre-wrap block max-h-32 overflow-y-auto">
+                                      {secret.targetValue}
+                                    </code>
+                                  ) : isTargetValueLoading ? (
+                                    <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400">
+                                      <LoadingSpinner size="sm" />
+                                      <span className="text-xs">Loading...</span>
+                                    </div>
+                                  ) : (
+                                    <span className="text-gray-500 dark:text-gray-400 text-xs italic">Failed to load</span>
+                                  )
+                                ) : (
+                                  <span className="text-green-600 dark:text-green-400">✓ Exists</span>
+                                )}
+                              </div>
+                            ) : (
+                              <span className="text-gray-400 dark:text-gray-500 text-sm">—</span>
+                            )}
+                          </td>
+                          <td className="px-4 py-3 text-right">
+                            <div className="flex items-center justify-end gap-2">
+                              {secret.status === 'source-only' && (
+                                <>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleSyncSecret(secret.name)}
+                                    disabled={createMutation.isPending}
+                                    className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-primary-700 dark:text-primary-400 bg-primary-100 dark:bg-primary-900/30 hover:bg-primary-200 dark:hover:bg-primary-900/50 rounded transition-colors disabled:opacity-50"
+                                    title="Copy secret from source to target"
+                                  >
+                                    <CopyIcon className="w-3 h-3"/>
+                                    Sync
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleCreateWithValue(secret.name, secret.sourceValue)}
+                                    disabled={createMutation.isPending}
                                   className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded transition-colors disabled:opacity-50"
                                   title="Create secret with custom value"
                                 >
@@ -667,13 +767,16 @@ function CompareVaults() {
                           </div>
                         </td>
                       </tr>
-                    ))}
+                      )
+                    })}
                   </tbody>
                 </table>
 
-                {comparedSecrets.length === 0 && (
+                {filteredSecrets.length === 0 && (
                   <div className="text-center py-8 text-gray-500 dark:text-gray-400">
-                    No secrets to compare
+                    {comparedSecrets.length === 0
+                      ? 'No secrets to compare'
+                      : 'No secrets match the selected filter'}
                   </div>
                 )}
               </div>
