@@ -265,7 +265,7 @@ function CompareVaults() {
   const secretValuesTotalCount = secretValueQueries.length
 
   // Build comparison data
-  // biome-ignore lint/correctness/useExhaustiveDependencies: secretValuesLoaded triggers recomputation when values are fetched
+  // biome-ignore lint/correctness/useExhaustiveDependencies: secretValuesLoadedCount triggers recomputation as values are fetched one by one
   const comparedSecrets = useMemo((): ComparedSecret[] => {
     if (!targetVaultUri) return []
 
@@ -309,7 +309,7 @@ function CompareVaults() {
         targetValueFetched,
       }
     })
-  }, [allSecretNames, sourceSecrets, targetSecrets, sourceVaultUri, targetVaultUri, queryClient, secretValuesLoaded])
+  }, [allSecretNames, sourceSecrets, targetSecrets, sourceVaultUri, targetVaultUri, queryClient, secretValuesLoadedCount])
 
   // Summary stats
   const stats = useMemo(() => {
