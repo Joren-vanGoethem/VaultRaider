@@ -148,3 +148,12 @@ export async function exportSecrets(vaultName: string, vaultUri: string, options
   return await invoke<string>('export_secrets', { vaultName, vaultUri, options });
 }
 
+export interface ImportedSecret {
+  name: string;
+  value: string;
+}
+
+export async function parseImportFile(content: string, format?: string): Promise<ImportedSecret[]> {
+  return await invoke<ImportedSecret[]>('parse_import_file', { content, format });
+}
+

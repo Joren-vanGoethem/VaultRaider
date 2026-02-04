@@ -18,6 +18,7 @@ use commands::cache::{
 use commands::keyvault::{
   check_keyvault_access, create_keyvault, create_secret, delete_secret,
   get_secret, get_secrets, update_secret, fetch_keyvaults, export_secrets,
+  parse_import_file,
 };
 use commands::resource_group::cmd_get_resource_groups;
 use commands::subscription::fetch_subscriptions;
@@ -55,6 +56,7 @@ pub fn run() {
             create_secret,
             update_secret,
             export_secrets,
+            parse_import_file,
             // Resource Group commands
             cmd_get_resource_groups,
             // Cache commands

@@ -1,9 +1,10 @@
 import {createFileRoute} from '@tanstack/react-router'
-import {Suspense, useState, useMemo, useRef} from 'react'
+import {Suspense, useState, useMemo} from 'react'
 import {LoadingSpinner} from '../components/LoadingSpinner'
 import {fetchSecrets, fetchSecretsKey, createSecret} from '../services/azureService'
 import {SecretCard} from '../components/SecretCard'
 import {ExportSecretsModal} from '../components/ExportSecretsModal'
+import {ImportSecretsModal} from '../components/ImportSecretsModal'
 import {useSuspenseQuery, useMutation, useQueryClient} from '@tanstack/react-query'
 import {PlusIcon, DownloadIcon, UploadIcon, FileJsonIcon, GitCompareIcon, SearchIcon, XIcon, KeyIcon} from 'lucide-react'
 import {useToast} from '../contexts/ToastContext'
@@ -44,9 +45,7 @@ function Keyvaults() {
   const [showCompareModal, setShowCompareModal] = useState(false)
   const [newSecretName, setNewSecretName] = useState('')
   const [newSecretValue, setNewSecretValue] = useState('')
-  const [importJson, setImportJson] = useState('')
   const [loadAll, setLoadAll] = useState(false)
-  const fileInputRef = useRef<HTMLInputElement>(null)
   const queryClient = useQueryClient()
   const { showSuccess, showError } = useToast()
 
@@ -103,66 +102,9 @@ function Keyvaults() {
     return parts[parts.length - 1]
   }
 
-  // Handle file input for import
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (file) {
-      const reader = new FileReader()
-      reader.onload = (event) => {
-        const content = event.target?.result as string
-        setImportJson(content)
-        setShowImportModal(true)
-      }
-      reader.readAsText(file)
-    }
-    // Reset file input
-    if (fileInputRef.current) {
-      fileInputRef.current.value = ''
-    }
-  }
-
-  // Import secrets from JSON
-  const handleImportJson = async () => {
-    try {
-      const data = JSON.parse(importJson)
-      const secretsToImport = data.secrets || data
-
-      if (!Array.isArray(secretsToImport)) {
-        throw new Error('Invalid JSON format. Expected an array of secrets or an object with a "secrets" array.')
-      }
-
-      let successCount = 0
-      let errorCount = 0
-
-      for (const secret of secretsToImport) {
-        const secretName = secret.name || secret.key
-        const secretValue = secret.value
-
-        if (!secretName || !secretValue) {
-          errorCount++
-          continue
-        }
-
-        try {
-          await createSecret(vaultUri, secretName, secretValue)
-          successCount++
-        } catch {
-          errorCount++
-        }
-      }
-
-      queryClient.invalidateQueries({ queryKey: [fetchSecretsKey, vaultUri] })
-      setShowImportModal(false)
-      setImportJson('')
-
-      if (successCount > 0) {
-        showSuccess(`Imported ${successCount} secrets successfully${errorCount > 0 ? ` (${errorCount} failed)` : ''}`)
-      } else {
-        showError('Import failed', 'No secrets were imported')
-      }
-    } catch (error) {
-      showError('Import failed', error instanceof Error ? error.message : 'Invalid JSON format')
-    }
+  // Handle import completion
+  const handleImportComplete = () => {
+    queryClient.invalidateQueries({ queryKey: [fetchSecretsKey, vaultUri] })
   }
 
   // Filter secrets based on search query
@@ -222,18 +164,11 @@ function Keyvaults() {
                 Export
               </button>
 
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept=".json"
-                onChange={handleFileSelect}
-                className="hidden"
-              />
               <button
                 type="button"
-                onClick={() => fileInputRef.current?.click()}
+                onClick={() => setShowImportModal(true)}
                 className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors"
-                title="Import secrets from JSON"
+                title="Import secrets from file"
               >
                 <UploadIcon className="w-4 h-4" />
                 Import
@@ -407,54 +342,14 @@ function Keyvaults() {
         )}
 
         {/* Import Modal */}
-        {showImportModal && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => { setShowImportModal(false); setImportJson(''); }}>
-            <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-2xl w-full mx-4 shadow-xl" onClick={(e) => e.stopPropagation()}>
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
-                Import Secrets from JSON
-              </h3>
-              <div className="mb-4">
-                <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
-                  Paste JSON containing secrets to import. Expected format:
-                </p>
-                <pre className="text-xs bg-gray-100 dark:bg-gray-900 p-3 rounded-lg text-gray-700 dark:text-gray-300 overflow-auto">
-{`{
-  "secrets": [
-    { "name": "secret-name", "value": "secret-value" },
-    ...
-  ]
-}`}
-                </pre>
-              </div>
-              <div className="mb-6">
-                <textarea
-                  value={importJson}
-                  onChange={(e) => setImportJson(e.target.value)}
-                  rows={10}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent resize-none"
-                  placeholder="Paste your JSON here..."
-                />
-              </div>
-              <div className="flex gap-3 justify-end">
-                <button
-                  type="button"
-                  onClick={() => { setShowImportModal(false); setImportJson(''); }}
-                  className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="button"
-                  onClick={handleImportJson}
-                  disabled={!importJson.trim()}
-                  className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  Import Secrets
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
+        <ImportSecretsModal
+          isOpen={showImportModal}
+          onClose={() => setShowImportModal(false)}
+          vaultName={name}
+          vaultUri={vaultUri}
+          existingSecrets={secrets}
+          onImportComplete={handleImportComplete}
+        />
 
         {/* Compare Modal (Placeholder) */}
         {showCompareModal && (

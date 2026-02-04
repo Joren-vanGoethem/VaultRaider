@@ -4,6 +4,7 @@ use crate::azure::keyvault::service::{get_keyvaults};
 use crate::azure::keyvault::types::{KeyVault, KeyVaultAccessCheck};
 use crate::azure::keyvault::secret::types::{Secret, SecretBundle};
 use crate::azure::keyvault::secret::export::ExportOptions;
+use crate::azure::keyvault::secret::import::ImportedSecret;
 use crate::cache::AZURE_CACHE;
 
 
@@ -141,5 +142,14 @@ pub async fn export_secrets(
     options: ExportOptions,
 ) -> Result<String, String> {
     crate::azure::keyvault::secret::export::export_secrets(&vault_name, &vault_uri, options).await
+}
+
+/// Parse an import file and extract secrets
+#[tauri::command]
+pub fn parse_import_file(
+    content: String,
+    format: Option<String>,
+) -> Result<Vec<ImportedSecret>, String> {
+    crate::azure::keyvault::secret::import::parse_import_file(&content, format.as_deref())
 }
 
