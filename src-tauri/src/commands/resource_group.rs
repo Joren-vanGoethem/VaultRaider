@@ -2,9 +2,16 @@
 
 use crate::azure::resource_group::service::get_resource_groups;
 use crate::azure::resource_group::types::ResourceGroup;
+use crate::cache::AZURE_CACHE;
 
 /// Fetch all resource groups for a subscription
+/// Uses caching with automatic loading on cache miss
 #[tauri::command]
 pub async fn cmd_get_resource_groups(subscription_id: String) -> Result<Vec<ResourceGroup>, String> {
-    get_resource_groups(&subscription_id).await
+    let sub_id = subscription_id.clone();
+    AZURE_CACHE
+        .get_resource_groups_or_load(&subscription_id, || async move {
+            get_resource_groups(&sub_id).await
+        })
+        .await
 }

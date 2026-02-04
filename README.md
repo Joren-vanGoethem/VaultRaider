@@ -154,7 +154,6 @@ This project uses [Biome](https://biomejs.dev/) for linting and formatting. Plea
 
 ## 🐛 Known Issues
 
-- Some Azure subscriptions with special configurations may not be fully supported
 - authentication using device code flow may not receive correct permissions.
 
 ## 🗺️ Roadmap

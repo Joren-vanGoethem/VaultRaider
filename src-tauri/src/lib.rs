@@ -3,6 +3,7 @@
 //! This is the main library entry point for the Tauri application.
 
 mod azure;
+mod cache;
 mod commands;
 mod config;
 
@@ -10,9 +11,14 @@ use commands::auth::{
     azure_login, azure_logout, check_auth, complete_browser_login, complete_device_code,
     get_current_user, start_browser_login, start_device_code,
 };
+use commands::cache::{
+    clear_cache, get_cache_stats, invalidate_keyvaults_cache,
+    invalidate_resource_groups_cache, invalidate_subscriptions_cache, invalidate_vault_cache,
+};
 use commands::keyvault::{
   check_keyvault_access, create_keyvault, create_secret, delete_secret,
-  get_secret, get_secrets, update_secret, fetch_keyvaults,
+  get_secret, get_secrets, update_secret, fetch_keyvaults, export_secrets,
+  parse_import_file,
 };
 use commands::resource_group::cmd_get_resource_groups;
 use commands::subscription::fetch_subscriptions;
@@ -25,6 +31,8 @@ pub fn run() {
         .plugin(tauri_plugin_log::Builder::new()
           .build())
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_fs::init())
         .invoke_handler(tauri::generate_handler![
             // Auth commands
             azure_login,
@@ -47,8 +55,17 @@ pub fn run() {
             delete_secret,
             create_secret,
             update_secret,
+            export_secrets,
+            parse_import_file,
             // Resource Group commands
             cmd_get_resource_groups,
+            // Cache commands
+            get_cache_stats,
+            clear_cache,
+            invalidate_subscriptions_cache,
+            invalidate_keyvaults_cache,
+            invalidate_resource_groups_cache,
+            invalidate_vault_cache,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -297,10 +297,10 @@ function Index() {
             )}
             <div className="flex flex-col sm:flex-row gap-3">
               <Link
-                to="/dashboard"
+                to="/subscriptions"
                 className="flex-1 px-6 py-3 bg-gradient-to-r from-primary-500 to-primary-600 hover:from-primary-600 hover:to-primary-700 text-white font-semibold rounded-lg shadow-lg hover:shadow-xl transition-all duration-200 text-center"
               >
-                Go to Dashboard
+                Go to Subscriptions
               </Link>
               <button
                 type="button"
