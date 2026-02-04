@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as SubscriptionsRouteImport } from './routes/subscriptions'
 import { Route as KeyvaultRouteImport } from './routes/keyvault'
+import { Route as CompareRouteImport } from './routes/compare'
 import { Route as IndexRouteImport } from './routes/index'
 
 const SubscriptionsRoute = SubscriptionsRouteImport.update({
@@ -23,6 +24,11 @@ const KeyvaultRoute = KeyvaultRouteImport.update({
   path: '/keyvault',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CompareRoute = CompareRouteImport.update({
+  id: '/compare',
+  path: '/compare',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
@@ -31,30 +37,34 @@ const IndexRoute = IndexRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/compare': typeof CompareRoute
   '/keyvault': typeof KeyvaultRoute
   '/subscriptions': typeof SubscriptionsRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/compare': typeof CompareRoute
   '/keyvault': typeof KeyvaultRoute
   '/subscriptions': typeof SubscriptionsRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/compare': typeof CompareRoute
   '/keyvault': typeof KeyvaultRoute
   '/subscriptions': typeof SubscriptionsRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/keyvault' | '/subscriptions'
+  fullPaths: '/' | '/compare' | '/keyvault' | '/subscriptions'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/keyvault' | '/subscriptions'
-  id: '__root__' | '/' | '/keyvault' | '/subscriptions'
+  to: '/' | '/compare' | '/keyvault' | '/subscriptions'
+  id: '__root__' | '/' | '/compare' | '/keyvault' | '/subscriptions'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  CompareRoute: typeof CompareRoute
   KeyvaultRoute: typeof KeyvaultRoute
   SubscriptionsRoute: typeof SubscriptionsRoute
 }
@@ -75,6 +85,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof KeyvaultRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/compare': {
+      id: '/compare'
+      path: '/compare'
+      fullPath: '/compare'
+      preLoaderRoute: typeof CompareRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -87,6 +104,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  CompareRoute: CompareRoute,
   KeyvaultRoute: KeyvaultRoute,
   SubscriptionsRoute: SubscriptionsRoute,
 }

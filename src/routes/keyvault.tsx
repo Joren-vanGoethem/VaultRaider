@@ -41,7 +41,7 @@ function SecretsLoadingSpinner() {
 }
 
 function Keyvaults() {
-  const {vaultUri, name} = Route.useSearch()
+  const {vaultUri, name, subscriptionId} = Route.useSearch()
   const [searchQuery, setSearchQuery] = useState('')
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [showImportModal, setShowImportModal] = useState(false)
@@ -167,6 +167,9 @@ function Keyvaults() {
         <CompareVaultsModal
           isOpen={showCompareModal}
           onClose={() => setShowCompareModal(false)}
+          sourceVaultUri={vaultUri}
+          sourceName={name}
+          sourceSubscriptionId={subscriptionId}
         />
 
         <ExportSecretsModal

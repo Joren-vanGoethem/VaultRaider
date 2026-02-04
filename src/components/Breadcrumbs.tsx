@@ -1,5 +1,5 @@
 ﻿import { Link, useMatches } from '@tanstack/react-router'
-import { ChevronRight, Key, Shield } from 'lucide-react'
+import { ChevronRight, Key, Shield, GitCompare } from 'lucide-react'
 
 interface BreadcrumbItem {
   label: string
@@ -17,16 +17,22 @@ export function Breadcrumbs() {
   // Build breadcrumb items based on current route
   const breadcrumbs: BreadcrumbItem[] = []
 
-  // Check for subscriptions route
-  if (currentPath.startsWith('/subscriptions') || currentPath.startsWith('/keyvault')) {
-    // Get the subscriptionId from the keyvault route if available
+  // Check for subscriptions route or keyvault route or compare route
+  if (currentPath.startsWith('/subscriptions') || currentPath.startsWith('/keyvault') || currentPath.startsWith('/compare')) {
+    // Get the subscriptionId from the keyvault route or compare route if available
     const keyvaultMatch = matches.find(m => m.pathname === '/keyvault')
+    const compareMatch = matches.find(m => m.pathname === '/compare')
     const keyvaultSearchParams = keyvaultMatch?.search as { subscriptionId?: string } | undefined
+    const compareSearchParams = compareMatch?.search as { sourceSubscriptionId?: string } | undefined
 
     breadcrumbs.push({
       label: 'Key Vaults',
       to: '/subscriptions',
-      search: keyvaultSearchParams?.subscriptionId ? { subscriptionId: keyvaultSearchParams.subscriptionId } : undefined,
+      search: keyvaultSearchParams?.subscriptionId
+        ? { subscriptionId: keyvaultSearchParams.subscriptionId }
+        : compareSearchParams?.sourceSubscriptionId
+          ? { subscriptionId: compareSearchParams.sourceSubscriptionId }
+          : undefined,
       icon: <Shield className="w-4 h-4" />
     })
   }
@@ -43,6 +49,36 @@ export function Breadcrumbs() {
         icon: <Key className="w-4 h-4" />
       })
     }
+  }
+
+  // Check for compare route
+  if (currentPath.startsWith('/compare')) {
+    const compareMatch = matches.find(m => m.pathname === '/compare')
+    const searchParams = compareMatch?.search as {
+      sourceName?: string
+      sourceVaultUri?: string
+      sourceSubscriptionId?: string
+    } | undefined
+
+    // Add source vault breadcrumb that links back
+    if (searchParams?.sourceName && searchParams?.sourceVaultUri) {
+      breadcrumbs.push({
+        label: searchParams.sourceName,
+        to: '/keyvault',
+        search: {
+          name: searchParams.sourceName,
+          vaultUri: searchParams.sourceVaultUri,
+          subscriptionId: searchParams.sourceSubscriptionId,
+        },
+        icon: <Key className="w-4 h-4" />
+      })
+    }
+
+    // Add compare breadcrumb
+    breadcrumbs.push({
+      label: 'Compare',
+      icon: <GitCompare className="w-4 h-4" />
+    })
   }
 
   // Don't render if no breadcrumbs
