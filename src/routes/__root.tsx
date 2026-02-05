@@ -12,7 +12,7 @@ import { ToastProvider } from "../contexts/ToastContext";
 
 function Sidebar() {
   const { isAuthenticated, userInfo, logout } = useAuth();
-  const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(true);
 
   const handleLogout = async () => {
     try {
