@@ -1,9 +1,9 @@
-﻿import type {KeyVault} from '../types/azure'
+﻿import type { KeyVault } from "../types/azure";
 
 interface LeyvaultSelectorProps {
-  keyvaults: KeyVault[]
-  selectedKeyvault: string | undefined
-  onKeyvaultChange: (subscriptionId: string) => void
+  keyvaults: KeyVault[];
+  selectedKeyvault: string | undefined;
+  onKeyvaultChange: (subscriptionId: string) => void;
 }
 
 export function KeyvaultSelector({
@@ -21,7 +21,7 @@ export function KeyvaultSelector({
       </label>
       <select
         id="keyvault-select"
-        value={selectedKeyvault ?? ''}
+        value={selectedKeyvault ?? ""}
         onChange={(e) => onKeyvaultChange(e.target.value)}
         className="w-full p-2 rounded-lg bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-100"
       >
@@ -32,6 +32,5 @@ export function KeyvaultSelector({
         ))}
       </select>
     </div>
-  )
+  );
 }
-

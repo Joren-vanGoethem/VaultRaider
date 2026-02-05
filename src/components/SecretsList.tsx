@@ -1,14 +1,14 @@
-﻿import {SecretCard} from './SecretCard'
-import type {Secret} from '../types/secrets'
+﻿import type { Secret } from "../types/secrets";
+import { SecretCard } from "./SecretCard";
 
 interface SecretsListProps {
-  secrets: Secret[]
-  vaultUri: string
-  searchQuery: string
-  shouldLoadAll: boolean
-  selectionMode?: boolean
-  selectedSecrets?: Set<string>
-  onSelectionChange?: (secretId: string, selected: boolean) => void
+  secrets: Secret[];
+  vaultUri: string;
+  searchQuery: string;
+  shouldLoadAll: boolean;
+  selectionMode?: boolean;
+  selectedSecrets?: Set<string>;
+  onSelectionChange?: (secretId: string, selected: boolean) => void;
 }
 
 export function SecretsList({
@@ -18,7 +18,7 @@ export function SecretsList({
   shouldLoadAll,
   selectionMode = false,
   selectedSecrets,
-  onSelectionChange
+  onSelectionChange,
 }: SecretsListProps) {
   return (
     <div className="grid gap-3 grid-cols-1 lg:grid-cols-2 2xl:grid-cols-3">
@@ -35,5 +35,5 @@ export function SecretsList({
         />
       ))}
     </div>
-  )
+  );
 }

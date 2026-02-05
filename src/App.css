@@ -5,10 +5,11 @@
 .logo.react:hover {
   filter: drop-shadow(0 0 2em #61dafb);
 }
+
 :root {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-    sans-serif;
+  font-family:
+    -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen", "Ubuntu", "Cantarell",
+    "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif;
   font-weight: 400;
 
   color: #0f0f0f;
@@ -49,7 +50,9 @@ h1 {
   background: white;
   border-radius: 12px;
   padding: 3rem;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1), 0 1px 3px rgba(0, 0, 0, 0.08);
+  box-shadow:
+    0 4px 6px rgba(0, 0, 0, 0.1),
+    0 1px 3px rgba(0, 0, 0, 0.08);
 }
 
 .login-container h2,
@@ -216,7 +219,9 @@ h1 {
   .login-container,
   .authenticated-container {
     background: #2a2a2a;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3), 0 1px 3px rgba(0, 0, 0, 0.2);
+    box-shadow:
+      0 4px 6px rgba(0, 0, 0, 0.3),
+      0 1px 3px rgba(0, 0, 0, 0.2);
   }
 
   .login-container h2,
@@ -259,5 +264,3 @@ h1 {
     color: #b0b0b0;
   }
 }
-
-

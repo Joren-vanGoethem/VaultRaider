@@ -1,22 +1,22 @@
-﻿import {SearchIcon, XIcon} from 'lucide-react'
+﻿import { SearchIcon, XIcon } from "lucide-react";
 
 interface KeyvaultSearchBarProps {
-  searchQuery: string
-  onSearchChange: (query: string) => void
-  totalCount: number
-  filteredCount: number
+  searchQuery: string;
+  onSearchChange: (query: string) => void;
+  totalCount: number;
+  filteredCount: number;
 }
 
 export function KeyvaultSearchBar({
   searchQuery,
   onSearchChange,
   totalCount,
-  filteredCount
+  filteredCount,
 }: KeyvaultSearchBarProps) {
   return (
     <div className="w-full">
       <div className="relative max-w-xl">
-        <SearchIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400"/>
+        <SearchIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
         <input
           type="text"
           placeholder="Search secrets by name..."
@@ -27,19 +27,19 @@ export function KeyvaultSearchBar({
         {searchQuery && (
           <button
             type="button"
-            onClick={() => onSearchChange('')}
+            onClick={() => onSearchChange("")}
             className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
             title="Clear search"
           >
-            <XIcon className="w-4 h-4"/>
+            <XIcon className="w-4 h-4" />
           </button>
         )}
       </div>
       {searchQuery && (
         <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
-          Showing {filteredCount} of {totalCount} secret{totalCount !== 1 ? 's' : ''}
+          Showing {filteredCount} of {totalCount} secret{totalCount !== 1 ? "s" : ""}
         </p>
       )}
     </div>
-  )
+  );
 }

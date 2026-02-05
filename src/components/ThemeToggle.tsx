@@ -1,4 +1,4 @@
-import { useTheme } from '../contexts/ThemeContext';
+import { useTheme } from "../contexts/ThemeContext";
 
 interface ThemeToggleProps {
   isCollapsed?: boolean;
@@ -8,12 +8,12 @@ export function ThemeToggle({ isCollapsed = false }: ThemeToggleProps) {
   const { theme, setTheme, effectiveTheme } = useTheme();
 
   const toggleTheme = () => {
-    if (theme === 'light') {
-      setTheme('dark');
-    } else if (theme === 'dark') {
-      setTheme('system');
+    if (theme === "light") {
+      setTheme("dark");
+    } else if (theme === "dark") {
+      setTheme("system");
     } else {
-      setTheme('light');
+      setTheme("light");
     }
   };
 
@@ -21,11 +21,11 @@ export function ThemeToggle({ isCollapsed = false }: ThemeToggleProps) {
     <button
       type="button"
       onClick={toggleTheme}
-      className={`p-2 rounded-lg max-w-max bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 hover:border-primary-500 transition-colors ${isCollapsed ? 'mx-auto block' : 'w-full'}`}
+      className={`p-2 rounded-lg max-w-max bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 hover:border-primary-500 transition-colors ${isCollapsed ? "mx-auto block" : "w-full"}`}
       aria-label="Toggle theme"
       title={`Current: ${theme} (${effectiveTheme})`}
     >
-      {theme === 'light' && (
+      {theme === "light" && (
         <svg
           xmlns="http://www.w3.org/2000/svg"
           fill="none"
@@ -43,7 +43,7 @@ export function ThemeToggle({ isCollapsed = false }: ThemeToggleProps) {
           />
         </svg>
       )}
-      {theme === 'dark' && (
+      {theme === "dark" && (
         <svg
           xmlns="http://www.w3.org/2000/svg"
           fill="none"
@@ -61,7 +61,7 @@ export function ThemeToggle({ isCollapsed = false }: ThemeToggleProps) {
           />
         </svg>
       )}
-      {theme === 'system' && (
+      {theme === "system" && (
         <svg
           xmlns="http://www.w3.org/2000/svg"
           fill="none"
@@ -82,4 +82,3 @@ export function ThemeToggle({ isCollapsed = false }: ThemeToggleProps) {
     </button>
   );
 }
-

@@ -1,7 +1,6 @@
-import { useState, useEffect } from "react";
 import { invoke } from "@tauri-apps/api/core";
+import { useCallback, useEffect, useState } from "react";
 import "./App.css";
-
 
 interface AuthResult {
   success: boolean;
@@ -21,12 +20,7 @@ function App() {
   const [message, setMessage] = useState("");
   const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
 
-  // Check authentication status on mount
-  useEffect(() => {
-    checkAuthStatus();
-  }, []);
-
-  async function checkAuthStatus() {
+  const checkAuthStatus = useCallback(async () => {
     try {
       const authenticated = await invoke<boolean>("check_auth");
       setIsAuthenticated(authenticated);
@@ -39,7 +33,12 @@ function App() {
     } catch (error) {
       console.error("Error checking auth status:", error);
     }
-  }
+  }, []);
+
+  // Check authentication status on mount
+  useEffect(() => {
+    checkAuthStatus();
+  }, [checkAuthStatus]);
 
   async function handleLogin() {
     setIsLoading(true);
@@ -60,10 +59,10 @@ function App() {
           });
         }
       } else {
-        setMessage("Login failed: " + result.message);
+        setMessage(`Login failed: ${result.message}`);
       }
     } catch (error) {
-      setMessage("Error: " + String(error));
+      setMessage(`Error: ${String(error)}`);
     } finally {
       setIsLoading(false);
     }
@@ -76,7 +75,7 @@ function App() {
       setUserInfo(null);
       setMessage("Logged out successfully");
     } catch (error) {
-      setMessage("Error logging out: " + String(error));
+      setMessage(`Error logging out: ${String(error)}`);
     }
   }
 
@@ -101,7 +100,9 @@ function App() {
             </button>
 
             {message && (
-              <div className={`message ${message.includes("Error") || message.includes("failed") ? "error" : "success"}`}>
+              <div
+                className={`message ${message.includes("Error") || message.includes("failed") ? "error" : "success"}`}
+              >
                 {message}
               </div>
             )}
@@ -113,7 +114,9 @@ function App() {
             {userInfo && (
               <div className="user-info">
                 <div className="user-avatar">
-                  {userInfo.name ? userInfo.name.charAt(0).toUpperCase() : userInfo.email.charAt(0).toUpperCase()}
+                  {userInfo.name
+                    ? userInfo.name.charAt(0).toUpperCase()
+                    : userInfo.email.charAt(0).toUpperCase()}
                 </div>
                 <div className="user-details">
                   {userInfo.name && <p className="user-name">{userInfo.name}</p>}

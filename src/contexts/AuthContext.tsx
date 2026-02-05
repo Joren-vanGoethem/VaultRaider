@@ -1,5 +1,12 @@
-import {createContext, useContext, useState, useEffect, type ReactNode, useEffectEvent} from 'react';
-import {invoke} from '@tauri-apps/api/core';
+import { invoke } from "@tauri-apps/api/core";
+import {
+  createContext,
+  type ReactNode,
+  useContext,
+  useEffect,
+  useEffectEvent,
+  useState,
+} from "react";
 
 interface UserInfo {
   email: string;
@@ -17,7 +24,7 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export function AuthProvider({children}: { children: ReactNode }) {
+export function AuthProvider({ children }: { children: ReactNode }) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -86,8 +93,7 @@ export function AuthProvider({children}: { children: ReactNode }) {
 export function useAuth() {
   const context = useContext(AuthContext);
   if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
+    throw new Error("useAuth must be used within an AuthProvider");
   }
   return context;
 }
-

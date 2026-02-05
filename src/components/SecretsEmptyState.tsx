@@ -1,16 +1,16 @@
-﻿import {KeyIcon, SearchIcon} from 'lucide-react'
+﻿import { KeyIcon, SearchIcon } from "lucide-react";
 
 interface SecretsEmptyStateProps {
-  type: 'no-secrets' | 'no-results'
-  searchQuery?: string
-  onClearSearch?: () => void
+  type: "no-secrets" | "no-results";
+  searchQuery?: string;
+  onClearSearch?: () => void;
 }
 
-export function SecretsEmptyState({type, searchQuery, onClearSearch}: SecretsEmptyStateProps) {
-  if (type === 'no-secrets') {
+export function SecretsEmptyState({ type, searchQuery, onClearSearch }: SecretsEmptyStateProps) {
+  if (type === "no-secrets") {
     return (
       <div className="text-center py-12">
-        <KeyIcon className="w-12 h-12 mx-auto text-gray-400 dark:text-gray-500 mb-4"/>
+        <KeyIcon className="w-12 h-12 mx-auto text-gray-400 dark:text-gray-500 mb-4" />
         <p className="text-gray-600 dark:text-gray-400 text-lg">
           No secrets found in this Key Vault
         </p>
@@ -18,15 +18,13 @@ export function SecretsEmptyState({type, searchQuery, onClearSearch}: SecretsEmp
           Click "Add Secret" to create your first secret
         </p>
       </div>
-    )
+    );
   }
 
   return (
     <div className="text-center py-12">
-      <SearchIcon className="w-12 h-12 mx-auto text-gray-400 dark:text-gray-500 mb-4"/>
-      <p className="text-gray-600 dark:text-gray-400">
-        No secrets match "{searchQuery}"
-      </p>
+      <SearchIcon className="w-12 h-12 mx-auto text-gray-400 dark:text-gray-500 mb-4" />
+      <p className="text-gray-600 dark:text-gray-400">No secrets match "{searchQuery}"</p>
       <button
         type="button"
         onClick={onClearSearch}
@@ -35,5 +33,5 @@ export function SecretsEmptyState({type, searchQuery, onClearSearch}: SecretsEmp
         Clear search
       </button>
     </div>
-  )
+  );
 }
