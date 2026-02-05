@@ -5,5 +5,3 @@
 pub mod service;
 pub mod types;
 
-pub(crate) mod constants;
-// pub(crate) mod client;
