@@ -9,4 +9,4 @@ mod pagination;
 
 pub use client::AzureHttpClient;
 pub use error::AzureHttpError;
-pub use pagination::{fetch_all_paginated, fetch_all_paginated_custom};
+pub use pagination::fetch_all_paginated;

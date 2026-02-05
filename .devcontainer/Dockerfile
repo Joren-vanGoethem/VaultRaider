@@ -21,6 +21,14 @@ libwebkit2gtk-4.1-dev \
 libgtk-3-dev \
 && apt-get clean -y && rm -rf /var/lib/apt/lists/*
 
+# gui support for tauri
+RUN apt-get update && apt-get install -y \
+    libgl1-mesa-dri \
+    libwayland-client0 \
+    libxkbcommon0 \
+    mesa-utils \
+ && rm -rf /var/lib/apt/lists/*
+
 # Create a non-root user
 ARG USERNAME=vscode
 ARG USER_UID=1000
@@ -35,11 +43,12 @@ RUN groupadd --gid $USER_GID $USERNAME 2>/dev/null || true \
 && echo $USERNAME ALL=\(root\) NOPASSWD:ALL > /etc/sudoers.d/$USERNAME \
 && chmod 0440 /etc/sudoers.d/$USERNAME
 
+USER $USERNAME
+
 # install bun for the vscode user
 RUN curl -fsSL https://bun.com/install | bash
 
 # Install Rust for the vscode user
-USER $USERNAME
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
 ENV PATH="/home/vscode/.cargo/bin:${PATH}"
 

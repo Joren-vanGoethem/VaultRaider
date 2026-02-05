@@ -5,5 +5,3 @@
 pub mod service;
 pub mod types;
 
-pub use service::get_subscriptions;
-pub use types::Subscription;

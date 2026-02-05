@@ -23,13 +23,11 @@ pub(crate) mod user_info;
 // Re-export old auth module for backwards compatibility
 #[deprecated(note = "Use azure::auth::service module instead")]
 pub mod auth {
-    pub use super::service::{get_user_info, is_authenticated, login, logout};
+    
 }
 
 // Re-export interactive_browser for backwards compatibility
 #[deprecated(note = "Use azure::auth::interactive module instead")]
 pub mod interactive_browser {
-    pub use super::interactive::{
-        complete_interactive_browser_login, start_interactive_browser_login,
-    };
+    
 }

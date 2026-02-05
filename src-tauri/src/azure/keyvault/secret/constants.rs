@@ -12,7 +12,7 @@ pub fn get_secret_version_uri(keyvault_uri: &str, secret_name: &str, secret_vers
       .trim_start_matches("https://")
       .trim_end_matches('/');
     
-    if (secret_version.is_none()) {
+    if secret_version.is_none()  {
         format!("https://{}/secrets/{}?api-version=2025-07-01", clean_uri, secret_name)
     } else {
         format!("https://{}/secrets/{}/{}?api-version=2025-07-01", clean_uri, secret_name, secret_version.unwrap_or("latest"))
