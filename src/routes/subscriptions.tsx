@@ -15,6 +15,7 @@ import {
   fetchSubscriptions,
   fetchSubscriptionsKey,
 } from "../services/azureService";
+import { SubscriptionSelector } from "../components/SubscriptionSelector.tsx";
 
 const subscriptionQueryOptions = { queryKey: [fetchSubscriptionsKey], queryFn: fetchSubscriptions };
 
@@ -167,6 +168,15 @@ function Subscriptions() {
 
             {/* Subscription Dropdown Selector */}
             {subscriptions.length > 0 && (
+              <SubscriptionSelector
+                subscriptions={subscriptions}
+                selectedSubscription={selectedSubscription}
+                setSelectedSubscription={setSelectedSubscription}
+                keyvaultCounts={keyvaultCounts}
+                keyvaultLoadingStates={keyvaultLoadingStates}
+              />
+            )}
+            {/* {subscriptions.length > 0 && (
               <div className="flex items-center gap-3">
                 <label
                   htmlFor="subscription-select"
@@ -195,7 +205,7 @@ function Subscriptions() {
                   })}
                 </select>
               </div>
-            )}
+            )} */}
           </div>
 
           <div className="card">

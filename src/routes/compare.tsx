@@ -30,6 +30,7 @@ import {
   fetchSubscriptionsKey,
 } from "../services/azureService";
 import type { Secret, SecretBundle } from "../types/secrets";
+import {CustomSelector} from "../components/CustomSelector.tsx";
 
 type CompareSearch = {
   sourceVaultUri: string;
@@ -604,58 +605,43 @@ function CompareVaults() {
         {/* Target Vault Selection */}
         <div className="flex-none px-6 py-4 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900">
           <div className="flex items-center gap-4">
-            <div className="flex-1">
-              <label
-                htmlFor="target-subscription-select"
-                className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
-              >
-                Target Subscription
-              </label>
-              <select
-                id="target-subscription-select"
+            <CustomSelector
+                label="Target Subscription"
                 value={selectedTargetSubscription}
-                onChange={(e) => {
-                  setSelectedTargetSubscription(e.target.value);
+                onChange={(value) => {
+                  setSelectedTargetSubscription(value);
                   setTargetVaultUri("");
                   setTargetName("");
                 }}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500"
-              >
-                <option value="">Select subscription...</option>
-                {subscriptions.map((sub) => (
-                  <option key={sub.subscriptionId} value={sub.subscriptionId}>
-                    {sub.displayName}
-                  </option>
-                ))}
-              </select>
-            </div>
+                options={[
+                  { value: '', label: 'Select subscription...' },
+                  ...subscriptions.map(sub => ({
+                    value: sub.subscriptionId,
+                    label: sub.displayName
+                  }))
+                ]}
+                placeholder="Select subscription..."
+                className="flex-1"
+            />
 
-            <div className="flex-1">
-              <label
-                htmlFor="target-vault-select"
-                className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
-              >
-                Target Key Vault
-              </label>
-              <select
-                id="target-vault-select"
+            <CustomSelector
+                label="Target Key Vault"
                 value={targetVaultUri}
-                onChange={(e) => handleTargetVaultChange(e.target.value)}
+                onChange={handleTargetVaultChange}
+                options={[
+                  { value: '', label: loadingTargetKeyvaults ? 'Loading...' : 'Select vault...' },
+                  ...targetKeyvaults
+                      .filter((kv) => kv.properties.vaultUri !== sourceVaultUri)
+                      .map(kv => ({
+                        value: kv.properties.vaultUri,
+                        label: kv.name
+                      }))
+                ]}
+                placeholder="Select vault..."
                 disabled={!selectedTargetSubscription || loadingTargetKeyvaults}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <option value="">
-                  {loadingTargetKeyvaults ? "Loading..." : "Select vault..."}
-                </option>
-                {targetKeyvaults
-                  .filter((kv) => kv.properties.vaultUri !== sourceVaultUri) // Exclude source vault
-                  .map((kv) => (
-                    <option key={kv.id} value={kv.properties.vaultUri}>
-                      {kv.name}
-                    </option>
-                  ))}
-              </select>
-            </div>
+                loading={loadingTargetKeyvaults}
+                className="flex-1"
+            />
           </div>
         </div>
 
