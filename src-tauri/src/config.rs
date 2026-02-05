@@ -77,6 +77,14 @@ pub mod urls {
         )
     }
 
+    /// Get the URL to list all subscriptions
+    pub fn subscription(subscription_id: &str) -> String {
+        format!(
+            "https://management.azure.com/subscriptions/{subscription_id}?api-version={}",
+            ARM_API_VERSION
+        )
+    }
+
     /// Get the URL to list all Key Vaults in a subscription
     pub fn keyvaults(subscription_id: &str) -> String {
         format!(

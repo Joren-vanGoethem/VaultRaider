@@ -20,7 +20,7 @@ use commands::keyvault::{
   get_secret, get_secrets, update_secret, fetch_keyvaults, export_secrets,
   parse_import_file,
 };
-use commands::resource_group::cmd_get_resource_groups;
+use commands::resource_group::get_resource_groups;
 use commands::subscription::fetch_subscriptions;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -58,7 +58,7 @@ pub fn run() {
             export_secrets,
             parse_import_file,
             // Resource Group commands
-            cmd_get_resource_groups,
+            get_resource_groups,
             // Cache commands
             get_cache_stats,
             clear_cache,

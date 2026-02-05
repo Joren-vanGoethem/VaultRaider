@@ -45,7 +45,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     showToast('success', title, message, duration)
   }, [showToast])
 
-  const showError = useCallback((title: string, message?: string, duration: number = 5000) => {
+  const showError = useCallback((title: string, message?: string, duration: number = 8000) => {
     showToast('error', title, message, duration)
   }, [showToast])
 
@@ -89,20 +89,20 @@ export function ToastProvider({ children }: { children: ReactNode }) {
       {children}
 
       {/* Toast Container */}
-      <div className="fixed bottom-4 right-4 z-50 flex flex-col gap-2 pointer-events-none">
+      <div className="fixed bottom-4 right-4 z-50 flex flex-col gap-2 pointer-events-none max-w-[90vw]">
         {toasts.map((toast) => (
           <div
             key={toast.id}
-            className={`${getToastStyles(toast.type)} px-6 py-3 rounded-lg shadow-lg flex items-start gap-3 max-w-md pointer-events-auto animate-in slide-in-from-bottom-5 fade-in duration-300`}
+            className={`${getToastStyles(toast.type)} px-6 py-3 rounded-lg shadow-lg flex items-start gap-3 max-w-2xl pointer-events-auto animate-in slide-in-from-bottom-5 fade-in duration-300`}
             onClick={() => removeToast(toast.id)}
             role="button"
             tabIndex={0}
           >
             {getToastIcon(toast.type)}
             <div className="flex-1 min-w-0">
-              <div className="font-medium">{toast.title}</div>
+              <div className="font-medium break-words">{toast.title}</div>
               {toast.message && (
-                <div className="text-sm opacity-90 mt-1 wrap-break-word">{toast.message}</div>
+                <div className="text-sm opacity-90 mt-1 break-words whitespace-pre-wrap">{toast.message}</div>
               )}
             </div>
           </div>

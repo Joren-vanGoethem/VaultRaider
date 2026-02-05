@@ -339,14 +339,38 @@ impl AzureHttpClient {
                 .await
                 .unwrap_or_else(|_| "Unknown error".to_string());
             error!("API request failed: {} \n {}", status.as_u16(), error_text);
+
+            // Try to parse Azure error response format
+            let error_message = Self::parse_azure_error(&error_text);
+
             return Err(AzureHttpError::ApiError {
                 status: status.as_u16(),
-                message: error_text,
+                message: error_message,
             });
         }
 
         info!("Request completed successfully: {}", status.as_u16());
         Ok(response)
+    }
+
+    /// Parse Azure error response to extract meaningful error message
+    fn parse_azure_error(error_text: &str) -> String {
+        // Try to parse JSON error response
+        if let Ok(json) = serde_json::from_str::<serde_json::Value>(error_text) {
+            // Azure error format: {"error":{"code":"...", "message":"..."}}
+            if let Some(error_obj) = json.get("error") {
+                if let Some(message) = error_obj.get("message").and_then(|m| m.as_str()) {
+                    return message.to_string();
+                }
+                if let Some(code) = error_obj.get("code").and_then(|c| c.as_str()) {
+                    return format!("{}: {}", code, error_obj.get("message")
+                        .and_then(|m| m.as_str())
+                        .unwrap_or("Unknown error"));
+                }
+            }
+        }
+        // If parsing fails, return the original error text
+        error_text.to_string()
     }
 }
 

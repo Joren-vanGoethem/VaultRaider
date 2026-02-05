@@ -4,11 +4,13 @@ use anyhow::{Context, Result};
 use log::{debug, error, info};
 
 use crate::azure::auth::token::{get_token_for_scope, get_token_from_state};
-use crate::azure::http::{fetch_all_paginated, AzureHttpClient};
+use crate::azure::http::{AzureHttpClient, AzureHttpError, fetch_all_paginated};
 use crate::azure::resource_group::service::get_resource_group_by_name;
-use crate::config::{urls, KEYVAULT_SCOPE, MANAGEMENT_SCOPE};
+use crate::azure::subscription::service::get_subscription;
+use crate::cache::AZURE_CACHE;
+use crate::config::{KEYVAULT_SCOPE, MANAGEMENT_SCOPE, urls};
 
-use super::types::{CreateVaultRequest, KeyVault, KeyVaultAccessCheck, Properties};
+use super::types::{CreateVaultRequest, KeyVault, KeyVaultAccessCheck, Properties, Sku};
 
 /// Fetch all Key Vaults for a specific subscription.
 ///
@@ -36,12 +38,10 @@ use super::types::{CreateVaultRequest, KeyVault, KeyVaultAccessCheck, Properties
 //     )
 // )]
 pub async fn get_keyvaults(subscription_id: &str) -> Result<Vec<KeyVault>, String> {
-    get_keyvaults_internal(subscription_id)
-        .await
-        .map_err(|e| {
-            error!("Failed to get keyvaults: {}", e);
-            e.to_string()
-        })
+    get_keyvaults_internal(subscription_id).await.map_err(|e| {
+        error!("Failed to get keyvaults: {}", e);
+        e.to_string()
+    })
 }
 
 async fn get_keyvaults_internal(subscription_id: &str) -> Result<Vec<KeyVault>> {
@@ -54,15 +54,20 @@ async fn get_keyvaults_internal(subscription_id: &str) -> Result<Vec<KeyVault>> 
 
     debug!("Successfully retrieved authentication token");
 
-    let client = AzureHttpClient::with_token(&token)
-        .context("Failed to create HTTP client with token")?;
+    let client =
+        AzureHttpClient::with_token(&token).context("Failed to create HTTP client with token")?;
 
     let url = urls::keyvaults(subscription_id);
     debug!("Calling Azure API: {}", url);
 
     let kv_list = fetch_all_paginated::<KeyVault>(&url, &client)
         .await
-        .with_context(|| format!("Failed to fetch keyvaults for subscription {}", subscription_id))?;
+        .with_context(|| {
+            format!(
+                "Failed to fetch keyvaults for subscription {}",
+                subscription_id
+            )
+        })?;
 
     // Record the count in the span for observability
     // Span::current().record("vault_count", kv_list.len());
@@ -80,15 +85,6 @@ async fn get_keyvaults_internal(subscription_id: &str) -> Result<Vec<KeyVault>> 
 /// # Returns
 ///
 /// Access check result indicating whether we can access the vault.
-// #[instrument(
-//     name = "keyvault.check_access",
-//     skip(keyvault_uri),
-//     fields(
-//         keyvault.uri = %keyvault_uri,
-//         has_access = tracing::field::Empty,
-//         otel.kind = "client",
-//     )
-// )]
 pub async fn check_keyvault_access(keyvault_uri: &str) -> Result<KeyVaultAccessCheck, String> {
     info!("Checking access to Key Vault");
 
@@ -168,16 +164,6 @@ pub async fn check_keyvault_access(keyvault_uri: &str) -> Result<KeyVaultAccessC
 /// - The user is not authenticated
 /// - The resource group doesn't exist
 /// - The API request fails
-// #[instrument(
-//     name = "keyvault.create",
-//     skip(subscription_id, resource_group, keyvault_name),
-//     fields(
-//         subscription_id = %subscription_id,
-//         resource_group = %resource_group,
-//         keyvault.name = %keyvault_name,
-//         otel.kind = "client",
-//     )
-// )]
 pub async fn create_keyvault(
     subscription_id: &str,
     resource_group: &str,
@@ -187,7 +173,14 @@ pub async fn create_keyvault(
         .await
         .map_err(|e| {
             error!("Failed to create keyvault: {}", e);
-            e.to_string()
+            // Extract the root cause error message for better user feedback
+            // The error chain looks like: context message -> underlying error
+            // We want to show the underlying error (e.g., Azure API error message)
+            if let Some(root_cause) = e.root_cause().downcast_ref::<AzureHttpError>() {
+                root_cause.to_string()
+            } else {
+                e.to_string()
+            }
         })
 }
 
@@ -203,13 +196,23 @@ async fn create_keyvault_internal(
         .map_err(|e| anyhow::anyhow!(e))
         .context("Failed to retrieve management token")?;
 
-    let client = AzureHttpClient::with_token(&token)
-        .context("Failed to create HTTP client with token")?;
+    let client =
+        AzureHttpClient::with_token(&token).context("Failed to create HTTP client with token")?;
 
     let rg = get_resource_group_by_name(subscription_id, resource_group)
         .await
         .map_err(|e| anyhow::anyhow!(e))
         .with_context(|| format!("Failed to get resource group '{}'", resource_group))?;
+    
+    let subscription = AZURE_CACHE
+      .get_subscription_or_load(subscription_id, || async {
+          get_subscription(subscription_id).await
+      })
+      .await;
+    
+    if subscription.is_err() {
+      return Err(anyhow::anyhow!("Failed to get subscription '{}'", subscription_id));
+    }
 
     let body = CreateVaultRequest {
         location: rg.location,
@@ -227,9 +230,9 @@ async fn create_keyvault_internal(
             private_endpoint_connections: None,
             provisioning_state: "".to_string(),
             public_network_access: "".to_string(),
-            sku: Default::default(),
+            sku: Sku::new(),
             soft_delete_retention_in_days: None,
-            tenant_id: "".to_string(),
+            tenant_id: subscription?.tenant_id.to_string(),
             vault_uri: "".to_string(),
         },
     };
@@ -241,7 +244,10 @@ async fn create_keyvault_internal(
         .await
         .with_context(|| format!("Failed to create keyvault '{}'", keyvault_name))?;
 
-    info!("Keyvault created successfully with id: {}", created_vault.id);
+    info!(
+        "Keyvault created successfully with id: {}",
+        created_vault.id
+    );
 
     Ok(created_vault)
 }
