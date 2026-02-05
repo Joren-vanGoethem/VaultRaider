@@ -110,7 +110,7 @@ Please run `bun run check` before submitting PRs.
 
 ## 🗺️ Roadmap
 
-- [x] Secret editing and creation
+- [x] Secret CRUD operations
 - [x] Secret search bar (may seem obvious, but somehow azure does not have this)
 - [x] Export/import functionality (json)
 - [x] Multi-select operations for deleting multiple secrets at once
