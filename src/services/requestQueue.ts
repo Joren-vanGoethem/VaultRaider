@@ -40,4 +40,3 @@ export class RequestQueue {
     return this.queue.length;
   }
 }
-

@@ -52,8 +52,14 @@ pub struct Properties {
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Sku {
-    pub family: String,
-    pub name: String,
+    pub family: String, // "A"
+    pub name: String, // "standard" or "premium"
+}
+
+impl Sku {
+    pub fn new() -> Self {
+        Self { family:"A".to_string(),  name:"standard".to_string() }
+    }
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]

@@ -1,12 +1,12 @@
-﻿import {DownloadIcon} from 'lucide-react'
-import {LoadingSpinner} from './LoadingSpinner'
+﻿import { DownloadIcon } from "lucide-react";
+import { LoadingSpinner } from "./LoadingSpinner";
 
 interface SecretValueProps {
-  value?: string
-  isLoading: boolean
-  error: string | null
-  onLoad: () => void
-  onCopy: (text: string) => void
+  value?: string;
+  isLoading: boolean;
+  error: string | null;
+  onLoad: () => void;
+  onCopy: (text: string) => void;
 }
 
 export function SecretValue({ value, isLoading, error, onLoad, onCopy }: SecretValueProps) {
@@ -16,15 +16,11 @@ export function SecretValue({ value, isLoading, error, onLoad, onCopy }: SecretV
         <LoadingSpinner size="sm" />
         <span className="text-xs text-gray-500 dark:text-gray-400">Loading value...</span>
       </div>
-    )
+    );
   }
 
   if (error) {
-    return (
-      <div className="text-xs text-red-600 dark:text-red-400 py-1 mb-2">
-        {error}
-      </div>
-    )
+    return <div className="text-xs text-red-600 dark:text-red-400 py-1 mb-2">{error}</div>;
   }
 
   if (value) {
@@ -42,7 +38,7 @@ export function SecretValue({ value, isLoading, error, onLoad, onCopy }: SecretV
           📋
         </button>
       </div>
-    )
+    );
   }
 
   return (
@@ -57,6 +53,5 @@ export function SecretValue({ value, isLoading, error, onLoad, onCopy }: SecretV
         Load Value
       </button>
     </div>
-  )
+  );
 }
-

@@ -11,6 +11,7 @@ use std::time::Duration;
 use moka::future::Cache;
 use log::{debug, info};
 use serde::{Serialize, Deserialize};
+use anyhow::{Context, Result};
 
 use crate::azure::subscription::types::Subscription;
 use crate::azure::keyvault::types::KeyVault;
@@ -134,6 +135,54 @@ impl AzureCache {
                 .time_to_live(Duration::from_secs(secret_value_ttl))
                 .build(),
         }
+    }
+
+    // ==================== Subscription ====================
+
+    /// Get subscription from cache by id
+    pub async fn get_subscription(&self, subscription_id: &str) -> Option<Subscription> {
+        let result = self.subscriptions.get("subscriptions").await;
+        if result.is_some() {
+            debug!("Cache hit for subscription");
+        }
+        result.map(|v| v.0
+          .into_iter()
+          .find(|s| s.subscription_id == subscription_id)
+          .unwrap())
+    }
+
+    /// Get subscription by id with automatic loading on cache miss
+    pub async fn get_subscription_or_load<F, Fut>(
+        &self,
+        subscription_id: &str,
+        loader: F,
+    ) -> Result<Subscription>
+    where
+      F: FnOnce() -> Fut,
+      Fut: std::future::Future<Output = Result<Subscription>>,
+    {
+        // Try to get from cache first
+        if let Some(cached) = self.get_subscription(subscription_id).await {
+            debug!("Cache hit for subscription");
+            return Ok(cached);
+        }
+
+        debug!("Cache miss for subscription, loading...");
+
+        // Load from Azure
+        let subscription = loader().await?;
+
+        // Store in cache
+        let mut subscriptions: Vec<Subscription> = self.subscriptions.get("subscriptions").await
+            .map(|v| v.0)
+            .unwrap_or_else(Vec::new);
+
+        subscriptions.push(subscription.clone());
+
+        self.subscriptions.insert("subscriptions".to_string(), CachedVec(subscriptions)).await;
+
+        info!("Cached subscription {}", subscription_id);
+        Ok(subscription)
     }
 
     // ==================== Subscriptions ====================

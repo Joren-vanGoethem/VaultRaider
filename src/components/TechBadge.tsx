@@ -1,16 +1,16 @@
 interface TechBadgeProps {
   name: string;
-  color: 'orange' | 'blue' | 'purple' | 'cyan' | 'yellow' | 'red' | 'green';
+  color: "orange" | "blue" | "purple" | "cyan" | "yellow" | "red" | "green";
 }
 
 const colorMap = {
-  orange: 'bg-orange-500',
-  blue: 'bg-blue-500',
-  purple: 'bg-purple-500',
-  cyan: 'bg-cyan-500',
-  yellow: 'bg-yellow-500',
-  red: 'bg-red-500',
-  green: 'bg-green-500',
+  orange: "bg-orange-500",
+  blue: "bg-blue-500",
+  purple: "bg-purple-500",
+  cyan: "bg-cyan-500",
+  yellow: "bg-yellow-500",
+  red: "bg-red-500",
+  green: "bg-green-500",
 };
 
 export function TechBadge({ name, color }: TechBadgeProps) {
@@ -21,4 +21,3 @@ export function TechBadge({ name, color }: TechBadgeProps) {
     </div>
   );
 }
-

@@ -1,12 +1,12 @@
-﻿import {GitCompareIcon} from 'lucide-react'
-import {useNavigate} from '@tanstack/react-router'
+﻿import { useNavigate } from "@tanstack/react-router";
+import { GitCompareIcon } from "lucide-react";
 
 interface CompareVaultsModalProps {
-  isOpen: boolean
-  onClose: () => void
-  sourceVaultUri: string
-  sourceName: string
-  sourceSubscriptionId?: string
+  isOpen: boolean;
+  onClose: () => void;
+  sourceVaultUri: string;
+  sourceName: string;
+  sourceSubscriptionId?: string;
 }
 
 export function CompareVaultsModal({
@@ -14,27 +14,27 @@ export function CompareVaultsModal({
   onClose,
   sourceVaultUri,
   sourceName,
-  sourceSubscriptionId
+  sourceSubscriptionId,
 }: CompareVaultsModalProps) {
-  const navigate = useNavigate()
+  const navigate = useNavigate();
 
-  if (!isOpen) return null
+  if (!isOpen) return null;
 
   const handleCompare = () => {
-    onClose()
+    onClose();
     navigate({
-      to: '/compare',
+      to: "/compare",
       search: {
         sourceVaultUri,
         sourceName,
         sourceSubscriptionId,
-      }
-    })
-  }
+      },
+    });
+  };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Escape') onClose()
-  }
+    if (e.key === "Escape") onClose();
+  };
 
   return (
     <div
@@ -51,16 +51,20 @@ export function CompareVaultsModal({
         onKeyDown={(e) => e.stopPropagation()}
         role="document"
       >
-        <h3 id="compare-modal-title" className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
+        <h3
+          id="compare-modal-title"
+          className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4"
+        >
           Compare with Another Vault
         </h3>
         <div className="text-center py-8">
-          <GitCompareIcon className="w-12 h-12 mx-auto text-primary-500 dark:text-primary-400 mb-4"/>
+          <GitCompareIcon className="w-12 h-12 mx-auto text-primary-500 dark:text-primary-400 mb-4" />
           <p className="text-gray-900 dark:text-gray-100 font-medium mb-2">
             Compare secrets between vaults
           </p>
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-2 max-w-md mx-auto">
-            Select a target vault to compare secrets, identify missing keys, and sync configurations between <strong>{sourceName}</strong> and another vault.
+            Select a target vault to compare secrets, identify missing keys, and sync configurations
+            between <strong>{sourceName}</strong> and another vault.
           </p>
         </div>
         <div className="flex justify-end gap-3 mt-6">
@@ -81,5 +85,5 @@ export function CompareVaultsModal({
         </div>
       </div>
     </div>
-  )
+  );
 }

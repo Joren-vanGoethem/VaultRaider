@@ -1,35 +1,43 @@
-﻿import {useState} from 'react'
+﻿import { useState } from "react";
 
 interface CreateSecretModalProps {
-  isOpen: boolean
-  onClose: () => void
-  onConfirm: (name: string, value: string) => void
-  isCreating: boolean
+  isOpen: boolean;
+  onClose: () => void;
+  onConfirm: (name: string, value: string) => void;
+  isCreating: boolean;
 }
 
-export function CreateSecretModal({isOpen, onClose, onConfirm, isCreating}: CreateSecretModalProps) {
-  const [secretName, setSecretName] = useState('')
-  const [secretValue, setSecretValue] = useState('')
+export function CreateSecretModal({
+  isOpen,
+  onClose,
+  onConfirm,
+  isCreating,
+}: CreateSecretModalProps) {
+  const [secretName, setSecretName] = useState("");
+  const [secretValue, setSecretValue] = useState("");
 
-  if (!isOpen) return null
+  if (!isOpen) return null;
 
   const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
+    e.preventDefault();
     if (!secretName.trim() || !secretValue.trim()) {
-      alert('Secret name and value are required')
-      return
+      alert("Secret name and value are required");
+      return;
     }
-    onConfirm(secretName, secretValue)
-  }
+    onConfirm(secretName, secretValue);
+  };
 
   const handleClose = () => {
-    setSecretName('')
-    setSecretValue('')
-    onClose()
-  }
+    setSecretName("");
+    setSecretValue("");
+    onClose();
+  };
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={handleClose}>
+    <div
+      className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+      onClick={handleClose}
+    >
       <div
         className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4 shadow-xl"
         onClick={(e) => e.stopPropagation()}
@@ -88,11 +96,11 @@ export function CreateSecretModal({isOpen, onClose, onConfirm, isCreating}: Crea
               className="px-4 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               disabled={isCreating}
             >
-              {isCreating ? 'Creating...' : 'Create Secret'}
+              {isCreating ? "Creating..." : "Create Secret"}
             </button>
           </div>
         </form>
       </div>
     </div>
-  )
+  );
 }

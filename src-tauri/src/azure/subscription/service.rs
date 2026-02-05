@@ -20,13 +20,6 @@ use super::types::{Subscription, SubscriptionListResponse};
 /// This function will return an error if:
 /// - The user is not authenticated
 /// - The API request fails
-// #[instrument(
-//     name = "subscription.list",
-//     fields(
-//         subscription_count = tracing::field::Empty,
-//         otel.kind = "client",
-//     )
-// )]
 pub async fn get_subscriptions() -> Result<Vec<Subscription>, String> {
     get_subscriptions_internal()
         .await
@@ -58,4 +51,36 @@ async fn get_subscriptions_internal() -> Result<Vec<Subscription>> {
     // Span::current().record("subscription_count", sub_list.value.len());
     info!("Successfully fetched {} subscriptions", sub_list.value.len());
     Ok(sub_list.value)
+}
+
+pub async fn get_subscription(subscription_id: &str) -> Result<Subscription> {
+    let subscriptions = get_subscriptions_internal().await?;
+
+    subscriptions
+        .into_iter()
+        .find(|sub| sub.subscription_id.eq_ignore_ascii_case(subscription_id))
+        .ok_or_else(|| {
+            anyhow::anyhow!(format!(
+                "Subscription with ID '{}' not found",
+                subscription_id
+            ))
+        })
+}
+
+pub async fn get_subscription_internal(subscription_id: &str) -> Result<Subscription> {
+    let url = urls::subscription(subscription_id);
+
+    let token = get_token_from_state()
+      .await
+      .map_err(|e| anyhow::anyhow!(e))
+      .context("Failed to retrieve authentication token")?;
+    
+    let client = AzureHttpClient::new()
+      .with_bearer_token(&token)
+      .context("Failed to create HTTP client with token")?;;
+    
+    client
+      .get(&url)
+      .await
+      .context("Failed to fetch subscription from Azure")
 }

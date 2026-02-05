@@ -1,5 +1,5 @@
-import { Avatar } from './Avatar';
-import { LogOut } from 'lucide-react';
+import { LogOut } from "lucide-react";
+import { Avatar } from "./Avatar";
 
 interface UserInfo {
   name?: string;
@@ -13,7 +13,12 @@ interface UserProfileProps {
   isCollapsed?: boolean;
 }
 
-export function UserProfile({ userInfo, onLogout, compact = false, isCollapsed = false }: UserProfileProps) {
+export function UserProfile({
+  userInfo,
+  onLogout,
+  compact = false,
+  isCollapsed = false,
+}: UserProfileProps) {
   // Collapsed mode - show only avatar with tooltip
   if (isCollapsed) {
     return (
@@ -77,4 +82,3 @@ export function UserProfile({ userInfo, onLogout, compact = false, isCollapsed =
     </div>
   );
 }
-

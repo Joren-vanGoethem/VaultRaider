@@ -1,9 +1,9 @@
-﻿import type { Subscription } from '../types/azure'
+﻿import type { Subscription } from "../types/azure";
 
 interface SubscriptionSelectorProps {
-  subscriptions: Subscription[]
-  selectedSubscription: string | undefined
-  onSubscriptionChange: (subscriptionId: string) => void
+  subscriptions: Subscription[];
+  selectedSubscription: string | undefined;
+  onSubscriptionChange: (subscriptionId: string) => void;
 }
 
 export function SubscriptionSelector({
@@ -21,7 +21,7 @@ export function SubscriptionSelector({
       </label>
       <select
         id="subscription-select"
-        value={selectedSubscription ?? ''}
+        value={selectedSubscription ?? ""}
         onChange={(e) => onSubscriptionChange(e.target.value)}
         className="w-full p-2 rounded-lg bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-100"
       >
@@ -32,6 +32,5 @@ export function SubscriptionSelector({
         ))}
       </select>
     </div>
-  )
+  );
 }
-

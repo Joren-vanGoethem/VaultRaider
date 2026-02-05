@@ -5,7 +5,7 @@ export interface ResourceGroup {
   name: string;
   properties: Properties;
   tags: { [key: string]: string };
-  type: string
+  type: string;
 }
 
 export interface Properties {

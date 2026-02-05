@@ -1,22 +1,18 @@
-﻿interface DeleteConfirmationModalProps {
+﻿interface BulkDeleteModalProps {
   isOpen: boolean;
   onConfirm: () => void;
   onCancel: () => void;
-  itemName: string;
-  itemType?: string;
+  secretNames: string[];
   isDeleting?: boolean;
-  recoveryMessage?: string;
 }
 
-export function DeleteConfirmationModal({
+export function BulkDeleteModal({
   isOpen,
   onConfirm,
   onCancel,
-  itemName,
-  itemType = "item",
+  secretNames,
   isDeleting = false,
-  recoveryMessage,
-}: DeleteConfirmationModalProps) {
+}: BulkDeleteModalProps) {
   if (!isOpen) return null;
 
   return (
@@ -25,19 +21,30 @@ export function DeleteConfirmationModal({
       onClick={onCancel}
     >
       <div
-        className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md mx-4 shadow-xl"
+        className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-lg w-full mx-4 shadow-xl max-h-[80vh] flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
         <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
-          Delete {itemType}
+          Delete {secretNames.length} Secret{secretNames.length !== 1 ? "s" : ""}
         </h3>
         <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-          Are you sure you want to delete the {itemType}{" "}
-          <span className="font-mono font-semibold text-gray-900 dark:text-gray-100">
-            "{itemName}"
-          </span>
-          ?{recoveryMessage && ` ${recoveryMessage}`}
+          Are you sure you want to delete the following secrets? This action may not be reversible
+          depending on vault settings.
         </p>
+
+        <div className="flex-1 overflow-auto mb-4 border border-gray-200 dark:border-gray-700 rounded-lg">
+          <ul className="divide-y divide-gray-200 dark:divide-gray-700">
+            {secretNames.map((name) => (
+              <li
+                key={name}
+                className="px-4 py-2 text-sm font-mono text-gray-900 dark:text-gray-100 hover:bg-gray-50 dark:hover:bg-gray-700/50"
+              >
+                {name}
+              </li>
+            ))}
+          </ul>
+        </div>
+
         <div className="flex gap-3 justify-end">
           <button
             type="button"
@@ -53,7 +60,9 @@ export function DeleteConfirmationModal({
             className="px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             disabled={isDeleting}
           >
-            {isDeleting ? "Deleting..." : "Delete"}
+            {isDeleting
+              ? `Deleting ${secretNames.length}...`
+              : `Delete ${secretNames.length} Secret${secretNames.length !== 1 ? "s" : ""}`}
           </button>
         </div>
       </div>

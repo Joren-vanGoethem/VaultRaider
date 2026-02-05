@@ -17,28 +17,6 @@ A modern, cross-platform desktop application for managing Azure Key Vaults. Buil
 - 🌙 **Dark Mode** - Supports light and dark themes
 - 🚀 **Cross-Platform** - Works on Windows, macOS, and Linux
 
-## 📸 Screenshots
-
-### Subscription Selection
-Choose from your Azure subscriptions to browse Key Vaults:
-
-![Subscription Dropdown](images/subscriptionDropdown.png)
-
-### Key Vault List
-View all Key Vaults in your selected subscription:
-
-![Vault List](images/vaultList.png)
-
-### Secret Management
-Browse and manage secrets within your Key Vaults:
-
-![Secret List](images/secretList.png)
-
-### Secret Values
-Securely load and view secret values with proper authentication:
-
-![Loading Secret Value](images/loadingSecretValue.png)
-
 ## 🚀 Getting Started
 
 ### Prerequisites
@@ -89,15 +67,13 @@ The compiled application will be available in `src-tauri/target/release/`.
 ### Backend
 - **Rust** - High-performance backend
 - **Tauri 2** - Desktop application framework
-- **Azure SDK for Rust** - Azure service integration
-- **Tokio** - Async runtime
 
 ## 🔧 Development
 
 ### Available Scripts
 
 - `bun run dev` - Start Vite development server
-- `cargo tauri dev` - Run Tauri app in development mode
+- `cargo tauri dev` - Run Tauri app in development mode, this start both backend and frontend
 - `bun run build` - Build frontend for production
 - `cargo tauri build` - Build complete application
 - `bun run lint` - Lint code with Biome
@@ -105,32 +81,11 @@ The compiled application will be available in `src-tauri/target/release/`.
 - `bun run check` - Check code quality
 - `bun run biome-fix` - Auto-fix linting issues
 
-### Project Structure
-
-```
-vaultraider/
-├── src/                    # React frontend
-│   ├── components/         # React components
-│   ├── contexts/          # React contexts
-│   ├── routes/            # TanStack Router routes
-│   ├── services/          # API services
-│   └── types/             # TypeScript definitions
-├── src-tauri/             # Rust backend
-│   ├── src/
-│   │   ├── azure/         # Azure SDK integration
-│   │   └── commands/      # Tauri commands
-│   └── Cargo.toml         # Rust dependencies
-└── images/                # Screenshots
-```
-
 ## 🔐 Authentication
 
-VaultRaider uses Azure Active Directory for authentication. On first launch, you'll be prompted to sign in with your Azure account, this may either use az cli if logged in or through your default web browser. The application securely stores your credentials and automatically refreshes tokens as needed.
-
-### Permissions Required
-
-- **Azure Key Vault**: Read permissions for Key Vaults and secrets
-- **Azure Subscriptions**: Read access to list subscriptions
+VaultRaider uses Azure Active Directory for authentication. 
+On first launch you'll be prompted to sign in with your Azure account, this may either use az cli if logged in or through your default web browser. 
+The application securely stores your credentials and automatically refreshes tokens as needed.
 
 ## 🤝 Contributing
 
@@ -144,33 +99,27 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 
 ### Code Style
 
-This project uses [Biome](https://biomejs.dev/) for linting and formatting. Please run `bun run check` before submitting PRs.
+This project uses [Biome](https://biomejs.dev/) for linting and formatting. 
+Please run `bun run check` before submitting PRs.
 
 ## 🙏 Acknowledgments
 
 - Built with [Tauri](https://tauri.app/)
 - UI powered by [React](https://reactjs.org/) and [Tailwind CSS](https://tailwindcss.com/)
-- Azure integration via [Azure SDK for Rust](https://github.com/Azure/azure-sdk-for-rust)
 
-## 🐛 Known Issues
-
-- authentication using device code flow may not receive correct permissions.
 
 ## 🗺️ Roadmap
 
-- [x] Secret editing and creation
-- [x] Secret search (azure does not have this)
-- [ ] Certificate management
-- [ ] Key management
-- [ ] Export/import functionality
-- [ ] Multi-select operations
+- [x] Secret CRUD operations
+- [x] Secret search bar (may seem obvious, but somehow azure does not have this)
+- [x] Export/import functionality (json)
+- [x] Multi-select operations for deleting multiple secrets at once
 - [ ] Secret version history
-- [ ] Batch operations
-- [ ] more authentication flows (e.g. interactive, device code flow)
+- [ ] more authentication flows
 
 ## 💬 Support
 
-If you encounter any issues or have questions, please [open an issue](https://github.com/yourusername/vaultraider/issues) on GitHub.
+If you encounter any issues or have questions, please [open an issue](https://github.com/Joren-vanGoethem/VaultRaider/issues) on GitHub.
 
 ---
 

@@ -1,10 +1,10 @@
-﻿import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
-import { useState, useEffect } from "react";
+﻿import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { invoke } from "@tauri-apps/api/core";
-import { useAuth } from "../contexts/AuthContext";
-import { LoadingSpinner } from "../components/LoadingSpinner";
+import { useEffect, useState } from "react";
 import { Avatar } from "../components/Avatar";
 import { CopyIcon } from "../components/icons";
+import { LoadingSpinner } from "../components/LoadingSpinner";
+import { useAuth } from "../contexts/AuthContext";
 
 interface AuthResult {
   success: boolean;
@@ -20,9 +20,9 @@ interface DeviceCodeInfo {
   message: string;
 }
 
-export const Route = createFileRoute('/')({
+export const Route = createFileRoute("/")({
   component: Index,
-})
+});
 
 function Index() {
   const { isAuthenticated, userInfo, setAuthenticated, logout } = useAuth();
@@ -35,11 +35,9 @@ function Index() {
   // Redirect to subscriptions if already authenticated
   useEffect(() => {
     if (isAuthenticated) {
-      navigate({ to: '/subscriptions' });
+      navigate({ to: "/subscriptions" });
     }
   }, [isAuthenticated, navigate]);
-
-
 
   async function handleLogin() {
     setIsLoading(true);
@@ -63,7 +61,9 @@ function Index() {
 
       // Check if Azure CLI failed - offer device code flow as fallback
       if (errorMessage.includes("Azure CLI") || errorMessage.includes("az login")) {
-        setMessage("Azure CLI not available. Would you like to use browser authentication instead?");
+        setMessage(
+          "Azure CLI not available. Would you like to use browser authentication instead?",
+        );
         setShowDeviceCodeFlow(true);
       } else {
         setMessage(`Error: ${error}`);
@@ -98,7 +98,7 @@ function Index() {
       // This will poll automatically in the backend
       const result = await invoke<AuthResult>("complete_browser_login", {
         authCode: "",
-        state: ""
+        state: "",
       });
 
       if (result.success) {
@@ -116,19 +116,25 @@ function Index() {
       const errorMessage = String(error);
 
       // Check for specific Azure configuration errors
-      if (errorMessage.includes("AADSTS7000218") || errorMessage.includes("client_assertion") || errorMessage.includes("client_secret")) {
+      if (
+        errorMessage.includes("AADSTS7000218") ||
+        errorMessage.includes("client_assertion") ||
+        errorMessage.includes("client_secret")
+      ) {
         setMessage(
           "❌ Azure App Registration Configuration Error\n\n" +
-          "Your app needs to be configured as a Public Client:\n\n" +
-          "1. Go to Azure Portal → App Registrations\n" +
-          "2. Select your app (Client ID: d904e24e...)\n" +
-          "3. Click 'Authentication' → Advanced Settings\n" +
-          "4. Set 'Allow public client flows' to YES ✅\n" +
-          "5. Click Save\n\n" +
-          "See AZURE_APP_REGISTRATION_SETUP.md for detailed instructions."
+            "Your app needs to be configured as a Public Client:\n\n" +
+            "1. Go to Azure Portal → App Registrations\n" +
+            "2. Select your app (Client ID: d904e24e...)\n" +
+            "3. Click 'Authentication' → Advanced Settings\n" +
+            "4. Set 'Allow public client flows' to YES ✅\n" +
+            "5. Click Save\n\n" +
+            "See AZURE_APP_REGISTRATION_SETUP.md for detailed instructions.",
         );
       } else if (errorMessage.includes("authorization_pending")) {
-        setMessage("Still waiting for authentication. Please complete the sign-in in your browser.");
+        setMessage(
+          "Still waiting for authentication. Please complete the sign-in in your browser.",
+        );
       } else if (errorMessage.includes("expired_token") || errorMessage.includes("timed out")) {
         setMessage("Authentication timed out. Please try again.");
       } else {
@@ -157,16 +163,12 @@ function Index() {
 
   return (
     <div className="h-full flex flex-col items-center justify-center px-4 py-12">
-      <h1 className="text-5xl md:text-6xl font-bold mb-12 gradient-text">
-        Welcome to VaultRaider
-      </h1>
+      <h1 className="text-5xl md:text-6xl font-bold mb-12 gradient-text">Welcome to VaultRaider</h1>
 
       <div className="w-full max-w-md">
         {!isAuthenticated ? (
           <div className="card">
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-4">
-              Sign In
-            </h2>
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-4">Sign In</h2>
             <p className="text-gray-600 dark:text-gray-400 mb-6">
               Sign in with your Azure account to access your Key Vaults
             </p>
@@ -179,9 +181,12 @@ function Index() {
                 </h3>
                 <ol className="space-y-3 text-sm text-blue-800 dark:text-blue-200">
                   <li className="flex items-start gap-2">
-                    <span className="flex-shrink-0 w-6 h-6 rounded-full bg-blue-500 text-white flex items-center justify-center text-xs font-bold">1</span>
+                    <span className="flex-shrink-0 w-6 h-6 rounded-full bg-blue-500 text-white flex items-center justify-center text-xs font-bold">
+                      1
+                    </span>
                     <span className="pt-0.5">
-                      Visit: <a
+                      Visit:{" "}
+                      <a
                         href={deviceCodeInfo.verification_uri}
                         target="_blank"
                         rel="noopener noreferrer"
@@ -192,7 +197,9 @@ function Index() {
                     </span>
                   </li>
                   <li className="flex items-start gap-2">
-                    <span className="flex-shrink-0 w-6 h-6 rounded-full bg-blue-500 text-white flex items-center justify-center text-xs font-bold">2</span>
+                    <span className="flex-shrink-0 w-6 h-6 rounded-full bg-blue-500 text-white flex items-center justify-center text-xs font-bold">
+                      2
+                    </span>
                     <div className="pt-0.5 flex-1">
                       <span className="block mb-2">Enter this code:</span>
                       <div className="flex items-center gap-2">
@@ -211,7 +218,9 @@ function Index() {
                     </div>
                   </li>
                   <li className="flex items-start gap-2">
-                    <span className="flex-shrink-0 w-6 h-6 rounded-full bg-blue-500 text-white flex items-center justify-center text-xs font-bold">3</span>
+                    <span className="flex-shrink-0 w-6 h-6 rounded-full bg-blue-500 text-white flex items-center justify-center text-xs font-bold">
+                      3
+                    </span>
                     <span className="pt-0.5">Sign in with your Microsoft account</span>
                   </li>
                 </ol>
@@ -262,13 +271,15 @@ function Index() {
             )}
 
             {message && !deviceCodeInfo && (
-              <div className={`mt-4 p-4 rounded-lg border ${
-                message.includes("Success") || message.includes("authenticated")
-                  ? "bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800 text-green-700 dark:text-green-300"
-                  : message.includes("Azure CLI not available") || showDeviceCodeFlow
-                  ? "bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800 text-amber-700 dark:text-amber-300"
-                  : "bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800 text-red-700 dark:text-red-300"
-              }`}>
+              <div
+                className={`mt-4 p-4 rounded-lg border ${
+                  message.includes("Success") || message.includes("authenticated")
+                    ? "bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800 text-green-700 dark:text-green-300"
+                    : message.includes("Azure CLI not available") || showDeviceCodeFlow
+                      ? "bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800 text-amber-700 dark:text-amber-300"
+                      : "bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800 text-red-700 dark:text-red-300"
+                }`}
+              >
                 <p className="text-sm whitespace-pre-wrap">{message}</p>
               </div>
             )}
@@ -302,11 +313,7 @@ function Index() {
               >
                 Go to Subscriptions
               </Link>
-              <button
-                type="button"
-                onClick={handleLogout}
-                className="btn-secondary"
-              >
+              <button type="button" onClick={handleLogout} className="btn-secondary">
                 Logout
               </button>
             </div>
@@ -321,4 +328,3 @@ function Index() {
     </div>
   );
 }
-
