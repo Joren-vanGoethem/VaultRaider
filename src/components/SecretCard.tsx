@@ -13,9 +13,20 @@ interface SecretCardProps {
   vaultUri: string
   searchQuery?: string
   shouldLoad?: boolean
+  selectionMode?: boolean
+  isSelected?: boolean
+  onSelectionChange?: (secretId: string, selected: boolean) => void
 }
 
-export function SecretCard({secret, vaultUri, searchQuery = '', shouldLoad = false}: SecretCardProps) {
+export function SecretCard({
+  secret,
+  vaultUri,
+  searchQuery = '',
+  shouldLoad = false,
+  selectionMode = false,
+  isSelected = false,
+  onSelectionChange
+}: SecretCardProps) {
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [showEditModal, setShowEditModal] = useState(false)
   const [manualLoad, setManualLoad] = useState(false)
@@ -183,12 +194,21 @@ export function SecretCard({secret, vaultUri, searchQuery = '', shouldLoad = fal
     setManualLoad(true)
   }
 
+  const handleSelectionToggle = () => {
+    onSelectionChange?.(secret.id, !isSelected)
+  }
+
   const loadErrorMessage = error instanceof Error ? error.message : error ? String(error) : null
 
   return (
     <div
+      onClick={selectionMode ? handleSelectionToggle : undefined}
       className={`border rounded-lg p-3 transition-colors ${
-        loading 
+        selectionMode ? 'cursor-pointer' : ''
+      } ${
+        isSelected
+          ? 'border-primary-500 dark:border-primary-400 bg-primary-50 dark:bg-primary-900/30 ring-2 ring-primary-500/50'
+          : loading 
           ? 'border-yellow-400 dark:border-yellow-500 bg-yellow-50/30 dark:bg-yellow-900/10' 
           : loadErrorMessage
           ? 'border-red-400 dark:border-red-500'
@@ -197,6 +217,20 @@ export function SecretCard({secret, vaultUri, searchQuery = '', shouldLoad = fal
           : 'border-gray-200 dark:border-gray-700 hover:border-primary-500 dark:hover:border-primary-400'
       }`}
     >
+      {selectionMode && (
+        <div className="flex items-center mb-2">
+          <input
+            type="checkbox"
+            checked={isSelected}
+            onChange={handleSelectionToggle}
+            onClick={(e) => e.stopPropagation()}
+            className="w-4 h-4 text-primary-600 bg-gray-100 border-gray-300 rounded focus:ring-primary-500 dark:focus:ring-primary-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600 cursor-pointer"
+          />
+          <span className="ml-2 text-xs text-gray-500 dark:text-gray-400">
+            {isSelected ? 'Selected' : 'Click to select'}
+          </span>
+        </div>
+      )}
       <SecretHeader
         name={secretName}
         id={secret.id}
