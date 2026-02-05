@@ -5,7 +5,7 @@ use log::{error, info};
 use serde::Serialize;
 
 use crate::azure::auth::token::get_token_for_scope;
-use crate::azure::http::{fetch_all_paginated, AzureHttpClient};
+use crate::azure::http::{fetch_all_paginated, AzureHttpClient, AzureHttpError};
 use crate::config::{urls, KEYVAULT_SCOPE};
 
 use super::types::{Secret, SecretBundle};
@@ -168,7 +168,12 @@ pub async fn delete_secret(keyvault_uri: &str, secret_name: &str) -> Result<Secr
         .await
         .map_err(|e| {
             error!("Failed to delete secret: {}", e);
-            e.to_string()
+            // Extract the root cause error message for better user feedback
+            if let Some(root_cause) = e.root_cause().downcast_ref::<AzureHttpError>() {
+                root_cause.to_string()
+            } else {
+                e.to_string()
+            }
         })
 }
 
@@ -229,7 +234,12 @@ pub async fn create_secret(
         .await
         .map_err(|e| {
             error!("Failed to create secret: {}", e);
-            e.to_string()
+            // Extract the root cause error message for better user feedback
+            if let Some(root_cause) = e.root_cause().downcast_ref::<AzureHttpError>() {
+                root_cause.to_string()
+            } else {
+                e.to_string()
+            }
         })
 }
 
@@ -297,7 +307,12 @@ pub async fn update_secret(
         .await
         .map_err(|e| {
             error!("Failed to update secret: {}", e);
-            e.to_string()
+            // Extract the root cause error message for better user feedback
+            if let Some(root_cause) = e.root_cause().downcast_ref::<AzureHttpError>() {
+                root_cause.to_string()
+            } else {
+                e.to_string()
+            }
         })
 }
 

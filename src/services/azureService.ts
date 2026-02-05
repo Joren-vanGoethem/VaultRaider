@@ -113,25 +113,25 @@ export async function deleteSecret(keyvaultUri: string, secretName: string): Pro
   return await invoke('delete_secret', {keyvaultUri, secretName});
 }
 
-export async function createSecret(keyvaultUri: string, secretName: string, secretValue: string): Promise<SecretBundle[]> {
+export async function createSecret(keyvaultUri: string, secretName: string, secretValue: string): Promise<SecretBundle> {
   try {
-    console.log(`Creating secret ${secretName} with value ${secretValue} in keyvault ${keyvaultUri}...`);
-    return await invoke('create_secret', {keyvaultUri, secretName, secretValue});
+    console.log(`Creating secret ${secretName} in keyvault ${keyvaultUri}...`);
+    return await invoke<SecretBundle>('create_secret', {keyvaultUri, secretName, secretValue});
   } catch (err) {
     const errorMessage = err instanceof Error ? err.message : String(err)
     console.error(`Failed to create secret ${secretName} for keyvault ${keyvaultUri}:`, errorMessage)
-    return [];
+    throw new Error(errorMessage);
   }
 }
 
-export async function updateSecret(keyvaultUri: string, secretName: string, secretValue: string): Promise<SecretBundle[]> {
+export async function updateSecret(keyvaultUri: string, secretName: string, secretValue: string): Promise<SecretBundle> {
   try {
-    console.log(`Updating secret ${secretName} with value ${secretValue} in keyvault ${keyvaultUri}...`);
-    return await invoke('update_secret', {keyvaultUri, secretName, secretValue});
+    console.log(`Updating secret ${secretName} in keyvault ${keyvaultUri}...`);
+    return await invoke<SecretBundle>('update_secret', {keyvaultUri, secretName, secretValue});
   } catch (err) {
     const errorMessage = err instanceof Error ? err.message : String(err)
     console.error(`Failed to update secret ${secretName} for keyvault ${keyvaultUri}:`, errorMessage)
-    return [];
+    throw new Error(errorMessage);
   }
 }
 
