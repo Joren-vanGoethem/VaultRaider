@@ -1,17 +1,17 @@
-﻿use crate::azure::auth::constants::{CLIENT_ID, TENANT_ID, VAULT_SCOPE};
+use crate::azure::auth::constants::{CLIENT_ID, TENANT_ID, VAULT_SCOPE};
+use crate::azure::auth::token::store_auth_result;
 use crate::azure::auth::types::AuthResult;
-use std::env;
 use azure_core::credentials::{Secret, TokenCredential};
 use azure_identity::{ClientSecretCredential, ClientSecretCredentialOptions};
 use log::info;
-use crate::azure::auth::token::store_auth_result;
+use std::env;
 
 /// Initiates Azure authentication using environment variables
 /// This tries to authenticate using AZURE_CLIENT_ID, AZURE_CLIENT_SECRET, and AZURE_TENANT_ID
 /// environment variables (Service Principal authentication)
 pub async fn try_environment_credential() -> Result<AuthResult, String> {
     info!("try_environment_credential...");
-    
+
     // Check if environment variables are set
     let client_id = env::var("AZURE_CLIENT_ID")
         .or_else(|_| Ok::<String, std::env::VarError>(CLIENT_ID.to_string()))
@@ -30,8 +30,9 @@ pub async fn try_environment_credential() -> Result<AuthResult, String> {
         &client_id,
         tenant_id,
         Secret::new(client_secret),
-        Some(options)
-    ).map_err(|e| format!("Failed to create client secret credential: {}", e))?;
+        Some(options),
+    )
+    .map_err(|e| format!("Failed to create client secret credential: {}", e))?;
 
     // Try to get a token to verify authentication
     let scopes = &[VAULT_SCOPE];

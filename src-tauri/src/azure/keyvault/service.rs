@@ -1,4 +1,4 @@
-﻿//! Key Vault service - business logic for Azure Key Vault operations
+//! Key Vault service - business logic for Azure Key Vault operations
 
 use anyhow::{Context, Result};
 use log::{debug, error, info};
@@ -203,15 +203,18 @@ async fn create_keyvault_internal(
         .await
         .map_err(|e| anyhow::anyhow!(e))
         .with_context(|| format!("Failed to get resource group '{}'", resource_group))?;
-    
+
     let subscription = AZURE_CACHE
-      .get_subscription_or_load(subscription_id, || async {
-          get_subscription(subscription_id).await
-      })
-      .await;
-    
+        .get_subscription_or_load(subscription_id, || async {
+            get_subscription(subscription_id).await
+        })
+        .await;
+
     if subscription.is_err() {
-      return Err(anyhow::anyhow!("Failed to get subscription '{}'", subscription_id));
+        return Err(anyhow::anyhow!(
+            "Failed to get subscription '{}'",
+            subscription_id
+        ));
     }
 
     let body = CreateVaultRequest {

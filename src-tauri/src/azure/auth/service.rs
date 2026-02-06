@@ -1,4 +1,4 @@
-﻿//! Authentication service - core authentication logic
+//! Authentication service - core authentication logic
 //!
 //! This module provides the main authentication functions that coordinate
 //! between different authentication methods (CLI, Service Principal, etc.)
@@ -22,7 +22,7 @@ use log::{error, info};
 /// describing which methods failed.
 pub async fn login() -> Result<AuthResult, String> {
     info!("Starting generic login flow...");
-    
+
     // First, try Azure CLI authentication
     match try_azure_cli_login().await {
         Ok(result) => {
@@ -68,7 +68,7 @@ pub async fn is_authenticated() -> bool {
 /// This clears both the authentication credential and any cached user info.
 pub async fn logout() {
     info!("Logging out, clearing AUTH_CREDENTIAL");
-    
+
     let mut cred = AUTH_CREDENTIAL.lock().await;
     *cred = None;
 

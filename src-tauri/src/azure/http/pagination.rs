@@ -1,10 +1,10 @@
-﻿//! Generic pagination utilities for Azure API responses
+//! Generic pagination utilities for Azure API responses
 //!
 //! This module provides a reusable function for handling Azure's
 //! paginated API responses that use the `nextLink` pattern.
 
-use serde::de::DeserializeOwned;
 use log::{debug, info};
+use serde::de::DeserializeOwned;
 
 use crate::azure::auth::types::AzureListResponse;
 use crate::azure::http::client::AzureHttpClient;
@@ -60,7 +60,7 @@ where
         let response: AzureListResponse<T> = client.get(&url).await?;
         let items_count = response.value.len();
 
-        debug!( "Page {} fetched: {} items", page_count, items_count);
+        debug!("Page {} fetched: {} items", page_count, items_count);
         results.extend(response.value);
 
         current_url = response.next_link;
@@ -70,7 +70,11 @@ where
         }
     }
 
-    info!("Pagination complete, {} items fetched across {} pages", results.len(), page_count);
+    info!(
+        "Pagination complete, {} items fetched across {} pages",
+        results.len(),
+        page_count
+    );
 
     Ok(results)
 }
@@ -138,7 +142,11 @@ where
         }
     }
 
-    info!("Pagination complete, {} items fetched across {} pages", results.len(), page_count);
+    info!(
+        "Pagination complete, {} items fetched across {} pages",
+        results.len(),
+        page_count
+    );
 
     Ok(results)
 }

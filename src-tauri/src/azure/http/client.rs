@@ -1,4 +1,4 @@
-﻿//! Reusable HTTP client for Azure API requests
+//! Reusable HTTP client for Azure API requests
 //!
 //! This module provides a generic HTTP client wrapper that handles:
 //! - Bearer token authentication
@@ -18,11 +18,11 @@
 //! let vaults: Vec<KeyVault> = client.get(&url).await?;
 //! ```
 
-use reqwest::header::{HeaderMap, HeaderValue, AUTHORIZATION, CONTENT_TYPE};
-use reqwest::{Client, Method, Response};
-use serde::de::DeserializeOwned;
-use serde::Serialize;
 use log::{debug, error, info};
+use reqwest::header::{AUTHORIZATION, CONTENT_TYPE, HeaderMap, HeaderValue};
+use reqwest::{Client, Method, Response};
+use serde::Serialize;
+use serde::de::DeserializeOwned;
 
 use super::error::AzureHttpError;
 
@@ -266,7 +266,9 @@ impl AzureHttpClient {
 
         serde_json::from_str(&response_text).map_err(|e| {
             error!(
-                "Failed to parse JSON response: {} \n {}", e, response_text.chars().take(500).collect::<String>()
+                "Failed to parse JSON response: {} \n {}",
+                e,
+                response_text.chars().take(500).collect::<String>()
             );
             AzureHttpError::ParseError {
                 message: e.to_string(),
@@ -330,7 +332,7 @@ impl AzureHttpClient {
     async fn check_status(&self, response: Response) -> Result<Response, AzureHttpError> {
         let status = response.status();
         // Span::current().record("http.status_code", status.as_u16());
-        
+
         debug!("Response status received: {}", status);
 
         if !status.is_success() {
@@ -363,9 +365,14 @@ impl AzureHttpClient {
                     return message.to_string();
                 }
                 if let Some(code) = error_obj.get("code").and_then(|c| c.as_str()) {
-                    return format!("{}: {}", code, error_obj.get("message")
-                        .and_then(|m| m.as_str())
-                        .unwrap_or("Unknown error"));
+                    return format!(
+                        "{}: {}",
+                        code,
+                        error_obj
+                            .get("message")
+                            .and_then(|m| m.as_str())
+                            .unwrap_or("Unknown error")
+                    );
                 }
             }
         }
@@ -425,8 +432,10 @@ mod tests {
         let client = AzureHttpClient::new()
             .with_header("X-Custom-Header", "test_value")
             .unwrap();
-        assert!(client
-            .headers()
-            .contains_key("X-Custom-Header".to_lowercase().as_str()));
+        assert!(
+            client
+                .headers()
+                .contains_key("X-Custom-Header".to_lowercase().as_str())
+        );
     }
 }

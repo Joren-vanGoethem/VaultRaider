@@ -1,4 +1,4 @@
-﻿//! Centralized configuration and constants for VaultRaider
+//! Centralized configuration and constants for VaultRaider
 //!
 //! This module contains all configuration values, API endpoints,
 //! and constants used throughout the application.
@@ -24,7 +24,8 @@ pub const MANAGEMENT_SCOPE: &str = "https://management.azure.com/.default";
 pub const KEYVAULT_SCOPE: &str = "https://vault.azure.net/.default";
 
 /// Combined auth scopes for interactive login
-pub const AUTH_SCOPES: &str = "https://management.azure.com/.default offline_access openid profile email";
+pub const AUTH_SCOPES: &str =
+    "https://management.azure.com/.default offline_access openid profile email";
 
 // ============================================================================
 // Azure AD Endpoints
@@ -192,7 +193,10 @@ mod tests {
         let url = urls::secrets("https://myvault.vault.azure.net/");
         assert_eq!(
             url,
-            format!("https://myvault.vault.azure.net/secrets?api-version={}", KEYVAULT_DATA_API_VERSION)
+            format!(
+                "https://myvault.vault.azure.net/secrets?api-version={}",
+                KEYVAULT_DATA_API_VERSION
+            )
         );
     }
 

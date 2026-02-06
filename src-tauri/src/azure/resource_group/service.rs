@@ -1,10 +1,10 @@
-﻿//! Resource Group service - business logic for Azure Resource Group operations
+//! Resource Group service - business logic for Azure Resource Group operations
 
 use anyhow::{Context, Result};
 use log::{debug, error, info};
 
 use crate::azure::auth::token::get_token_from_state;
-use crate::azure::http::{fetch_all_paginated, AzureHttpClient};
+use crate::azure::http::{AzureHttpClient, fetch_all_paginated};
 use crate::config::urls;
 
 use super::types::ResourceGroup;
@@ -52,15 +52,20 @@ async fn get_resource_groups_internal(subscription_id: &str) -> Result<Vec<Resou
 
     debug!("Successfully retrieved authentication token");
 
-    let client = AzureHttpClient::with_token(&token)
-        .context("Failed to create HTTP client with token")?;
+    let client =
+        AzureHttpClient::with_token(&token).context("Failed to create HTTP client with token")?;
 
     let url = urls::resource_groups(subscription_id);
-    debug!( "Calling Azure API: {}", url);
+    debug!("Calling Azure API: {}", url);
 
     let rg_list = fetch_all_paginated::<ResourceGroup>(&url, &client)
         .await
-        .with_context(|| format!("Failed to fetch resource groups for subscription {}", subscription_id))?;
+        .with_context(|| {
+            format!(
+                "Failed to fetch resource groups for subscription {}",
+                subscription_id
+            )
+        })?;
 
     // Span::current().record("resource_group_count", rg_list.len());
     info!("Successfully retrieved {} resource groups", rg_list.len());
@@ -118,13 +123,15 @@ async fn get_resource_group_by_name_internal(
 
     debug!("Successfully retrieved authentication token");
 
-    let client = AzureHttpClient::with_token(&token)
-        .context("Failed to create HTTP client with token")?;
+    let client =
+        AzureHttpClient::with_token(&token).context("Failed to create HTTP client with token")?;
 
-    let rg_response: ResourceGroup = client
-        .get(&url)
-        .await
-        .with_context(|| format!("Failed to fetch resource group '{}' in subscription {}", resource_group_name, subscription_id))?;
+    let rg_response: ResourceGroup = client.get(&url).await.with_context(|| {
+        format!(
+            "Failed to fetch resource group '{}' in subscription {}",
+            resource_group_name, subscription_id
+        )
+    })?;
 
     info!("Resource group fetched successfully");
     Ok(rg_response)

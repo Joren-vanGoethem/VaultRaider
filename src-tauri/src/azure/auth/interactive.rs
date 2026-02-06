@@ -1,4 +1,4 @@
-﻿//! Interactive browser authentication flow
+//! Interactive browser authentication flow
 //!
 //! This module implements the OAuth 2.0 device code flow for interactive
 //! browser-based authentication. This is the recommended authentication
@@ -8,18 +8,20 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use azure_core::credentials::{AccessToken, Secret, TokenCredential, TokenRequestOptions};
 use azure_core::Error;
+use azure_core::credentials::{AccessToken, Secret, TokenCredential, TokenRequestOptions};
 use log::{error as log_error, info};
 use time::OffsetDateTime;
 
-use crate::config::{
-    AUTH_SCOPES, CLIENT_ID, MAX_POLL_ATTEMPTS, POLL_SLOWDOWN_SECONDS, TENANT_ID,
-    DEVICE_CODE_ENDPOINT, TOKEN_ENDPOINT,
-};
 use crate::azure::auth::state::{AUTH_CREDENTIAL, DEVICE_CODE_STATE};
 use crate::azure::auth::token::store_auth_result;
-use crate::azure::auth::types::{AuthResult, DeviceCodeInfo, DeviceCodeResponse, DeviceCodeState, TokenResponse};
+use crate::azure::auth::types::{
+    AuthResult, DeviceCodeInfo, DeviceCodeResponse, DeviceCodeState, TokenResponse,
+};
+use crate::config::{
+    AUTH_SCOPES, CLIENT_ID, DEVICE_CODE_ENDPOINT, MAX_POLL_ATTEMPTS, POLL_SLOWDOWN_SECONDS,
+    TENANT_ID, TOKEN_ENDPOINT,
+};
 
 /// Credential implementation for interactive device code flow
 #[derive(Debug)]
@@ -36,8 +38,11 @@ impl TokenCredential for InteractiveDeviceCodeCredential {
         scopes: &[&str],
         _options: Option<TokenRequestOptions<'_>>,
     ) -> azure_core::Result<AccessToken> {
-        info!("Getting token from InteractiveDeviceCodeCredential for scopes: {:?}", scopes);
-        
+        info!(
+            "Getting token from InteractiveDeviceCodeCredential for scopes: {:?}",
+            scopes
+        );
+
         // Check if we already have a valid token
         {
             let token_lock = self.access_token.read().await;
@@ -52,7 +57,10 @@ impl TokenCredential for InteractiveDeviceCodeCredential {
         let state = {
             let state_lock = DEVICE_CODE_STATE.lock().await;
             state_lock.clone().ok_or_else(|| {
-                Error::with_message(azure_core::error::ErrorKind::Other, "No device code state found")
+                Error::with_message(
+                    azure_core::error::ErrorKind::Other,
+                    "No device code state found",
+                )
             })?
         };
 
@@ -78,19 +86,20 @@ impl TokenCredential for InteractiveDeviceCodeCredential {
                 ])
                 .send()
                 .await
-                .map_err(|e| Error::with_message(azure_core::error::ErrorKind::Io, e.to_string()))?;
+                .map_err(|e| {
+                    Error::with_message(azure_core::error::ErrorKind::Io, e.to_string())
+                })?;
 
             if response.status().is_success() {
-                let token_res: TokenResponse = response
-                    .json()
-                    .await
-                    .map_err(|e| {
-                        Error::with_message(azure_core::error::ErrorKind::DataConversion, e.to_string())
-                    })?;
+                let token_res: TokenResponse = response.json().await.map_err(|e| {
+                    Error::with_message(azure_core::error::ErrorKind::DataConversion, e.to_string())
+                })?;
 
                 let expires_in = token_res.expires_in.unwrap_or(3600);
-                let expires_on = OffsetDateTime::now_utc() + std::time::Duration::from_secs(expires_in);
-                let access_token = AccessToken::new(Secret::new(token_res.access_token), expires_on);
+                let expires_on =
+                    OffsetDateTime::now_utc() + std::time::Duration::from_secs(expires_in);
+                let access_token =
+                    AccessToken::new(Secret::new(token_res.access_token), expires_on);
 
                 let mut token_lock = self.access_token.write().await;
                 *token_lock = Some(access_token.clone());
@@ -197,7 +206,7 @@ pub async fn start_interactive_browser_login() -> Result<DeviceCodeInfo, String>
 /// Returns authentication result with user information.
 pub async fn complete_interactive_browser_login() -> Result<AuthResult, String> {
     info!("Completing interactive browser login...");
-    
+
     let credential = {
         let auth_lock = AUTH_CREDENTIAL.lock().await;
         auth_lock.clone().ok_or_else(|| {

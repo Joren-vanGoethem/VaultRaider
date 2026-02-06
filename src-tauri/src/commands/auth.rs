@@ -1,10 +1,10 @@
-﻿//! Authentication-related Tauri commands
+//! Authentication-related Tauri commands
 
-use crate::azure::auth::service::{get_user_info, is_authenticated, login, logout};
 use crate::azure::auth::device_code::{complete_device_code_login, start_device_code_login};
 use crate::azure::auth::interactive::{
     complete_interactive_browser_login, start_interactive_browser_login,
 };
+use crate::azure::auth::service::{get_user_info, is_authenticated, login, logout};
 use crate::azure::auth::types::{AuthResult, DeviceCodeInfo};
 use crate::cache::AZURE_CACHE;
 
@@ -41,7 +41,10 @@ pub async fn start_browser_login() -> Result<DeviceCodeInfo, String> {
 
 /// Complete browser authentication with authorization code
 #[tauri::command]
-pub async fn complete_browser_login(_auth_code: String, _state: String) -> Result<AuthResult, String> {
+pub async fn complete_browser_login(
+    _auth_code: String,
+    _state: String,
+) -> Result<AuthResult, String> {
     complete_interactive_browser_login().await
 }
 

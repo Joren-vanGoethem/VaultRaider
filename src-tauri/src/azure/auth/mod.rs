@@ -1,4 +1,4 @@
-﻿//! Azure Authentication module
+//! Azure Authentication module
 //!
 //! This module provides authentication functionality for Azure services,
 //! supporting multiple authentication methods:
@@ -7,10 +7,10 @@
 //! - Device Code Flow
 //! - Interactive Browser Flow
 
-pub mod service;
 pub mod device_code;
 pub mod interactive;
 pub mod provider;
+pub mod service;
 pub mod token;
 pub mod types;
 
@@ -22,12 +22,8 @@ pub(crate) mod user_info;
 
 // Re-export old auth module for backwards compatibility
 #[deprecated(note = "Use azure::auth::service module instead")]
-pub mod auth {
-    
-}
+pub mod auth {}
 
 // Re-export interactive_browser for backwards compatibility
 #[deprecated(note = "Use azure::auth::interactive module instead")]
-pub mod interactive_browser {
-    
-}
+pub mod interactive_browser {}

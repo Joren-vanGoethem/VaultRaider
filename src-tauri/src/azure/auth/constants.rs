@@ -1,4 +1,4 @@
-﻿// ============================================================================
+// ============================================================================
 // Constants
 // ============================================================================
 
@@ -11,7 +11,8 @@ pub const DEVICE_CODE_ENDPOINT: &str = "https://login.microsoftonline.com";
 pub const TOKEN_ENDPOINT: &str = "https://login.microsoftonline.com";
 pub const VAULT_SCOPE: &str = "https://vault.azure.net/.default";
 pub const ARM_SCOPE: &str = "https://management.azure.com/.default";
-pub const AUTH_SCOPES: &str = "https://management.azure.com/.default offline_access openid profile email";
+pub const AUTH_SCOPES: &str =
+    "https://management.azure.com/.default offline_access openid profile email";
 
 // Polling configuration
 pub const MAX_POLL_ATTEMPTS: u32 = 60;

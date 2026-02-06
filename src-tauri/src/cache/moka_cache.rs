@@ -1,4 +1,4 @@
-﻿//! Moka-based caching for Azure API calls
+//! Moka-based caching for Azure API calls
 //!
 //! Provides high-performance caching with:
 //! - TTL-based expiration
@@ -6,17 +6,17 @@
 //! - Thread-safe access
 //! - Per-key eviction
 
+use anyhow::{Context, Result};
+use log::{debug, info};
+use moka::future::Cache;
+use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use std::time::Duration;
-use moka::future::Cache;
-use log::{debug, info};
-use serde::{Serialize, Deserialize};
-use anyhow::{Context, Result};
 
-use crate::azure::subscription::types::Subscription;
-use crate::azure::keyvault::types::KeyVault;
 use crate::azure::keyvault::secret::types::{Secret, SecretBundle};
+use crate::azure::keyvault::types::KeyVault;
 use crate::azure::resource_group::types::ResourceGroup;
+use crate::azure::subscription::types::Subscription;
 
 /// Default TTL for subscriptions (10 minutes - they don't change often)
 const SUBSCRIPTION_TTL_SECS: u64 = 600;
@@ -145,10 +145,11 @@ impl AzureCache {
         if result.is_some() {
             debug!("Cache hit for subscription");
         }
-        result.map(|v| v.0
-          .into_iter()
-          .find(|s| s.subscription_id == subscription_id)
-          .unwrap())
+        result.map(|v| {
+            v.0.into_iter()
+                .find(|s| s.subscription_id == subscription_id)
+                .unwrap()
+        })
     }
 
     /// Get subscription by id with automatic loading on cache miss
@@ -158,8 +159,8 @@ impl AzureCache {
         loader: F,
     ) -> Result<Subscription>
     where
-      F: FnOnce() -> Fut,
-      Fut: std::future::Future<Output = Result<Subscription>>,
+        F: FnOnce() -> Fut,
+        Fut: std::future::Future<Output = Result<Subscription>>,
     {
         // Try to get from cache first
         if let Some(cached) = self.get_subscription(subscription_id).await {
@@ -173,13 +174,18 @@ impl AzureCache {
         let subscription = loader().await?;
 
         // Store in cache
-        let mut subscriptions: Vec<Subscription> = self.subscriptions.get("subscriptions").await
+        let mut subscriptions: Vec<Subscription> = self
+            .subscriptions
+            .get("subscriptions")
+            .await
             .map(|v| v.0)
             .unwrap_or_else(Vec::new);
 
         subscriptions.push(subscription.clone());
 
-        self.subscriptions.insert("subscriptions".to_string(), CachedVec(subscriptions)).await;
+        self.subscriptions
+            .insert("subscriptions".to_string(), CachedVec(subscriptions))
+            .await;
 
         info!("Cached subscription {}", subscription_id);
         Ok(subscription)
@@ -218,7 +224,10 @@ impl AzureCache {
 
         // Store in cache
         self.subscriptions
-            .insert("subscriptions".to_string(), CachedVec(subscriptions.clone()))
+            .insert(
+                "subscriptions".to_string(),
+                CachedVec(subscriptions.clone()),
+            )
             .await;
 
         info!("Cached {} subscriptions", subscriptions.len());
@@ -244,7 +253,10 @@ impl AzureCache {
     pub async fn get_resource_groups(&self, subscription_id: &str) -> Option<Vec<ResourceGroup>> {
         let result = self.resource_groups.get(subscription_id).await;
         if result.is_some() {
-            debug!("Cache hit for resource groups in subscription {}", subscription_id);
+            debug!(
+                "Cache hit for resource groups in subscription {}",
+                subscription_id
+            );
         }
         result.map(|v| v.0)
     }
@@ -261,26 +273,43 @@ impl AzureCache {
     {
         // Try to get from cache first
         if let Some(cached) = self.resource_groups.get(subscription_id).await {
-            debug!("Cache hit for resource groups in subscription {}", subscription_id);
+            debug!(
+                "Cache hit for resource groups in subscription {}",
+                subscription_id
+            );
             return Ok(cached.0);
         }
 
-        debug!("Cache miss for resource groups in subscription {}, loading...", subscription_id);
+        debug!(
+            "Cache miss for resource groups in subscription {}, loading...",
+            subscription_id
+        );
 
         // Load from Azure
         let resource_groups = loader().await?;
 
         // Store in cache
         self.resource_groups
-            .insert(subscription_id.to_string(), CachedVec(resource_groups.clone()))
+            .insert(
+                subscription_id.to_string(),
+                CachedVec(resource_groups.clone()),
+            )
             .await;
 
-        info!("Cached {} resource groups for subscription {}", resource_groups.len(), subscription_id);
+        info!(
+            "Cached {} resource groups for subscription {}",
+            resource_groups.len(),
+            subscription_id
+        );
         Ok(resource_groups)
     }
 
     /// Cache resource groups for a subscription
-    pub async fn cache_resource_groups(&self, subscription_id: &str, resource_groups: Vec<ResourceGroup>) {
+    pub async fn cache_resource_groups(
+        &self,
+        subscription_id: &str,
+        resource_groups: Vec<ResourceGroup>,
+    ) {
         self.resource_groups
             .insert(subscription_id.to_string(), CachedVec(resource_groups))
             .await;
@@ -289,7 +318,10 @@ impl AzureCache {
     /// Invalidate resource groups cache for a subscription
     pub async fn invalidate_resource_groups(&self, subscription_id: &str) {
         self.resource_groups.invalidate(subscription_id).await;
-        debug!("Invalidated resource groups cache for subscription {}", subscription_id);
+        debug!(
+            "Invalidated resource groups cache for subscription {}",
+            subscription_id
+        );
     }
 
     /// Invalidate all resource groups cache
@@ -304,7 +336,10 @@ impl AzureCache {
     pub async fn get_keyvaults(&self, subscription_id: &str) -> Option<Vec<KeyVault>> {
         let result = self.keyvaults.get(subscription_id).await;
         if result.is_some() {
-            debug!("Cache hit for keyvaults in subscription {}", subscription_id);
+            debug!(
+                "Cache hit for keyvaults in subscription {}",
+                subscription_id
+            );
         }
         result.map(|v| v.0)
     }
@@ -321,11 +356,17 @@ impl AzureCache {
     {
         // Try to get from cache first
         if let Some(cached) = self.keyvaults.get(subscription_id).await {
-            debug!("Cache hit for keyvaults in subscription {}", subscription_id);
+            debug!(
+                "Cache hit for keyvaults in subscription {}",
+                subscription_id
+            );
             return Ok(cached.0);
         }
 
-        debug!("Cache miss for keyvaults in subscription {}, loading...", subscription_id);
+        debug!(
+            "Cache miss for keyvaults in subscription {}, loading...",
+            subscription_id
+        );
 
         // Load from Azure
         let keyvaults = loader().await?;
@@ -335,7 +376,11 @@ impl AzureCache {
             .insert(subscription_id.to_string(), CachedVec(keyvaults.clone()))
             .await;
 
-        info!("Cached {} keyvaults for subscription {}", keyvaults.len(), subscription_id);
+        info!(
+            "Cached {} keyvaults for subscription {}",
+            keyvaults.len(),
+            subscription_id
+        );
         Ok(keyvaults)
     }
 
@@ -349,7 +394,10 @@ impl AzureCache {
     /// Invalidate keyvaults cache for a subscription
     pub async fn invalidate_keyvaults(&self, subscription_id: &str) {
         self.keyvaults.invalidate(subscription_id).await;
-        debug!("Invalidated keyvaults cache for subscription {}", subscription_id);
+        debug!(
+            "Invalidated keyvaults cache for subscription {}",
+            subscription_id
+        );
     }
 
     /// Invalidate all keyvaults cache
@@ -385,7 +433,10 @@ impl AzureCache {
             return Ok(cached.0);
         }
 
-        debug!("Cache miss for secrets list in vault {}, loading...", vault_uri);
+        debug!(
+            "Cache miss for secrets list in vault {}, loading...",
+            vault_uri
+        );
 
         // Load from Azure
         let secrets = loader().await?;
@@ -420,11 +471,18 @@ impl AzureCache {
     }
 
     /// Get secret value from cache
-    pub async fn get_secret_value(&self, vault_uri: &str, secret_name: &str) -> Option<SecretBundle> {
+    pub async fn get_secret_value(
+        &self,
+        vault_uri: &str,
+        secret_name: &str,
+    ) -> Option<SecretBundle> {
         let key = Self::secret_key(vault_uri, secret_name);
         let result = self.secret_values.get(&key).await;
         if result.is_some() {
-            debug!("Cache hit for secret {} in vault {}", secret_name, vault_uri);
+            debug!(
+                "Cache hit for secret {} in vault {}",
+                secret_name, vault_uri
+            );
         }
         result
     }
@@ -444,11 +502,17 @@ impl AzureCache {
 
         // Try to get from cache first
         if let Some(cached) = self.secret_values.get(&key).await {
-            debug!("Cache hit for secret {} in vault {}", secret_name, vault_uri);
+            debug!(
+                "Cache hit for secret {} in vault {}",
+                secret_name, vault_uri
+            );
             return Ok(cached);
         }
 
-        debug!("Cache miss for secret {} in vault {}, loading...", secret_name, vault_uri);
+        debug!(
+            "Cache miss for secret {} in vault {}, loading...",
+            secret_name, vault_uri
+        );
 
         // Load from Azure
         let secret = loader().await?;
@@ -471,7 +535,10 @@ impl AzureCache {
     pub async fn invalidate_secret_value(&self, vault_uri: &str, secret_name: &str) {
         let key = Self::secret_key(vault_uri, secret_name);
         self.secret_values.invalidate(&key).await;
-        debug!("Invalidated secret {} cache for vault {}", secret_name, vault_uri);
+        debug!(
+            "Invalidated secret {} cache for vault {}",
+            secret_name, vault_uri
+        );
     }
 
     /// Invalidate all secrets for a vault (both list and values)

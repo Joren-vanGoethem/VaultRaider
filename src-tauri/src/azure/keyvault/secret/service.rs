@@ -1,12 +1,12 @@
-﻿//! Secret service - business logic for Key Vault secret operations
+//! Secret service - business logic for Key Vault secret operations
 
 use anyhow::{Context, Result};
 use log::{error, info};
 use serde::Serialize;
 
 use crate::azure::auth::token::get_token_for_scope;
-use crate::azure::http::{fetch_all_paginated, AzureHttpClient, AzureHttpError};
-use crate::config::{urls, KEYVAULT_SCOPE};
+use crate::azure::http::{AzureHttpClient, AzureHttpError, fetch_all_paginated};
+use crate::config::{KEYVAULT_SCOPE, urls};
 
 use super::types::{Secret, SecretBundle};
 
@@ -42,12 +42,10 @@ struct SecretValue {
 //     )
 // )]
 pub async fn get_secrets(keyvault_uri: &str) -> Result<Vec<Secret>, String> {
-    get_secrets_internal(keyvault_uri)
-        .await
-        .map_err(|e| {
-            error!("Failed to get secrets: {}", e);
-            e.to_string()
-        })
+    get_secrets_internal(keyvault_uri).await.map_err(|e| {
+        error!("Failed to get secrets: {}", e);
+        e.to_string()
+    })
 }
 
 async fn get_secrets_internal(keyvault_uri: &str) -> Result<Vec<Secret>> {
@@ -59,8 +57,8 @@ async fn get_secrets_internal(keyvault_uri: &str) -> Result<Vec<Secret>> {
         .map_err(|e| anyhow::anyhow!(e))
         .context("Failed to retrieve Key Vault token")?;
 
-    let client = AzureHttpClient::with_token(&token)
-        .context("Failed to create HTTP client with token")?;
+    let client =
+        AzureHttpClient::with_token(&token).context("Failed to create HTTP client with token")?;
 
     let secret_list = fetch_all_paginated::<Secret>(&url, &client)
         .await
@@ -125,13 +123,15 @@ async fn get_secret_internal(
         .map_err(|e| anyhow::anyhow!(e))
         .context("Failed to retrieve Key Vault token")?;
 
-    let client = AzureHttpClient::with_token(&token)
-        .context("Failed to create HTTP client with token")?;
+    let client =
+        AzureHttpClient::with_token(&token).context("Failed to create HTTP client with token")?;
 
-    let secret: SecretBundle = client
-        .get(&url)
-        .await
-        .with_context(|| format!("Failed to fetch secret '{}' from {}", secret_name, keyvault_uri))?;
+    let secret: SecretBundle = client.get(&url).await.with_context(|| {
+        format!(
+            "Failed to fetch secret '{}' from {}",
+            secret_name, keyvault_uri
+        )
+    })?;
 
     info!("Secret fetched successfully");
     Ok(secret)
@@ -186,13 +186,15 @@ async fn delete_secret_internal(keyvault_uri: &str, secret_name: &str) -> Result
         .map_err(|e| anyhow::anyhow!(e))
         .context("Failed to retrieve Key Vault token")?;
 
-    let client = AzureHttpClient::with_token(&token)
-        .context("Failed to create HTTP client with token")?;
+    let client =
+        AzureHttpClient::with_token(&token).context("Failed to create HTTP client with token")?;
 
-    let deleted_secret: Secret = client
-        .delete(&url)
-        .await
-        .with_context(|| format!("Failed to delete secret '{}' from {}", secret_name, keyvault_uri))?;
+    let deleted_secret: Secret = client.delete(&url).await.with_context(|| {
+        format!(
+            "Failed to delete secret '{}' from {}",
+            secret_name, keyvault_uri
+        )
+    })?;
 
     info!("Secret deleted successfully");
     Ok(deleted_secret)
@@ -256,17 +258,19 @@ async fn create_secret_internal(
         .map_err(|e| anyhow::anyhow!(e))
         .context("Failed to retrieve Key Vault token")?;
 
-    let client = AzureHttpClient::with_token(&token)
-        .context("Failed to create HTTP client with token")?;
+    let client =
+        AzureHttpClient::with_token(&token).context("Failed to create HTTP client with token")?;
 
     let body = SecretValue {
         value: secret_value.to_string(),
     };
 
-    let created_secret: SecretBundle = client
-        .put(&url, &body)
-        .await
-        .with_context(|| format!("Failed to create secret '{}' in {}", secret_name, keyvault_uri))?;
+    let created_secret: SecretBundle = client.put(&url, &body).await.with_context(|| {
+        format!(
+            "Failed to create secret '{}' in {}",
+            secret_name, keyvault_uri
+        )
+    })?;
 
     info!("Secret created successfully");
     Ok(created_secret)
@@ -329,17 +333,19 @@ async fn update_secret_internal(
         .map_err(|e| anyhow::anyhow!(e))
         .context("Failed to retrieve Key Vault token")?;
 
-    let client = AzureHttpClient::with_token(&token)
-        .context("Failed to create HTTP client with token")?;
+    let client =
+        AzureHttpClient::with_token(&token).context("Failed to create HTTP client with token")?;
 
     let body = SecretValue {
         value: secret_value.to_string(),
     };
 
-    let updated_secret: SecretBundle = client
-        .put(&url, &body)
-        .await
-        .with_context(|| format!("Failed to update secret '{}' in {}", secret_name, keyvault_uri))?;
+    let updated_secret: SecretBundle = client.put(&url, &body).await.with_context(|| {
+        format!(
+            "Failed to update secret '{}' in {}",
+            secret_name, keyvault_uri
+        )
+    })?;
 
     info!("Secret updated successfully");
     Ok(updated_secret)

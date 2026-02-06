@@ -1,4 +1,4 @@
-﻿// ============================================================================
+// ============================================================================
 // Type Aliases
 // ============================================================================
 
@@ -16,7 +16,7 @@ pub type UserInfo = (String, Option<String>);
 #[serde(rename_all = "camelCase")]
 pub struct AzureListResponse<T> {
     pub value: Vec<T>,
-    pub next_link: Option<String>
+    pub next_link: Option<String>,
 }
 
 /// Information returned when initiating device code authentication flow
@@ -36,8 +36,6 @@ pub struct AuthResult {
     pub user_email: Option<String>,
     pub user_name: Option<String>,
 }
-
-
 
 // ============================================================================
 // Internal Data Structures
@@ -75,7 +73,6 @@ pub struct TokenResponse {
     #[serde(default)]
     refresh_token: Option<String>,
 }
-
 
 /// Response from Azure device code endpoint
 #[derive(Debug, Deserialize)]

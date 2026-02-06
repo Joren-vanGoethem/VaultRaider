@@ -1,12 +1,12 @@
-use std::sync::Arc;
-use azure_core::credentials::TokenCredential;
+use crate::azure::auth::provider::{GlobalTokenProvider, TokenProvider};
 use crate::azure::auth::state::AUTH_CREDENTIAL;
 use crate::azure::auth::types::{AuthResult, TokenClaims};
 use crate::azure::auth::user_info::store_user_info;
-use crate::azure::auth::provider::{GlobalTokenProvider, TokenProvider};
-use base64::engine::general_purpose::URL_SAFE_NO_PAD as BASE64URL;
+use azure_core::credentials::TokenCredential;
 use base64::Engine;
-use log::{info, warn, error};
+use base64::engine::general_purpose::URL_SAFE_NO_PAD as BASE64URL;
+use log::{error, info, warn};
+use std::sync::Arc;
 
 /// Get a token for Azure Resource Management API.
 ///
@@ -31,7 +31,9 @@ pub async fn get_token_for_scope(scope: &str) -> Result<String, String> {
 }
 
 /// Decode JWT token without verification to extract user info
-pub fn extract_user_info_from_token(token: &str) -> Result<(Option<String>, Option<String>), String> {
+pub fn extract_user_info_from_token(
+    token: &str,
+) -> Result<(Option<String>, Option<String>), String> {
     // Split the JWT token (format: header.payload.signature)
     let parts: Vec<&str> = token.split('.').collect();
     if parts.len() != 3 {
@@ -58,7 +60,6 @@ pub fn extract_user_info_from_token(token: &str) -> Result<(Option<String>, Opti
     Ok((email, claims.name))
 }
 
-
 /// Extracts user info from token and stores credential
 pub async fn store_auth_result(
     credential: Arc<dyn TokenCredential>,
@@ -81,8 +82,12 @@ pub async fn store_auth_result(
     {
         let mut cred = AUTH_CREDENTIAL.lock().await;
         *cred = Some(credential);
-        info!("Credential stored in global AUTH_CREDENTIAL. Type: {}. Is Some: {}", auth_method, cred.is_some());
-        
+        info!(
+            "Credential stored in global AUTH_CREDENTIAL. Type: {}. Is Some: {}",
+            auth_method,
+            cred.is_some()
+        );
+
         // Verify it's actually there
         if cred.is_some() {
             info!("AUTH_CREDENTIAL verification: Some");
@@ -101,4 +106,3 @@ pub async fn store_auth_result(
         user_name,
     })
 }
-

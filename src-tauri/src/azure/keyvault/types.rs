@@ -1,5 +1,5 @@
-use serde::{Deserialize, Serialize};
 use crate::azure::auth::types::AzureListResponse;
+use serde::{Deserialize, Serialize};
 
 pub type KeyVaultListResponse = AzureListResponse<KeyVault>;
 
@@ -53,12 +53,15 @@ pub struct Properties {
 #[serde(rename_all = "camelCase")]
 pub struct Sku {
     pub family: String, // "A"
-    pub name: String, // "standard" or "premium"
+    pub name: String,   // "standard" or "premium"
 }
 
 impl Sku {
     pub fn new() -> Self {
-        Self { family:"A".to_string(),  name:"standard".to_string() }
+        Self {
+            family: "A".to_string(),
+            name: "standard".to_string(),
+        }
     }
 }
 
@@ -92,13 +95,13 @@ pub struct KeyVaultAccessCheck {
 #[serde(rename_all = "camelCase")]
 pub struct CreateVaultRequest {
     pub(crate) location: String,
-    pub properties: Properties
+    pub properties: Properties,
 }
-
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct NetworkRuleSet { // TODO@JOREN: these are not strings, see docs
+pub struct NetworkRuleSet {
+    // TODO@JOREN: these are not strings, see docs
     // https://learn.microsoft.com/en-us/rest/api/keyvault/keyvault/vaults/create-or-update?view=rest-keyvault-keyvault-2024-11-01&tabs=HTTP#networkruleset
     pub bypass: String,
     pub default_action: String,
@@ -126,4 +129,3 @@ pub struct PrivateEndpointConnectionItem {
     pub id: String,
     // TODO@JOREN: there is more but docs are unclear
 }
-

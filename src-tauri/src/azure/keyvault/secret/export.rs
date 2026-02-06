@@ -1,12 +1,12 @@
-﻿//! Secret export functionality - business logic for exporting secrets in various formats
+//! Secret export functionality - business logic for exporting secrets in various formats
 
+use super::service::{get_secret, get_secrets};
+use super::types::Secret;
+use crate::cache::AZURE_CACHE;
 use anyhow::{Context, Result};
 use log::{error, info};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use crate::cache::AZURE_CACHE;
-use super::service::{get_secrets, get_secret};
-use super::types::Secret;
 
 /// Export format options
 #[derive(Debug, Clone, Deserialize)]
@@ -106,9 +106,7 @@ async fn export_secrets_internal(
     // Get all secrets metadata from cache or load
     let uri = vault_uri.to_string();
     let secrets = AZURE_CACHE
-        .get_secrets_list_or_load(vault_uri, || async move {
-            get_secrets(&uri).await
-        })
+        .get_secrets_list_or_load(vault_uri, || async move { get_secrets(&uri).await })
         .await
         .map_err(|e| anyhow::anyhow!(e))?;
 
@@ -145,7 +143,10 @@ async fn export_secrets_internal(
         _ => return Err(anyhow::anyhow!("Unknown export format: {}", options.format)),
     };
 
-    info!("Successfully exported {} secrets", secrets_with_values.len());
+    info!(
+        "Successfully exported {} secrets",
+        secrets_with_values.len()
+    );
     Ok(output)
 }
 

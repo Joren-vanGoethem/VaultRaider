@@ -1,7 +1,7 @@
-﻿//! Types for Azure Resource Groups
+//! Types for Azure Resource Groups
 
-use serde::{Deserialize, Serialize};
 use crate::azure::auth::types::AzureListResponse;
+use serde::{Deserialize, Serialize};
 
 pub type ResourceGroupListResponse = AzureListResponse<ResourceGroup>;
 

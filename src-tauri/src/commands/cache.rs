@@ -1,8 +1,8 @@
-﻿//! Cache-related Tauri commands
+//! Cache-related Tauri commands
 //!
 //! Provides commands for cache management and statistics.
 
-use crate::cache::{CacheStatistics, AZURE_CACHE};
+use crate::cache::{AZURE_CACHE, CacheStatistics};
 
 /// Get cache statistics
 #[tauri::command]
@@ -28,14 +28,22 @@ pub async fn invalidate_subscriptions_cache() -> Result<String, String> {
 #[tauri::command]
 pub async fn invalidate_keyvaults_cache(subscription_id: String) -> Result<String, String> {
     AZURE_CACHE.invalidate_keyvaults(&subscription_id).await;
-    Ok(format!("Keyvaults cache invalidated for subscription {}", subscription_id))
+    Ok(format!(
+        "Keyvaults cache invalidated for subscription {}",
+        subscription_id
+    ))
 }
 
 /// Invalidate resource groups cache for a subscription
 #[tauri::command]
 pub async fn invalidate_resource_groups_cache(subscription_id: String) -> Result<String, String> {
-    AZURE_CACHE.invalidate_resource_groups(&subscription_id).await;
-    Ok(format!("Resource groups cache invalidated for subscription {}", subscription_id))
+    AZURE_CACHE
+        .invalidate_resource_groups(&subscription_id)
+        .await;
+    Ok(format!(
+        "Resource groups cache invalidated for subscription {}",
+        subscription_id
+    ))
 }
 
 /// Invalidate secrets cache for a vault

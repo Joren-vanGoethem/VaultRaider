@@ -1,12 +1,12 @@
-﻿//! Token provider trait and implementations for Azure authentication
+//! Token provider trait and implementations for Azure authentication
 //!
 //! This module defines a trait for abstracting token retrieval, allowing
 //! for different authentication methods and easier testing.
 
-use std::sync::Arc;
 use async_trait::async_trait;
 use azure_core::credentials::TokenCredential;
 use log::{debug, error, info};
+use std::sync::Arc;
 
 use crate::azure::http::AzureHttpError;
 
@@ -181,16 +181,10 @@ impl TokenProvider for GlobalTokenProvider {
             })?
         };
 
-        let token_response = credential
-            .get_token(&[scope], None)
-            .await
-            .map_err(|e| {
-                error!("Failed to get token: {}", e);
-                AzureHttpError::TokenError(format!(
-                    "Failed to get token for scope {}: {}",
-                    scope, e
-                ))
-            })?;
+        let token_response = credential.get_token(&[scope], None).await.map_err(|e| {
+            error!("Failed to get token: {}", e);
+            AzureHttpError::TokenError(format!("Failed to get token for scope {}: {}", scope, e))
+        })?;
 
         info!("Successfully obtained token");
         Ok(token_response.token.secret().to_string())

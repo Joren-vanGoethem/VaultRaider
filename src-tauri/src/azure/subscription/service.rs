@@ -1,4 +1,4 @@
-﻿//! Subscription service - business logic for Azure subscriptions
+//! Subscription service - business logic for Azure subscriptions
 
 use anyhow::{Context, Result};
 use log::{error, info};
@@ -21,12 +21,10 @@ use super::types::{Subscription, SubscriptionListResponse};
 /// - The user is not authenticated
 /// - The API request fails
 pub async fn get_subscriptions() -> Result<Vec<Subscription>, String> {
-    get_subscriptions_internal()
-        .await
-        .map_err(|e| {
-            error!("Failed to fetch subscriptions: {}", e);
-            e.to_string()
-        })
+    get_subscriptions_internal().await.map_err(|e| {
+        error!("Failed to fetch subscriptions: {}", e);
+        e.to_string()
+    })
 }
 
 async fn get_subscriptions_internal() -> Result<Vec<Subscription>> {
@@ -49,7 +47,10 @@ async fn get_subscriptions_internal() -> Result<Vec<Subscription>> {
         .context("Failed to fetch subscriptions from Azure")?;
 
     // Span::current().record("subscription_count", sub_list.value.len());
-    info!("Successfully fetched {} subscriptions", sub_list.value.len());
+    info!(
+        "Successfully fetched {} subscriptions",
+        sub_list.value.len()
+    );
     Ok(sub_list.value)
 }
 
@@ -71,16 +72,16 @@ pub async fn get_subscription_internal(subscription_id: &str) -> Result<Subscrip
     let url = urls::subscription(subscription_id);
 
     let token = get_token_from_state()
-      .await
-      .map_err(|e| anyhow::anyhow!(e))
-      .context("Failed to retrieve authentication token")?;
-    
+        .await
+        .map_err(|e| anyhow::anyhow!(e))
+        .context("Failed to retrieve authentication token")?;
+
     let client = AzureHttpClient::new()
-      .with_bearer_token(&token)
-      .context("Failed to create HTTP client with token")?;;
-    
+        .with_bearer_token(&token)
+        .context("Failed to create HTTP client with token")?;
+
     client
-      .get(&url)
-      .await
-      .context("Failed to fetch subscription from Azure")
+        .get(&url)
+        .await
+        .context("Failed to fetch subscription from Azure")
 }

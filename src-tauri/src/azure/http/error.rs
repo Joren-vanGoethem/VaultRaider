@@ -1,4 +1,4 @@
-﻿//! Error types for Azure HTTP operations
+//! Error types for Azure HTTP operations
 
 use std::fmt;
 
@@ -7,31 +7,28 @@ use std::fmt;
 pub enum AzureHttpError {
     /// Failed to construct a valid HTTP header
     InvalidHeader(String),
-    
+
     /// Network or connection error
     NetworkError(String),
-    
+
     /// Azure API returned an error response
-    ApiError {
-        status: u16,
-        message: String,
-    },
-    
+    ApiError { status: u16, message: String },
+
     /// Failed to parse response body
     ParseError {
         message: String,
         body: Option<String>,
     },
-    
+
     /// Failed to read response body
     ResponseBodyError(String),
-    
+
     /// Serialization error when preparing request body
     SerializationError(String),
-    
+
     /// Token acquisition or refresh error
     TokenError(String),
-    
+
     /// User is not authenticated
     NotAuthenticated,
 }

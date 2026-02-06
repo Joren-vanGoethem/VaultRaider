@@ -1,12 +1,11 @@
-﻿//! Key Vault related Tauri commands
+//! Key Vault related Tauri commands
 
-use crate::azure::keyvault::service::{get_keyvaults};
-use crate::azure::keyvault::types::{KeyVault, KeyVaultAccessCheck};
-use crate::azure::keyvault::secret::types::{Secret, SecretBundle};
 use crate::azure::keyvault::secret::export::ExportOptions;
 use crate::azure::keyvault::secret::import::ImportedSecret;
+use crate::azure::keyvault::secret::types::{Secret, SecretBundle};
+use crate::azure::keyvault::service::get_keyvaults;
+use crate::azure::keyvault::types::{KeyVault, KeyVaultAccessCheck};
 use crate::cache::AZURE_CACHE;
-
 
 /// Fetch all Key Vaults for a subscription
 /// Uses caching with automatic loading on cache miss
@@ -14,9 +13,10 @@ use crate::cache::AZURE_CACHE;
 pub async fn fetch_keyvaults(subscription_id: String) -> Result<Vec<KeyVault>, String> {
     let sub_id = subscription_id.clone();
     AZURE_CACHE
-        .get_keyvaults_or_load(&subscription_id, || async move {
-            get_keyvaults(&sub_id).await
-        })
+        .get_keyvaults_or_load(
+            &subscription_id,
+            || async move { get_keyvaults(&sub_id).await },
+        )
         .await
 }
 
@@ -34,7 +34,12 @@ pub async fn create_keyvault(
     resource_group: String,
     keyvault_name: String,
 ) -> Result<KeyVault, String> {
-    let result = crate::azure::keyvault::service::create_keyvault(&subscription_id, &resource_group, &keyvault_name).await;
+    let result = crate::azure::keyvault::service::create_keyvault(
+        &subscription_id,
+        &resource_group,
+        &keyvault_name,
+    )
+    .await;
 
     if result.is_ok() {
         // Invalidate keyvaults cache for this subscription
@@ -75,7 +80,12 @@ pub async fn get_secret(
             .await
     } else {
         // Don't cache specific versions
-        crate::azure::keyvault::secret::service::get_secret(&keyvault_uri, &secret_name, secret_version.as_deref()).await
+        crate::azure::keyvault::secret::service::get_secret(
+            &keyvault_uri,
+            &secret_name,
+            secret_version.as_deref(),
+        )
+        .await
     }
 }
 
@@ -83,11 +93,14 @@ pub async fn get_secret(
 /// Invalidates the cache after successful deletion
 #[tauri::command]
 pub async fn delete_secret(keyvault_uri: String, secret_name: String) -> Result<Secret, String> {
-    let result = crate::azure::keyvault::secret::service::delete_secret(&keyvault_uri, &secret_name).await;
+    let result =
+        crate::azure::keyvault::secret::service::delete_secret(&keyvault_uri, &secret_name).await;
 
     if result.is_ok() {
         // Invalidate both the secret value and the secrets list cache
-        AZURE_CACHE.invalidate_secret_value(&keyvault_uri, &secret_name).await;
+        AZURE_CACHE
+            .invalidate_secret_value(&keyvault_uri, &secret_name)
+            .await;
         AZURE_CACHE.invalidate_secrets_list(&keyvault_uri).await;
     }
 
@@ -102,11 +115,18 @@ pub async fn create_secret(
     secret_name: String,
     secret_value: String,
 ) -> Result<SecretBundle, String> {
-    let result = crate::azure::keyvault::secret::service::create_secret(&keyvault_uri, &secret_name, &secret_value).await;
+    let result = crate::azure::keyvault::secret::service::create_secret(
+        &keyvault_uri,
+        &secret_name,
+        &secret_value,
+    )
+    .await;
 
     if let Ok(ref secret_bundle) = result {
         // Cache the new secret value
-        AZURE_CACHE.cache_secret_value(&keyvault_uri, secret_bundle.clone()).await;
+        AZURE_CACHE
+            .cache_secret_value(&keyvault_uri, secret_bundle.clone())
+            .await;
         // Invalidate secrets list so it gets refreshed
         AZURE_CACHE.invalidate_secrets_list(&keyvault_uri).await;
     }
@@ -122,11 +142,18 @@ pub async fn update_secret(
     secret_name: String,
     secret_value: String,
 ) -> Result<SecretBundle, String> {
-    let result = crate::azure::keyvault::secret::service::update_secret(&keyvault_uri, &secret_name, &secret_value).await;
+    let result = crate::azure::keyvault::secret::service::update_secret(
+        &keyvault_uri,
+        &secret_name,
+        &secret_value,
+    )
+    .await;
 
     if let Ok(ref secret_bundle) = result {
         // Cache the updated secret value
-        AZURE_CACHE.cache_secret_value(&keyvault_uri, secret_bundle.clone()).await;
+        AZURE_CACHE
+            .cache_secret_value(&keyvault_uri, secret_bundle.clone())
+            .await;
         // Invalidate secrets list so updated timestamp is refreshed
         AZURE_CACHE.invalidate_secrets_list(&keyvault_uri).await;
     }
@@ -152,4 +179,3 @@ pub fn parse_import_file(
 ) -> Result<Vec<ImportedSecret>, String> {
     crate::azure::keyvault::secret::import::parse_import_file(&content, format.as_deref())
 }
-

@@ -1,7 +1,7 @@
-﻿//! Secret import functionality - business logic for parsing and importing secrets from various formats
+//! Secret import functionality - business logic for parsing and importing secrets from various formats
 
 use anyhow::{Context, Result};
-use log::{error, info, debug};
+use log::{debug, error, info};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
@@ -66,17 +66,13 @@ pub fn parse_import_file(
     content: &str,
     format: Option<&str>,
 ) -> Result<Vec<ImportedSecret>, String> {
-    parse_import_file_internal(content, format)
-        .map_err(|e| {
-            error!("Failed to parse import file: {}", e);
-            e.to_string()
-        })
+    parse_import_file_internal(content, format).map_err(|e| {
+        error!("Failed to parse import file: {}", e);
+        e.to_string()
+    })
 }
 
-fn parse_import_file_internal(
-    content: &str,
-    format: Option<&str>,
-) -> Result<Vec<ImportedSecret>> {
+fn parse_import_file_internal(content: &str, format: Option<&str>) -> Result<Vec<ImportedSecret>> {
     let content = content.trim();
 
     if content.is_empty() {
@@ -136,12 +132,15 @@ fn auto_detect_and_parse(content: &str) -> Result<Vec<ImportedSecret>> {
         }
     }
 
-    Err(anyhow::anyhow!("Could not detect file format. Supported formats: full JSON export, simple JSON, key-value JSON, or .env"))
+    Err(anyhow::anyhow!(
+        "Could not detect file format. Supported formats: full JSON export, simple JSON, key-value JSON, or .env"
+    ))
 }
 
 /// Check if content looks like dotenv format
 fn looks_like_dotenv(content: &str) -> bool {
-    let lines: Vec<&str> = content.lines()
+    let lines: Vec<&str> = content
+        .lines()
         .filter(|l| !l.trim().is_empty() && !l.trim().starts_with('#'))
         .collect();
 
@@ -150,7 +149,8 @@ fn looks_like_dotenv(content: &str) -> bool {
     }
 
     // Check if most lines contain '=' and don't start with '{'
-    let matching = lines.iter()
+    let matching = lines
+        .iter()
         .filter(|l| l.contains('=') && !l.trim().starts_with('{'))
         .count();
 
@@ -159,10 +159,11 @@ fn looks_like_dotenv(content: &str) -> bool {
 
 /// Parse full export format
 fn parse_full_format(content: &str) -> Result<Vec<ImportedSecret>> {
-    let export: FullExportFormat = serde_json::from_str(content)
-        .context("Failed to parse as full export format")?;
+    let export: FullExportFormat =
+        serde_json::from_str(content).context("Failed to parse as full export format")?;
 
-    let secrets: Vec<ImportedSecret> = export.secrets
+    let secrets: Vec<ImportedSecret> = export
+        .secrets
         .into_iter()
         .map(|s| ImportedSecret {
             name: s.name,
@@ -180,10 +181,11 @@ fn parse_full_format(content: &str) -> Result<Vec<ImportedSecret>> {
 
 /// Parse simple export format
 fn parse_simple_format(content: &str) -> Result<Vec<ImportedSecret>> {
-    let export: SimpleExportFormat = serde_json::from_str(content)
-        .context("Failed to parse as simple export format")?;
+    let export: SimpleExportFormat =
+        serde_json::from_str(content).context("Failed to parse as simple export format")?;
 
-    let secrets: Vec<ImportedSecret> = export.secrets
+    let secrets: Vec<ImportedSecret> = export
+        .secrets
         .into_iter()
         .map(|s| ImportedSecret {
             name: s.name,
@@ -201,15 +203,18 @@ fn parse_simple_format(content: &str) -> Result<Vec<ImportedSecret>> {
 
 /// Parse key-value format (flat JSON object)
 fn parse_key_value_format(content: &str) -> Result<Vec<ImportedSecret>> {
-    let kv: HashMap<String, serde_json::Value> = serde_json::from_str(content)
-        .context("Failed to parse as key-value JSON")?;
+    let kv: HashMap<String, serde_json::Value> =
+        serde_json::from_str(content).context("Failed to parse as key-value JSON")?;
 
     // Filter out non-string values and known metadata fields
     let secrets: Vec<ImportedSecret> = kv
         .into_iter()
         .filter(|(key, _)| {
             // Filter out known metadata fields from full export format
-            !matches!(key.as_str(), "vaultName" | "vaultUri" | "exportedAt" | "secrets")
+            !matches!(
+                key.as_str(),
+                "vaultName" | "vaultUri" | "exportedAt" | "secrets"
+            )
         })
         .filter_map(|(key, value)| {
             match value {
@@ -262,7 +267,8 @@ fn parse_dotenv_format(content: &str) -> Result<Vec<ImportedSecret>> {
 
             // Remove surrounding quotes if present
             if (value.starts_with('"') && value.ends_with('"'))
-                || (value.starts_with('\'') && value.ends_with('\'')) {
+                || (value.starts_with('\'') && value.ends_with('\''))
+            {
                 value = &value[1..value.len() - 1];
             }
 

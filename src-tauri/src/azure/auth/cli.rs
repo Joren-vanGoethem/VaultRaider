@@ -1,8 +1,8 @@
-﻿use azure_core::credentials::TokenCredential;
-use azure_identity::{AzureCliCredential, AzureCliCredentialOptions};
 use crate::azure::auth::constants::{TENANT_ID, VAULT_SCOPE};
 use crate::azure::auth::token::store_auth_result;
 use crate::azure::auth::types::AuthResult;
+use azure_core::credentials::TokenCredential;
+use azure_identity::{AzureCliCredential, AzureCliCredentialOptions};
 
 /// Initiates Azure authentication using Azure CLI
 /// Note: This requires the user to be logged in via Azure CLI (az login)
