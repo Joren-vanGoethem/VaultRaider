@@ -40,6 +40,7 @@ export function useCompareSecrets({
               queryKey: ["secret", sourceVaultUri, name],
               queryFn: () => fetchSecret(sourceVaultUri, name),
               staleTime: 5 * 60 * 1000,
+              meta: { vaultUri: sourceVaultUri, secretName: name },
             });
           }
           if (targetSecret && targetVaultUri) {
@@ -47,6 +48,7 @@ export function useCompareSecrets({
               queryKey: ["secret", targetVaultUri, name],
               queryFn: () => fetchSecret(targetVaultUri, name),
               staleTime: 5 * 60 * 1000,
+              meta: { vaultUri: targetVaultUri, secretName: name },
             });
           }
           return queries;
@@ -61,8 +63,22 @@ export function useCompareSecrets({
   const secretValuesLoadedCount = secretValueQueries.filter((q) => q.isSuccess).length;
   const secretValuesTotalCount = secretValueQueries.length;
 
+  // Create a map for efficient query result lookup by vault and secret name
+  const queryMap = useMemo(() => {
+    const map = new Map<string, typeof secretValueQueries[0]>();
+    for (const query of secretValueQueries) {
+      // The queryKey is in the format ["secret", vaultUri, secretName]
+      const queryKey = (query as any).queryKey;
+      if (Array.isArray(queryKey) && queryKey.length === 3) {
+        const [, vaultUri, secretName] = queryKey;
+        const key = `${vaultUri}:${secretName}`;
+        map.set(key, query);
+      }
+    }
+    return map;
+  }, [secretValueQueries]);
+
   // Build comparison data
-  // biome-ignore lint/correctness/useExhaustiveDependencies: secretValuesLoadedCount triggers recomputation as values are fetched one by one
   const comparedSecrets = useMemo((): ComparedSecret[] => {
     if (!targetVaultUri) return [];
 
@@ -70,31 +86,20 @@ export function useCompareSecrets({
       const sourceSecret = sourceSecrets.find((s) => getSecretName(s.id) === name);
       const targetSecret = targetSecrets.find((s) => getSecretName(s.id) === name);
 
-      // Get cached values if they exist - check query state to know if fetch was attempted
-      const sourceQueryState = queryClient.getQueryState(["secret", sourceVaultUri, name]);
-      const targetQueryState = queryClient.getQueryState(["secret", targetVaultUri, name]);
+      // Get query results from map
+      const sourceQuery = queryMap.get(`${sourceVaultUri}:${name}`);
+      const targetQuery = queryMap.get(`${targetVaultUri}:${name}`);
 
-      const sourceValueData = queryClient.getQueryData<SecretBundle | null>([
-        "secret",
-        sourceVaultUri,
-        name,
-      ]);
-      const targetValueData = queryClient.getQueryData<SecretBundle | null>([
-        "secret",
-        targetVaultUri,
-        name,
-      ]);
+      // Get the actual data from the queries
+      const sourceValueData = sourceQuery?.data;
+      const targetValueData = targetQuery?.data;
 
       // A value is "fetched" if the query has completed (success or error)
       // OR if the secret doesn't exist in that vault (no need to fetch)
       const sourceValueFetched =
-        !sourceSecret ||
-        sourceQueryState?.status === "success" ||
-        sourceQueryState?.status === "error";
+        !sourceSecret || sourceQuery?.status === "success" || sourceQuery?.status === "error";
       const targetValueFetched =
-        !targetSecret ||
-        targetQueryState?.status === "success" ||
-        targetQueryState?.status === "error";
+        !targetSecret || targetQuery?.status === "success" || targetQuery?.status === "error";
 
       let status: ComparisonStatus;
       if (sourceSecret && !targetSecret) {
@@ -127,8 +132,7 @@ export function useCompareSecrets({
     targetSecrets,
     sourceVaultUri,
     targetVaultUri,
-    queryClient,
-    secretValuesLoadedCount,
+    queryMap,
   ]);
 
   // Summary stats
