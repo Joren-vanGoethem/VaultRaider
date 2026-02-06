@@ -210,9 +210,9 @@ pub fn global_provider() -> Box<dyn TokenProvider> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+  use super::*;
 
-    #[test]
+  #[test]
     fn test_global_provider_creation() {
         let _provider = GlobalTokenProvider::new();
         let _provider_default = GlobalTokenProvider::default();

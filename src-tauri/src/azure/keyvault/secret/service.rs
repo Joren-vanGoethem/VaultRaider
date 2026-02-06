@@ -5,8 +5,8 @@ use log::{error, info};
 use serde::Serialize;
 
 use crate::azure::auth::token::get_token_for_scope;
-use crate::azure::http::{AzureHttpClient, AzureHttpError, fetch_all_paginated};
-use crate::config::{KEYVAULT_SCOPE, urls};
+use crate::azure::http::{fetch_all_paginated, AzureHttpClient, AzureHttpError};
+use crate::config::{urls, KEYVAULT_SCOPE};
 
 use super::types::{Secret, SecretBundle};
 

@@ -8,16 +8,16 @@ mod commands;
 mod config;
 
 use commands::auth::{
-    azure_login, azure_logout, check_auth, complete_browser_login, complete_device_code,
-    get_current_user, start_browser_login, start_device_code,
+  azure_login, azure_logout, check_auth, complete_browser_login, complete_device_code,
+  get_current_user, start_browser_login, start_device_code,
 };
 use commands::cache::{
-    clear_cache, get_cache_stats, invalidate_keyvaults_cache, invalidate_resource_groups_cache,
-    invalidate_subscriptions_cache, invalidate_vault_cache,
+  clear_cache, get_cache_stats, invalidate_keyvaults_cache, invalidate_resource_groups_cache,
+  invalidate_subscriptions_cache, invalidate_vault_cache,
 };
 use commands::keyvault::{
-    check_keyvault_access, create_keyvault, create_secret, delete_secret, export_secrets,
-    fetch_keyvaults, get_secret, get_secrets, parse_import_file, update_secret,
+  check_keyvault_access, create_keyvault, create_secret, delete_secret, export_secrets,
+  fetch_keyvaults, get_secret, get_secrets, parse_import_file, update_secret,
 };
 use commands::resource_group::get_resource_groups;
 use commands::subscription::fetch_subscriptions;

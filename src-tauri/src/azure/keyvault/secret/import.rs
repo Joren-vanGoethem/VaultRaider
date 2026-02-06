@@ -292,9 +292,9 @@ fn parse_dotenv_format(content: &str) -> Result<Vec<ImportedSecret>> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+  use super::*;
 
-    #[test]
+  #[test]
     fn test_parse_full_format() {
         let content = r#"{
             "vaultName": "test-vault",

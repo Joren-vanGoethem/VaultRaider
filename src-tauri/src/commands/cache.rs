@@ -2,7 +2,7 @@
 //!
 //! Provides commands for cache management and statistics.
 
-use crate::cache::{AZURE_CACHE, CacheStatistics};
+use crate::cache::{CacheStatistics, AZURE_CACHE};
 
 /// Get cache statistics
 #[tauri::command]

@@ -3,8 +3,8 @@ use crate::azure::auth::state::AUTH_CREDENTIAL;
 use crate::azure::auth::types::{AuthResult, TokenClaims};
 use crate::azure::auth::user_info::store_user_info;
 use azure_core::credentials::TokenCredential;
-use base64::Engine;
 use base64::engine::general_purpose::URL_SAFE_NO_PAD as BASE64URL;
+use base64::Engine;
 use log::{error, info, warn};
 use std::sync::Arc;
 

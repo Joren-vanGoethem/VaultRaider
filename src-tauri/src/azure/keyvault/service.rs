@@ -4,11 +4,11 @@ use anyhow::{Context, Result};
 use log::{debug, error, info};
 
 use crate::azure::auth::token::{get_token_for_scope, get_token_from_state};
-use crate::azure::http::{AzureHttpClient, AzureHttpError, fetch_all_paginated};
+use crate::azure::http::{fetch_all_paginated, AzureHttpClient, AzureHttpError};
 use crate::azure::resource_group::service::get_resource_group_by_name;
 use crate::azure::subscription::service::get_subscription;
 use crate::cache::AZURE_CACHE;
-use crate::config::{KEYVAULT_SCOPE, MANAGEMENT_SCOPE, urls};
+use crate::config::{urls, KEYVAULT_SCOPE, MANAGEMENT_SCOPE};
 
 use super::types::{CreateVaultRequest, KeyVault, KeyVaultAccessCheck, Properties, Sku};
 

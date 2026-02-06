@@ -3,7 +3,7 @@
 use crate::azure::subscription::service::{get_subscription, get_subscriptions};
 use crate::azure::subscription::types::Subscription;
 use crate::cache::AZURE_CACHE;
-use anyhow::{Context, Result};
+use anyhow::Result;
 
 /// Fetch all Azure subscriptions for the authenticated user
 /// Uses caching with automatic loading on cache miss

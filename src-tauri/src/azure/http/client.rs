@@ -19,10 +19,10 @@
 //! ```
 
 use log::{debug, error, info};
-use reqwest::header::{AUTHORIZATION, CONTENT_TYPE, HeaderMap, HeaderValue};
+use reqwest::header::{HeaderMap, HeaderValue, AUTHORIZATION, CONTENT_TYPE};
 use reqwest::{Client, Method, Response};
-use serde::Serialize;
 use serde::de::DeserializeOwned;
+use serde::Serialize;
 
 use super::error::AzureHttpError;
 
@@ -405,9 +405,9 @@ impl AzureHttpClient {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+  use super::*;
 
-    #[test]
+  #[test]
     fn test_client_creation() {
         let client = AzureHttpClient::new();
         assert!(client.headers().is_empty());

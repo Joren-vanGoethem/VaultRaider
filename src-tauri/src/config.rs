@@ -68,9 +68,9 @@ pub const RESOURCE_GROUPS_API_VERSION: &str = "2021-04-01";
 // ============================================================================
 
 pub mod urls {
-    use super::*;
+  use super::*;
 
-    /// Get the URL to list all subscriptions
+  /// Get the URL to list all subscriptions
     pub fn subscriptions() -> String {
         format!(
             "https://management.azure.com/subscriptions?api-version={}",
@@ -172,9 +172,9 @@ pub mod urls {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+  use super::*;
 
-    #[test]
+  #[test]
     fn test_subscriptions_url() {
         let url = urls::subscriptions();
         assert!(url.contains("management.azure.com"));

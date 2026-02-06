@@ -4,4 +4,4 @@
 
 mod moka_cache;
 
-pub use moka_cache::{AZURE_CACHE, CacheStatistics};
+pub use moka_cache::{CacheStatistics, AZURE_CACHE};

@@ -4,7 +4,7 @@ use anyhow::{Context, Result};
 use log::{debug, error, info};
 
 use crate::azure::auth::token::get_token_from_state;
-use crate::azure::http::{AzureHttpClient, fetch_all_paginated};
+use crate::azure::http::{fetch_all_paginated, AzureHttpClient};
 use crate::config::urls;
 
 use super::types::ResourceGroup;

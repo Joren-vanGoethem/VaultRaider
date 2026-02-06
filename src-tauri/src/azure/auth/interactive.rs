@@ -8,19 +8,19 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use azure_core::Error;
 use azure_core::credentials::{AccessToken, Secret, TokenCredential, TokenRequestOptions};
+use azure_core::Error;
 use log::{error as log_error, info};
 use time::OffsetDateTime;
 
 use crate::azure::auth::state::{AUTH_CREDENTIAL, DEVICE_CODE_STATE};
 use crate::azure::auth::token::store_auth_result;
 use crate::azure::auth::types::{
-    AuthResult, DeviceCodeInfo, DeviceCodeResponse, DeviceCodeState, TokenResponse,
+  AuthResult, DeviceCodeInfo, DeviceCodeResponse, DeviceCodeState, TokenResponse,
 };
 use crate::config::{
-    AUTH_SCOPES, CLIENT_ID, DEVICE_CODE_ENDPOINT, MAX_POLL_ATTEMPTS, POLL_SLOWDOWN_SECONDS,
-    TENANT_ID, TOKEN_ENDPOINT,
+  AUTH_SCOPES, CLIENT_ID, DEVICE_CODE_ENDPOINT, MAX_POLL_ATTEMPTS, POLL_SLOWDOWN_SECONDS,
+  TENANT_ID, TOKEN_ENDPOINT,
 };
 
 /// Credential implementation for interactive device code flow

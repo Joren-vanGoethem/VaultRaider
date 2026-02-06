@@ -1,12 +1,17 @@
-﻿use std::collections::HashMap;
-use log::{info, error as log_error};
-use crate::azure::auth::constants::{AUTH_SCOPES, CLIENT_ID, DEVICE_CODE_ENDPOINT, MAX_POLL_ATTEMPTS, POLL_SLOWDOWN_SECONDS, TENANT_ID, TOKEN_ENDPOINT};
+﻿use crate::azure::auth::constants::{
+  AUTH_SCOPES, CLIENT_ID, DEVICE_CODE_ENDPOINT, MAX_POLL_ATTEMPTS, POLL_SLOWDOWN_SECONDS,
+  TENANT_ID, TOKEN_ENDPOINT,
+};
 use crate::azure::auth::state::{AUTH_CREDENTIAL, DEVICE_CODE_STATE};
 use crate::azure::auth::token::store_auth_result;
-use crate::azure::auth::types::{AuthResult, DeviceCodeInfo, DeviceCodeResponse, DeviceCodeState, TokenResponse};
+use crate::azure::auth::types::{
+  AuthResult, DeviceCodeInfo, DeviceCodeResponse, DeviceCodeState, TokenResponse,
+};
+use async_trait::async_trait;
 use azure_core::credentials::{AccessToken, Secret, TokenCredential, TokenRequestOptions};
 use azure_core::Error;
-use async_trait::async_trait;
+use log::{error as log_error, info};
+use std::collections::HashMap;
 use std::sync::Arc;
 use time::OffsetDateTime;
 
@@ -24,7 +29,10 @@ impl TokenCredential for InteractiveDeviceCodeCredential {
         scopes: &[&str],
         _options: Option<TokenRequestOptions<'_>>,
     ) -> azure_core::Result<AccessToken> {
-        info!("get token from InteractiveDeviceCodeCredential for scopes: {:?}", scopes);
+        info!(
+            "get token from InteractiveDeviceCodeCredential for scopes: {:?}",
+            scopes
+        );
         // Check if we already have a valid token
         {
             let token_lock = self.access_token.read().await;
@@ -40,7 +48,10 @@ impl TokenCredential for InteractiveDeviceCodeCredential {
         let state = {
             let state_lock = DEVICE_CODE_STATE.lock().await;
             state_lock.clone().ok_or_else(|| {
-                Error::with_message(azure_core::error::ErrorKind::Other, "No device code state found")
+                Error::with_message(
+                    azure_core::error::ErrorKind::Other,
+                    "No device code state found",
+                )
             })?
         };
 
@@ -50,7 +61,10 @@ impl TokenCredential for InteractiveDeviceCodeCredential {
         let mut attempts = 0;
         loop {
             if attempts >= MAX_POLL_ATTEMPTS {
-                return Err(Error::with_message(azure_core::error::ErrorKind::Other, "Authentication timed out"));
+                return Err(Error::with_message(
+                    azure_core::error::ErrorKind::Other,
+                    "Authentication timed out",
+                ));
             }
 
             let response = client
@@ -63,33 +77,42 @@ impl TokenCredential for InteractiveDeviceCodeCredential {
                 ])
                 .send()
                 .await
-                .map_err(|e| Error::with_message(azure_core::error::ErrorKind::Io, e.to_string()))?;
+                .map_err(|e| {
+                    Error::with_message(azure_core::error::ErrorKind::Io, e.to_string())
+                })?;
 
             if response.status().is_success() {
-                let token_res: TokenResponse = response
-                    .json()
-                    .await
-                    .map_err(|e| Error::with_message(azure_core::error::ErrorKind::DataConversion, e.to_string()))?;
-                
+                let token_res: TokenResponse = response.json().await.map_err(|e| {
+                    Error::with_message(azure_core::error::ErrorKind::DataConversion, e.to_string())
+                })?;
+
                 let expires_in = token_res.expires_in.unwrap_or(3600);
-                let expires_on = OffsetDateTime::now_utc() + std::time::Duration::from_secs(expires_in);
-                let access_token = AccessToken::new(Secret::new(token_res.access_token), expires_on);
-                
+                let expires_on =
+                    OffsetDateTime::now_utc() + std::time::Duration::from_secs(expires_in);
+                let access_token =
+                    AccessToken::new(Secret::new(token_res.access_token), expires_on);
+
                 let mut token_lock = self.access_token.write().await;
                 *token_lock = Some(access_token.clone());
-                
+
                 return Ok(access_token);
             } else {
                 let error_json: serde_json::Value = response.json().await.unwrap_or_default();
                 let error_code = error_json["error"].as_str().unwrap_or("");
-                
+
                 if error_code == "authorization_pending" {
                     attempts += 1;
                     tokio::time::sleep(std::time::Duration::from_secs(state.interval)).await;
                 } else if error_code == "slow_down" {
-                    tokio::time::sleep(std::time::Duration::from_secs(state.interval + POLL_SLOWDOWN_SECONDS)).await;
+                    tokio::time::sleep(std::time::Duration::from_secs(
+                        state.interval + POLL_SLOWDOWN_SECONDS,
+                    ))
+                    .await;
                 } else {
-                    return Err(Error::with_message(azure_core::error::ErrorKind::Other, format!("Authentication failed: {}", error_code)));
+                    return Err(Error::with_message(
+                        azure_core::error::ErrorKind::Other,
+                        format!("Authentication failed: {}", error_code),
+                    ));
                 }
             }
         }
@@ -182,5 +205,10 @@ pub async fn complete_interactive_browser_login() -> Result<AuthResult, String> 
         *state_guard = None;
     }
 
-    store_auth_result(credential, token_response.token.secret(), "Interactive Browser Flow").await
+    store_auth_result(
+        credential,
+        token_response.token.secret(),
+        "Interactive Browser Flow",
+    )
+    .await
 }

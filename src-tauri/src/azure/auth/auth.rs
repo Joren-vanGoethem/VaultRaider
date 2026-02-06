@@ -3,7 +3,7 @@ use crate::azure::auth::service_principal::try_environment_credential;
 use crate::azure::auth::state::AUTH_CREDENTIAL;
 use crate::azure::auth::types::AuthResult;
 use crate::azure::auth::user_info::USER_INFO;
-use log::{info, error};
+use log::{error, info};
 
 /// Try to authenticate with the best available method
 /// First tries Azure CLI, then falls back to environment-based authentication (Service Principal)

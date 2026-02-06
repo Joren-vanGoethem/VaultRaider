@@ -86,9 +86,9 @@ impl From<AzureHttpError> for String {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+  use super::*;
 
-    #[test]
+  #[test]
     fn test_error_display() {
         let err = AzureHttpError::ApiError {
             status: 404,
