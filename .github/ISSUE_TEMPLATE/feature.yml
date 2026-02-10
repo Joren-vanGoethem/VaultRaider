@@ -1,0 +1,79 @@
+name: Feature Request
+description: Suggest a new feature or enhancement
+title: "[FEATURE] Short description"
+labels: ["enhancement"]
+assignees: []
+
+body:
+  - type: input
+    id: summary
+    attributes:
+      label: Feature Summary
+      description: One clear sentence describing the feature
+      placeholder: e.g. Allow exporting secrets as json
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem does this solve?
+      description: Why is this feature needed?
+      placeholder: |
+        Describe the pain point or limitation.
+        What is difficult or impossible today?
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed Solution
+      description: How should this feature work?
+      placeholder: |
+        Describe the behavior, UI, ...
+        Include examples if helpful.
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives Considered (optional)
+      description: Other approaches or workarounds you tried
+      placeholder: |
+        What else could solve this?
+        Why is this better?
+    validations:
+      required: false
+
+  - type: textarea
+    id: impact
+    attributes:
+      label: Who benefits and how?
+      description: Business, user, or technical impact
+      placeholder: |
+        Who needs this?
+        How often would it be used?
+        What improves?
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: scope
+    attributes:
+      label: Scope (select all that apply)
+      options:
+        - label: UI / Frontend
+        - label: Backend
+        - label: Documentation
+
+  - type: checkboxes
+    id: terms
+    attributes:
+      label: Before submitting
+      options:
+        - label: I checked existing issues to avoid duplicates
+          required: true
+        - label: This is not a bug report
+          required: true
