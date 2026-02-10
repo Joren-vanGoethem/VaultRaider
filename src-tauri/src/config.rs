@@ -2,16 +2,9 @@
 //!
 //! This module contains all configuration values, API endpoints,
 //! and constants used throughout the application.
-
-// ============================================================================
-// Azure App Registration
-// ============================================================================
-
-/// Azure AD App Registration Client ID
-pub const CLIENT_ID: &str = "d904e24e-ef24-4c0c-b361-597ec4ef69cf";
-
-/// Azure AD Tenant ID
-pub const TENANT_ID: &str = "8948bc3d-2462-4abf-b447-84b07161f34e";
+//!
+//! Note: Azure Client ID and Tenant ID are stored in user_config.rs
+//! and can be configured by the user at runtime.
 
 // ============================================================================
 // OAuth2 Scopes
@@ -23,9 +16,10 @@ pub const MANAGEMENT_SCOPE: &str = "https://management.azure.com/.default";
 /// Azure Key Vault data plane API scope
 pub const KEYVAULT_SCOPE: &str = "https://vault.azure.net/.default";
 
-/// Combined auth scopes for interactive login
-pub const AUTH_SCOPES: &str =
-    "https://management.azure.com/.default offline_access openid profile email";
+/// Auth scopes for interactive login - includes both Azure Management and Key Vault access
+/// Note: OAuth 2.0 only allows one resource per token, so we request Azure Management scope.
+/// Key Vault tokens will be obtained separately via the credential's get_token method.
+pub const AUTH_SCOPES: &str = "https://management.azure.com/.default offline_access openid profile";
 
 // ============================================================================
 // Azure AD Endpoints

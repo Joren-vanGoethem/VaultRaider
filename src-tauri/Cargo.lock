@@ -5312,6 +5312,7 @@ dependencies = [
  "azure_identity",
  "base64 0.22.1",
  "chrono",
+ "dirs",
  "lazy_static",
  "log",
  "moka",

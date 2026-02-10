@@ -2,6 +2,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import { useEffect, useState } from "react";
 import { Avatar } from "../components/Avatar";
+import { AzureConfigEditor } from "../components/AzureConfigEditor";
 import { CopyIcon } from "../components/icons";
 import { LoadingSpinner } from "../components/LoadingSpinner";
 import { useAuth } from "../contexts/AuthContext";
@@ -30,7 +31,7 @@ function Index() {
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState("");
   const [deviceCodeInfo, setDeviceCodeInfo] = useState<DeviceCodeInfo | null>(null);
-  const [showDeviceCodeFlow, setShowDeviceCodeFlow] = useState(false);
+  const [selectedMethod, setSelectedMethod] = useState<"cli" | "browser" | null>(null);
 
   // Redirect to subscriptions if already authenticated
   useEffect(() => {
@@ -39,9 +40,10 @@ function Index() {
     }
   }, [isAuthenticated, navigate]);
 
-  async function handleLogin() {
+  async function handleCliLogin() {
+    setSelectedMethod("cli");
     setIsLoading(true);
-    setMessage("Starting Azure login...");
+    setMessage("Authenticating with Azure CLI...");
 
     try {
       const result = await invoke<AuthResult>("azure_login");
@@ -56,27 +58,19 @@ function Index() {
         setMessage(`Login failed: ${result.message}`);
       }
     } catch (error) {
-      console.error("Error during login:", error);
-      const errorMessage = String(error);
-
-      // Check if Azure CLI failed - offer device code flow as fallback
-      if (errorMessage.includes("Azure CLI") || errorMessage.includes("az login")) {
-        setMessage(
-          "Azure CLI not available. Would you like to use browser authentication instead?",
-        );
-        setShowDeviceCodeFlow(true);
-      } else {
-        setMessage(`Error: ${error}`);
-      }
+      console.error("Error during CLI login:", error);
+      setMessage(
+        `Azure CLI login failed: ${error}\n\nMake sure you have run 'az login' in your terminal first.`,
+      );
     } finally {
       setIsLoading(false);
     }
   }
 
-  async function handleDeviceCodeLogin() {
+  async function handleBrowserLogin() {
+    setSelectedMethod("browser");
     setIsLoading(true);
-    setMessage("Starting device code authentication...");
-    setShowDeviceCodeFlow(false);
+    setMessage("Starting browser authentication...");
 
     try {
       // Start device code flow
@@ -87,7 +81,7 @@ function Index() {
       // Automatically poll for completion
       pollForDeviceCodeCompletion();
     } catch (error) {
-      console.error("Error starting device code flow:", error);
+      console.error("Error starting browser login:", error);
       setMessage(`Error: ${error}`);
       setIsLoading(false);
     }
@@ -230,44 +224,96 @@ function Index() {
                     <span className="text-sm">Waiting for authentication...</span>
                   </div>
                 )}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setDeviceCodeInfo(null);
+                    setIsLoading(false);
+                    setMessage("");
+                    setSelectedMethod(null);
+                  }}
+                  className="mt-4 w-full px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                >
+                  Cancel
+                </button>
               </div>
             )}
 
-            {/* Login Buttons */}
+            {/* Login Method Selection */}
             {!deviceCodeInfo && (
-              <>
-                <button
-                  type="button"
-                  onClick={handleLogin}
-                  disabled={isLoading}
-                  className="btn-primary w-full"
-                >
-                  {isLoading ? (
-                    <span className="flex items-center justify-center gap-2">
-                      <LoadingSpinner size="md" />
-                      Authenticating...
+              <div className="space-y-4">
+                {/* Azure CLI Authentication - Recommended */}
+                <div className="p-4 rounded-lg border-2 border-primary-200 dark:border-primary-800 bg-primary-50/50 dark:bg-primary-900/20">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="px-2 py-0.5 text-xs font-medium bg-primary-500 text-white rounded">
+                      Recommended
                     </span>
-                  ) : (
-                    "Login with Azure"
-                  )}
-                </button>
-
-                {/* Device Code Flow Option */}
-                {showDeviceCodeFlow && (
-                  <div className="mt-4 p-4 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800">
-                    <p className="text-sm text-amber-800 dark:text-amber-200 mb-3">
-                      Azure CLI is not available. You can authenticate using your browser instead.
-                    </p>
-                    <button
-                      type="button"
-                      onClick={handleDeviceCodeLogin}
-                      className="w-full px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white font-semibold rounded-lg transition-colors"
-                    >
-                      Use Browser Authentication
-                    </button>
                   </div>
-                )}
-              </>
+                  <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-1">Azure CLI</h3>
+                  <p className="text-xs text-gray-600 dark:text-gray-400 mb-3">
+                    Use your existing Azure CLI session. Run{" "}
+                    <code className="px-1 py-0.5 bg-gray-200 dark:bg-gray-700 rounded text-xs">
+                      az login
+                    </code>{" "}
+                    in your terminal first, then click below.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={handleCliLogin}
+                    disabled={isLoading}
+                    className="btn-primary w-full"
+                  >
+                    {isLoading && selectedMethod === "cli" ? (
+                      <span className="flex items-center justify-center gap-2">
+                        <LoadingSpinner size="md" />
+                        Authenticating...
+                      </span>
+                    ) : (
+                      "Sign in with Azure CLI"
+                    )}
+                  </button>
+                </div>
+
+                {/* Divider */}
+                <div className="relative">
+                  <div className="absolute inset-0 flex items-center">
+                    <div className="w-full border-t border-gray-300 dark:border-gray-600" />
+                  </div>
+                  <div className="relative flex justify-center text-xs">
+                    <span className="px-2 bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400">
+                      or
+                    </span>
+                  </div>
+                </div>
+
+                {/* Browser Authentication */}
+                <div className="p-4 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/50">
+                  <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-1">
+                    Browser Authentication
+                  </h3>
+                  <p className="text-xs text-gray-600 dark:text-gray-400 mb-2">
+                    Sign in using your browser with a device code.
+                  </p>
+                  <p className="text-xs text-amber-600 dark:text-amber-400 mb-3">
+                    ⚠️ May require admin consent in some organizations
+                  </p>
+                  <button
+                    type="button"
+                    onClick={handleBrowserLogin}
+                    disabled={isLoading}
+                    className="w-full px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {isLoading && selectedMethod === "browser" ? (
+                      <span className="flex items-center justify-center gap-2">
+                        <LoadingSpinner size="md" />
+                        Starting...
+                      </span>
+                    ) : (
+                      "Sign in with Browser"
+                    )}
+                  </button>
+                </div>
+              </div>
             )}
 
             {message && !deviceCodeInfo && (
@@ -275,14 +321,15 @@ function Index() {
                 className={`mt-4 p-4 rounded-lg border ${
                   message.includes("Success") || message.includes("authenticated")
                     ? "bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800 text-green-700 dark:text-green-300"
-                    : message.includes("Azure CLI not available") || showDeviceCodeFlow
-                      ? "bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800 text-amber-700 dark:text-amber-300"
-                      : "bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800 text-red-700 dark:text-red-300"
+                    : "bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800 text-red-700 dark:text-red-300"
                 }`}
               >
                 <p className="text-sm whitespace-pre-wrap">{message}</p>
               </div>
             )}
+
+            {/* Azure Configuration Editor */}
+            <AzureConfigEditor />
           </div>
         ) : (
           <div className="card">

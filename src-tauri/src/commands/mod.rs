@@ -6,6 +6,7 @@
 
 pub mod auth;
 pub mod cache;
+pub mod config;
 pub mod keyvault;
 pub mod resource_group;
 pub mod subscription;

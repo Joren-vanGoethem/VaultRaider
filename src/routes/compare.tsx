@@ -1,4 +1,4 @@
-﻿import { useMutation, useQuery, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { Suspense, useMemo, useState } from "react";
 import {
@@ -39,6 +39,13 @@ export const Route = createFileRoute("/compare")({
       sourceSubscriptionId: search.sourceSubscriptionId as string | undefined,
       targetSubscriptionId: search.targetSubscriptionId as string | undefined,
     };
+  },
+  beforeLoad: async () => {
+    // Check if user is authenticated before loading this route
+    const isAuthenticated = await invoke<boolean>("check_auth");
+    if (!isAuthenticated) {
+      throw redirect({ to: "/" });
+    }
   },
 });
 
@@ -159,6 +166,7 @@ function CompareVaults() {
 
   // Sync a single secret from source to target
   const handleSyncSecret = async (secretName: string) => {
+    // First, get the source value if not already loaded
     let sourceValue = queryClient.getQueryData<SecretBundle | null>([
       "secret",
       sourceVaultUri,
@@ -185,6 +193,7 @@ function CompareVaults() {
 
   // Sync a single secret from target to source
   const handleSyncSecretToSource = async (secretName: string) => {
+    // First, get the target value if not already loaded
     let targetValue = queryClient.getQueryData<SecretBundle | null>([
       "secret",
       targetVaultUri,
@@ -351,6 +360,7 @@ function CompareVaults() {
         </div>
       </div>
 
+      {/* Create with Value Modal */}
       <CreateWithValueModal
         isOpen={createWithValueModal.isOpen}
         onClose={() =>

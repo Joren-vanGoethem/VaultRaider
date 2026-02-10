@@ -6,8 +6,6 @@
 //! - Service Principal via environment variables  
 //! - Device Code Flow
 //! - Interactive Browser Flow
-
-pub mod device_code;
 pub mod interactive;
 pub mod provider;
 pub mod service;

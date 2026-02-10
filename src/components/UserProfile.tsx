@@ -25,8 +25,9 @@ export function UserProfile({
       <div className="flex flex-col items-center gap-2">
         <div className="relative group">
           <Avatar name={userInfo.name} email={userInfo.email} size="sm" />
-          <div className="absolute left-full ml-2 top-1/2 -translate-y-1/2 px-2 py-1 bg-gray-900 dark:bg-gray-700 text-white text-xs rounded whitespace-nowrap opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all pointer-events-none z-50">
-            {userInfo.name || userInfo.email}
+          <div className="absolute left-full ml-2 top-1/2 -translate-y-1/2 px-3 py-2 bg-gray-900 dark:bg-gray-700 text-white text-xs rounded shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all pointer-events-none z-50 whitespace-nowrap">
+            {userInfo.name && <div className="font-medium">{userInfo.name}</div>}
+            <div className={userInfo.name ? "text-gray-300" : ""}>{userInfo.email}</div>
           </div>
         </div>
         <button
@@ -46,12 +47,22 @@ export function UserProfile({
 
   if (compact) {
     return (
-      <div className="flex flex-col gap-2 text-sm">
-        <div className="flex items-center gap-2 text-gray-600 dark:text-gray-300">
+      <div className="flex flex-col gap-2">
+        <div className="flex items-start gap-2">
           <Avatar name={userInfo.name} email={userInfo.email} size="sm" />
-          <span className="truncate text-xs" title={userInfo.email}>
-            {userInfo.name || userInfo.email}
-          </span>
+          <div className="flex-1 min-w-0">
+            {userInfo.name && (
+              <p
+                className="text-xs font-medium text-gray-900 dark:text-gray-100 truncate"
+                title={userInfo.name}
+              >
+                {userInfo.name}
+              </p>
+            )}
+            <p className="text-xs text-gray-600 dark:text-gray-400 truncate" title={userInfo.email}>
+              {userInfo.email}
+            </p>
+          </div>
         </div>
         <button
           type="button"
