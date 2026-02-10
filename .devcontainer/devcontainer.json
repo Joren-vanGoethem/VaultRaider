@@ -1,0 +1,43 @@
+{
+  "name": "VaultRaider Tauri Dev",
+  "build": {
+    "dockerfile": "Dockerfile"
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "tauri-apps.tauri-vscode",
+        "rust-lang.rust-analyzer",
+        "vadimcn.vscode-lldb",
+        "dbaeumer.vscode-eslint",
+        "esbenp.prettier-vscode",
+        "biomejs.biome"
+      ],
+      "settings": {
+        "rust-analyzer.checkOnSave.command": "clippy",
+        "editor.formatOnSave": true,
+        "editor.defaultFormatter": "biomejs.biome"
+      }
+    }
+  },
+  "runArgs": [
+    "--device=/dev/dri",
+    "--volume=/run/user/1000:/run/user/1000",
+    "--env=WAYLAND_DISPLAY=wayland-0",
+    "--env=XDG_RUNTIME_DIR=/run/user/1000",
+    "--env=LIBGL_ALWAYS_SOFTWARE=1",
+    "--env=WEBKIT_DISABLE_COMPOSITING_MODE=1"
+  ],
+
+  "containerEnv": {
+    "GDK_BACKEND": "wayland",
+    "XDG_SESSION_TYPE": "wayland"
+  },
+  "forwardPorts": [1420],
+  "postCreateCommand": "npm install && cd src-tauri && cargo fetch",
+  "remoteUser": "vscode",
+  "features": {
+    "ghcr.io/devcontainers/features/git:1": {},
+    "ghcr.io/devcontainers/features/github-cli:1": {}
+  }
+}

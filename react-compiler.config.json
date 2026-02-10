@@ -1,0 +1,8 @@
+﻿{
+  "compilationMode": "all",
+  "sources": ["src/**"],
+  "environment": {
+    "enableTryCatchOptimization": true
+  }
+}
+

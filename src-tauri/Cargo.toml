@@ -1,0 +1,47 @@
+[package]
+name = "vaultraider"
+version = "0.1.1"
+description = "A cross platform app for managing azure keyvaults"
+authors = ["joren vangoethem"]
+edition = "2024"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[lib]
+# The `_lib` suffix may seem redundant but it is necessary
+# to make the lib name unique and wouldn't conflict with the bin name.
+# This seems to be only an issue on Windows, see https://github.com/rust-lang/cargo/issues/8519
+name = "vaultraider_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+tauri-plugin-opener = "2"
+tauri-plugin-dialog = "2"
+tauri-plugin-fs = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+azure_identity = "0.30"
+azure_core = "0.30"
+tokio = { version = "1", features = ["full"] }
+reqwest = { version = "0.12", features = ["json"] }
+lazy_static = "1.5"
+base64 = "0.22"
+async-trait = "0.1"
+time = { version = "0.3", features = ["macros"] }
+tauri-plugin-log = { version = "2.8.0", features = ["tracing"] }
+log = "0.4.29"
+serde_path_to_error = "0.1"
+uuid = { version = "1.0", features = ["v4"] }
+anyhow = "1.0"
+chrono = { version = "0.4", features = ["serde"] }
+moka = { version = "0.12", features = ["future"] }
+dirs = "6.0.0"
+
+[target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
+tauri-plugin-updater = "2"
+
+
