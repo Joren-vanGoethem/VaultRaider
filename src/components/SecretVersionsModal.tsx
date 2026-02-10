@@ -1,8 +1,8 @@
-import { useQuery } from "@tanstack/react-query";
-import { ClipboardIcon, DownloadIcon, HistoryIcon } from "lucide-react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { ClipboardIcon, DownloadIcon, HistoryIcon, RefreshCwIcon } from "lucide-react";
 import { useCallback, useState } from "react";
 import { useToast } from "../contexts/ToastContext";
-import { fetchSecret, fetchSecretVersions } from "../services/azureService";
+import { fetchSecret, fetchSecretVersions, updateSecret } from "../services/azureService";
 import type { Secret, SecretBundle } from "../types/secrets";
 import { Button, IconButton, Modal, ModalDescription, ModalFooter, ModalTitle } from "./common";
 import { LoadingSpinner } from "./LoadingSpinner";
@@ -34,7 +34,13 @@ function VersionValueCell({
   version,
   vaultUri,
   secretName,
-}: { version: Secret; vaultUri: string; secretName: string }) {
+  loadAll,
+}: {
+  version: Secret;
+  vaultUri: string;
+  secretName: string;
+  loadAll: boolean;
+}) {
   const [manualLoad, setManualLoad] = useState(false);
   const { showSuccess } = useToast();
 
@@ -43,7 +49,7 @@ function VersionValueCell({
   const { data, isLoading, error } = useQuery<SecretBundle | null>({
     queryKey: ["secret-version-value", vaultUri, secretName, versionId],
     queryFn: ({ signal }) => fetchSecret(vaultUri, secretName, versionId, signal),
-    enabled: manualLoad,
+    enabled: manualLoad || loadAll,
     staleTime: 5 * 60 * 1000,
     gcTime: 30 * 60 * 1000,
   });
@@ -110,6 +116,10 @@ export function SecretVersionsModal({
   secretName,
   vaultUri,
 }: SecretVersionsModalProps) {
+  const [loadAll, setLoadAll] = useState(false);
+  const queryClient = useQueryClient();
+  const { showSuccess, showError } = useToast();
+
   const {
     data: versions,
     isLoading,
@@ -120,6 +130,20 @@ export function SecretVersionsModal({
     enabled: isOpen,
     staleTime: 2 * 60 * 1000,
     gcTime: 10 * 60 * 1000,
+  });
+
+  // Mutation for restoring a version (creates a new version with the old value)
+  const restoreMutation = useMutation({
+    mutationFn: (value: string) => updateSecret(vaultUri, secretName, value),
+    onSuccess: () => {
+      showSuccess(`Version restored successfully as the new latest version`);
+      queryClient.invalidateQueries({ queryKey: ["secret-versions", vaultUri, secretName] });
+      queryClient.invalidateQueries({ queryKey: ["secret", vaultUri, secretName] });
+    },
+    onError: (error) => {
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      showError("Failed to restore version", errorMsg);
+    },
   });
 
   const sortedVersions = versions
@@ -134,13 +158,26 @@ export function SecretVersionsModal({
           Versions of "{secretName}"
         </div>
       </ModalTitle>
-      <ModalDescription>
-        {isLoading
-          ? "Loading versions..."
-          : sortedVersions.length > 0
-            ? `${sortedVersions.length} version${sortedVersions.length !== 1 ? "s" : ""} found. Each update to a secret creates a new version.`
-            : "No versions found."}
-      </ModalDescription>
+      <div className="flex items-center justify-between mb-4">
+        <ModalDescription>
+          {isLoading
+            ? "Loading versions..."
+            : sortedVersions.length > 0
+              ? `${sortedVersions.length} version${sortedVersions.length !== 1 ? "s" : ""} found. Each update to a secret creates a new version.`
+              : "No versions found."}
+        </ModalDescription>
+        {!isLoading && sortedVersions.length > 0 && (
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => setLoadAll(true)}
+            disabled={loadAll}
+            title="Load values for all versions"
+          >
+            {loadAll ? "All Loaded" : "Load All"}
+          </Button>
+        )}
+      </div>
 
       <div className="max-h-[60vh] overflow-auto">
         {isLoading && (
@@ -181,7 +218,7 @@ export function SecretVersionsModal({
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-2 min-w-0">
                       <span
-                        className="font-mono text-xs text-gray-700 dark:text-gray-300 truncate max-w-48"
+                        className="font-mono text-xs text-gray-700 dark:text-gray-300 truncate max-w-64"
                         title={versionId}
                       >
                         {versionId}
@@ -191,16 +228,24 @@ export function SecretVersionsModal({
                           Latest
                         </span>
                       )}
-                      <span
-                        className={`text-xs px-1.5 py-0.5 rounded whitespace-nowrap ${
-                          version.attributes.enabled
-                            ? "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400"
-                            : "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400"
-                        }`}
-                      >
-                        {version.attributes.enabled ? "Enabled" : "Disabled"}
-                      </span>
                     </div>
+                    {!isLatest && (
+                      <IconButton
+                        icon={<RefreshCwIcon className="w-4 h-4" />}
+                        label="Restore this version"
+                        variant="primary"
+                        size="sm"
+                        onClick={() => {
+                          // Fetch the value and restore it
+                          fetchSecret(vaultUri, secretName, versionId).then((bundle) => {
+                            if (bundle?.value) {
+                              restoreMutation.mutate(bundle.value);
+                            }
+                          });
+                        }}
+                        disabled={restoreMutation.isPending}
+                      />
+                    )}
                   </div>
 
                   {/* Version value */}
@@ -209,6 +254,7 @@ export function SecretVersionsModal({
                       version={version}
                       vaultUri={vaultUri}
                       secretName={secretName}
+                      loadAll={loadAll}
                     />
                   </div>
 
@@ -220,20 +266,6 @@ export function SecretVersionsModal({
                         {formatDate(version.attributes.created)}
                       </span>
                     </div>
-                    <div className="flex items-center gap-1">
-                      <span className="text-gray-500 dark:text-gray-500">Updated:</span>
-                      <span className="text-gray-900 dark:text-gray-100">
-                        {formatDate(version.attributes.updated)}
-                      </span>
-                    </div>
-                    {version.attributes.recoveryLevel && (
-                      <div className="flex items-center gap-1">
-                        <span className="text-gray-500 dark:text-gray-500">Recovery:</span>
-                        <span className="text-gray-900 dark:text-gray-100">
-                          {version.attributes.recoveryLevel}
-                        </span>
-                      </div>
-                    )}
                   </div>
                 </div>
               );
