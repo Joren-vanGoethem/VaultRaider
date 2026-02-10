@@ -1,7 +1,7 @@
-﻿import { type QueryClient, useQueries } from "@tanstack/react-query";
+﻿import { useQueries } from "@tanstack/react-query";
 import { useMemo } from "react";
 import { fetchSecret } from "../../services/azureService";
-import type { Secret, SecretBundle } from "../../types/secrets";
+import type { Secret } from "../../types/secrets";
 import type { ComparedSecret, ComparisonStats, ComparisonStatus } from "./ComparisonTypes";
 import { getSecretName } from "./ComparisonTypes";
 
@@ -10,7 +10,6 @@ interface UseCompareSecretsParams {
   targetSecrets: Secret[];
   sourceVaultUri: string;
   targetVaultUri: string;
-  queryClient: QueryClient;
 }
 
 export function useCompareSecrets({
@@ -18,7 +17,6 @@ export function useCompareSecrets({
   targetSecrets,
   sourceVaultUri,
   targetVaultUri,
-  queryClient,
 }: UseCompareSecretsParams) {
   // Get all unique secret names from both vaults
   const allSecretNames = useMemo(() => {

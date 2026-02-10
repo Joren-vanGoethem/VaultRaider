@@ -128,7 +128,6 @@ function CompareVaults() {
     targetSecrets,
     sourceVaultUri,
     targetVaultUri,
-    queryClient,
   });
 
   // Filter secrets based on selected status filter
