@@ -145,9 +145,10 @@ export function SecretCard({
       showSuccess(`Secret "${secretName}" updated successfully`);
       setShowEditModal(false);
       setEditValue("");
-      // Invalidate both the secrets list and the individual secret cache
+      // Invalidate the secrets list, individual secret cache, and version history
       queryClient.invalidateQueries({ queryKey: [fetchSecretsKey, vaultUri] });
       queryClient.invalidateQueries({ queryKey: ["secret", vaultUri, secretName] });
+      queryClient.invalidateQueries({ queryKey: ["secret-versions", vaultUri, secretName] });
     },
     onError: (error) => {
       const errorMsg = error instanceof Error ? error.message : String(error);
