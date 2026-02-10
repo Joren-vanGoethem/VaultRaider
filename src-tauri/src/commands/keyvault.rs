@@ -150,6 +150,10 @@ pub async fn update_secret(
     .await;
 
     if let Ok(ref secret_bundle) = result {
+        // Invalidate the old cached secret value
+        AZURE_CACHE
+            .invalidate_secret_value(&keyvault_uri, &secret_name)
+            .await;
         // Cache the updated secret value
         AZURE_CACHE
             .cache_secret_value(&keyvault_uri, secret_bundle.clone())
