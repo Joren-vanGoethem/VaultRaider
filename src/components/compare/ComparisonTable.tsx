@@ -7,6 +7,7 @@
   PlusIcon,
   RefreshCwIcon,
 } from "lucide-react";
+import { ActionButton } from "../common";
 import { LoadingSpinner } from "../LoadingSpinner";
 import type { ComparedSecret, ComparisonStatus } from "./ComparisonTypes";
 
@@ -175,67 +176,62 @@ export function ComparisonTable({
                   <div className="flex items-center justify-end gap-2">
                     {secret.status === "source-only" && (
                       <>
-                        <button
-                          type="button"
+                        <ActionButton
+                          variant="primary"
                           onClick={() => onSyncSecret(secret.name)}
                           disabled={isSyncing}
-                          className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-primary-700 dark:text-primary-400 bg-primary-100 dark:bg-primary-900/30 hover:bg-primary-200 dark:hover:bg-primary-900/50 rounded transition-colors disabled:opacity-50"
+                          leftIcon={<CopyIcon className="w-3 h-3" />}
                           title="Copy secret from source to target"
                         >
-                          <CopyIcon className="w-3 h-3" />
                           Sync
-                        </button>
-                        <button
-                          type="button"
+                        </ActionButton>
+                        <ActionButton
+                          variant="secondary"
                           onClick={() =>
                             onCreateWithValue(secret.name, secret.sourceValue ?? undefined)
                           }
                           disabled={isSyncing}
-                          className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded transition-colors disabled:opacity-50"
+                          leftIcon={<PlusIcon className="w-3 h-3" />}
                           title="Create secret with custom value"
                         >
-                          <PlusIcon className="w-3 h-3" />
                           Custom
-                        </button>
+                        </ActionButton>
                       </>
                     )}
                     {secret.status === "target-only" && (
                       <>
-                        <button
-                          type="button"
+                        <ActionButton
+                          variant="purple"
                           onClick={() => onSyncSecretToSource(secret.name)}
                           disabled={isSyncing}
-                          className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-purple-700 dark:text-purple-400 bg-purple-100 dark:bg-purple-900/30 hover:bg-purple-200 dark:hover:bg-purple-900/50 rounded transition-colors disabled:opacity-50"
+                          leftIcon={<ArrowLeftIcon className="w-3 h-3" />}
                           title="Copy secret from target to source"
                         >
-                          <ArrowLeftIcon className="w-3 h-3" />
                           Sync
-                        </button>
-                        <button
-                          type="button"
+                        </ActionButton>
+                        <ActionButton
+                          variant="secondary"
                           onClick={() =>
                             onCreateInSource(secret.name, secret.targetValue ?? undefined)
                           }
                           disabled={isSyncing}
-                          className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded transition-colors disabled:opacity-50"
+                          leftIcon={<PlusIcon className="w-3 h-3" />}
                           title="Create secret in source with custom value"
                         >
-                          <PlusIcon className="w-3 h-3" />
                           Custom
-                        </button>
+                        </ActionButton>
                       </>
                     )}
                     {secret.status === "mismatch" && (
-                      <button
-                        type="button"
+                      <ActionButton
+                        variant="warning"
                         onClick={() => onSyncSecret(secret.name)}
                         disabled={isSyncing}
-                        className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-yellow-700 dark:text-yellow-400 bg-yellow-100 dark:bg-yellow-900/30 hover:bg-yellow-200 dark:hover:bg-yellow-900/50 rounded transition-colors disabled:opacity-50"
+                        leftIcon={<RefreshCwIcon className="w-3 h-3" />}
                         title="Overwrite target with source value"
                       >
-                        <RefreshCwIcon className="w-3 h-3" />
                         Update
-                      </button>
+                      </ActionButton>
                     )}
                   </div>
                 </td>

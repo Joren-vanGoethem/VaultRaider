@@ -6,6 +6,7 @@
   PlusIcon,
   UploadIcon,
 } from "lucide-react";
+import { Button } from "./common";
 
 interface KeyvaultHeaderProps {
   name: string;
@@ -46,61 +47,61 @@ export function KeyvaultHeader({
         {/* Action Buttons */}
         <div className="flex items-center gap-2">
           {secretsCount > 0 && !loadAll && (
-            <button
-              type="button"
+            <Button
+              variant="secondary"
+              size="sm"
               onClick={onLoadAll}
-              className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors"
+              leftIcon={<DownloadIcon className="w-4 h-4" />}
               title="Load all secret values"
             >
-              <DownloadIcon className="w-4 h-4" />
               Load All
-            </button>
+            </Button>
           )}
 
           <div className="h-6 w-px bg-gray-300 dark:bg-gray-600 mx-1" />
 
-          <button
-            type="button"
+          <Button
+            variant="secondary"
+            size="sm"
             onClick={onExport}
             disabled={secretsCount === 0}
-            className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            leftIcon={<FileJsonIcon className="w-4 h-4" />}
             title="Export secrets to JSON"
           >
-            <FileJsonIcon className="w-4 h-4" />
             Export
-          </button>
+          </Button>
 
-          <button
-            type="button"
+          <Button
+            variant="secondary"
+            size="sm"
             onClick={onImport}
-            className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors"
+            leftIcon={<UploadIcon className="w-4 h-4" />}
             title="Import secrets from file"
           >
-            <UploadIcon className="w-4 h-4" />
             Import
-          </button>
+          </Button>
 
-          <button
-            type="button"
+          <Button
+            variant="secondary"
+            size="sm"
             onClick={onCompare}
-            className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors"
+            leftIcon={<GitCompareIcon className="w-4 h-4" />}
             title="Compare with another vault"
           >
-            <GitCompareIcon className="w-4 h-4" />
             Compare
-          </button>
+          </Button>
 
           <div className="h-6 w-px bg-gray-300 dark:bg-gray-600 mx-1" />
 
-          <button
-            type="button"
+          <Button
+            variant="success"
+            size="sm"
             onClick={onCreate}
-            className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-lg transition-colors"
+            leftIcon={<PlusIcon className="w-4 h-4" />}
             title="Add new secret"
           >
-            <PlusIcon className="w-4 h-4" />
             Add Secret
-          </button>
+          </Button>
         </div>
       </div>
     </div>

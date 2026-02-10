@@ -1,8 +1,9 @@
-﻿import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { invoke } from "@tauri-apps/api/core";
 import { useEffect, useState } from "react";
 import { Avatar } from "../components/Avatar";
 import { AzureConfigEditor } from "../components/AzureConfigEditor";
+import { Alert, Button } from "../components/common";
 import { CopyIcon } from "../components/icons";
 import { LoadingSpinner } from "../components/LoadingSpinner";
 import { useAuth } from "../contexts/AuthContext";
@@ -116,12 +117,12 @@ function Index() {
         errorMessage.includes("client_secret")
       ) {
         setMessage(
-          "❌ Azure App Registration Configuration Error\n\n" +
+          "? Azure App Registration Configuration Error\n\n" +
             "Your app needs to be configured as a Public Client:\n\n" +
-            "1. Go to Azure Portal → App Registrations\n" +
+            "1. Go to Azure Portal ? App Registrations\n" +
             "2. Select your app (Client ID: d904e24e...)\n" +
-            "3. Click 'Authentication' → Advanced Settings\n" +
-            "4. Set 'Allow public client flows' to YES ✅\n" +
+            "3. Click 'Authentication' ? Advanced Settings\n" +
+            "4. Set 'Allow public client flows' to YES ?\n" +
             "5. Click Save\n\n" +
             "See AZURE_APP_REGISTRATION_SETUP.md for detailed instructions.",
         );
@@ -175,7 +176,7 @@ function Index() {
                 </h3>
                 <ol className="space-y-3 text-sm text-blue-800 dark:text-blue-200">
                   <li className="flex items-start gap-2">
-                    <span className="flex-shrink-0 w-6 h-6 rounded-full bg-blue-500 text-white flex items-center justify-center text-xs font-bold">
+                    <span className="shrink-0 w-6 h-6 rounded-full bg-blue-500 text-white flex items-center justify-center text-xs font-bold">
                       1
                     </span>
                     <span className="pt-0.5">
@@ -191,7 +192,7 @@ function Index() {
                     </span>
                   </li>
                   <li className="flex items-start gap-2">
-                    <span className="flex-shrink-0 w-6 h-6 rounded-full bg-blue-500 text-white flex items-center justify-center text-xs font-bold">
+                    <span className="shrink-0 w-6 h-6 rounded-full bg-blue-500 text-white flex items-center justify-center text-xs font-bold">
                       2
                     </span>
                     <div className="pt-0.5 flex-1">
@@ -212,7 +213,7 @@ function Index() {
                     </div>
                   </li>
                   <li className="flex items-start gap-2">
-                    <span className="flex-shrink-0 w-6 h-6 rounded-full bg-blue-500 text-white flex items-center justify-center text-xs font-bold">
+                    <span className="shrink-0 w-6 h-6 rounded-full bg-blue-500 text-white flex items-center justify-center text-xs font-bold">
                       3
                     </span>
                     <span className="pt-0.5">Sign in with your Microsoft account</span>
@@ -224,18 +225,18 @@ function Index() {
                     <span className="text-sm">Waiting for authentication...</span>
                   </div>
                 )}
-                <button
-                  type="button"
+                <Button
+                  variant="secondary"
+                  className="mt-4 w-full"
                   onClick={() => {
                     setDeviceCodeInfo(null);
                     setIsLoading(false);
                     setMessage("");
                     setSelectedMethod(null);
                   }}
-                  className="mt-4 w-full px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
                 >
                   Cancel
-                </button>
+                </Button>
               </div>
             )}
 
@@ -295,37 +296,33 @@ function Index() {
                     Sign in using your browser with a device code.
                   </p>
                   <p className="text-xs text-amber-600 dark:text-amber-400 mb-3">
-                    ⚠️ May require admin consent in some organizations
+                    ?? May require admin consent in some organizations
                   </p>
-                  <button
-                    type="button"
+                  <Button
+                    variant="secondary"
+                    className="w-full"
                     onClick={handleBrowserLogin}
                     disabled={isLoading}
-                    className="w-full px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    isLoading={isLoading && selectedMethod === "browser"}
+                    loadingText="Starting..."
                   >
-                    {isLoading && selectedMethod === "browser" ? (
-                      <span className="flex items-center justify-center gap-2">
-                        <LoadingSpinner size="md" />
-                        Starting...
-                      </span>
-                    ) : (
-                      "Sign in with Browser"
-                    )}
-                  </button>
+                    Sign in with Browser
+                  </Button>
                 </div>
               </div>
             )}
 
             {message && !deviceCodeInfo && (
-              <div
-                className={`mt-4 p-4 rounded-lg border ${
+              <Alert
+                variant={
                   message.includes("Success") || message.includes("authenticated")
-                    ? "bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800 text-green-700 dark:text-green-300"
-                    : "bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800 text-red-700 dark:text-red-300"
-                }`}
+                    ? "success"
+                    : "error"
+                }
+                className="mt-4"
               >
                 <p className="text-sm whitespace-pre-wrap">{message}</p>
-              </div>
+              </Alert>
             )}
 
             {/* Azure Configuration Editor */}
@@ -365,9 +362,9 @@ function Index() {
               </button>
             </div>
             {message && (
-              <div className="mt-4 p-4 rounded-lg bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800">
-                <p className="text-sm text-green-700 dark:text-green-300">{message}</p>
-              </div>
+              <Alert variant="success" className="mt-4">
+                <p className="text-sm">{message}</p>
+              </Alert>
             )}
           </div>
         )}
