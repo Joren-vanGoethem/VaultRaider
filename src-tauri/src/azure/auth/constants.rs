@@ -14,7 +14,7 @@ pub const VAULT_SCOPE: &str = "https://vault.azure.net/.default";
 pub const ARM_SCOPE: &str = "https://management.azure.com/.default";
 
 /// Auth scopes for interactive login - includes Azure Management for direct access
-pub const AUTH_SCOPES: &str = "https://management.azure.com/.default offline_access openid profile";
+pub const AUTH_SCOPES: &str = "https://management.azure.com/.default offline_access openid profile email";
 
 // Polling configuration
 pub const MAX_POLL_ATTEMPTS: u32 = 60;
