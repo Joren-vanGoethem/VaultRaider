@@ -286,24 +286,17 @@ function Index() {
                   </div>
                 </div>
 
-                {/* Browser Authentication - Limitations */}
+                {/* Browser Authentication */}
                 <div className="p-4 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/50">
                   <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-1">
                     Browser Authentication
                   </h3>
                   <p className="text-xs text-gray-600 dark:text-gray-400 mb-2">
-                    Sign in using your browser with a device code.{" "}
-                    <strong>Work/school accounts only.</strong>
+                    Sign in using your browser with a device code.
                   </p>
-                  <div className="text-xs text-amber-600 dark:text-amber-400 mb-3 space-y-1">
-                    <p>
-                      ⚠️ <strong>Personal accounts (outlook.com, hotmail.com):</strong>
-                    </p>
-                    <p className="ml-4">
-                      Cannot access Azure Management API directly. Please use Azure CLI instead or
-                      get added as guest to an Azure AD tenant.
-                    </p>
-                  </div>
+                  <p className="text-xs text-amber-600 dark:text-amber-400 mb-3">
+                    ⚠️ May require admin consent in some organizations
+                  </p>
                   <button
                     type="button"
                     onClick={handleBrowserLogin}
@@ -316,7 +309,7 @@ function Index() {
                         Starting...
                       </span>
                     ) : (
-                      "Sign in with Browser (Work/School Only)"
+                      "Sign in with Browser"
                     )}
                   </button>
                 </div>

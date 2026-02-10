@@ -24,27 +24,20 @@ use crate::config::{
 };
 use crate::user_config::{get_client_id, get_tenant_id};
 
-/// Cached token for a specific scope
-#[derive(Debug, Clone)]
-struct CachedToken {
-    access_token: AccessToken,
-    scope: String,
-}
-
 /// Credential implementation for interactive device code flow
-/// Supports refresh tokens to get access tokens for different Azure resources
+/// Supports requesting tokens for different scopes using refresh tokens
 #[derive(Debug)]
 struct InteractiveDeviceCodeCredential {
     client_id: String,
     tenant_id: String,
-    /// Cached access tokens per scope
+    /// Cached access tokens keyed by scope
     cached_tokens: Arc<tokio::sync::RwLock<HashMap<String, AccessToken>>>,
-    /// Refresh token for getting new access tokens
+    /// Refresh token for obtaining new access tokens for different resources
     refresh_token: Arc<tokio::sync::RwLock<Option<String>>>,
 }
 
 impl InteractiveDeviceCodeCredential {
-    /// Use refresh token to get an access token for a specific scope
+    /// Get a token using the refresh token for a specific scope
     async fn get_token_with_refresh(&self, scope: &str) -> azure_core::Result<AccessToken> {
         let refresh_token = {
             let rt_lock = self.refresh_token.read().await;
@@ -58,17 +51,6 @@ impl InteractiveDeviceCodeCredential {
 
         info!("Using refresh token to get access token for scope: {}", scope);
 
-        // Convert .default scopes to user_impersonation format for v2 endpoint
-        // v2 OAuth requires a path component in the scope (e.g., /user_impersonation)
-        let resource_scope = if scope.ends_with("/.default") {
-            let base = scope.trim_end_matches("/.default");
-            format!("{}/user_impersonation", base)
-        } else {
-            scope.to_string()
-        };
-
-        info!("Converted scope for refresh token: {}", resource_scope);
-
         let client = reqwest::Client::new();
         let url = format!("{}/{}/oauth2/v2.0/token", TOKEN_ENDPOINT, self.tenant_id);
 
@@ -78,7 +60,7 @@ impl InteractiveDeviceCodeCredential {
                 ("grant_type", "refresh_token"),
                 ("client_id", &self.client_id),
                 ("refresh_token", &refresh_token),
-                ("scope", resource_scope.as_str()),
+                ("scope", scope),
             ])
             .send()
             .await
@@ -93,13 +75,14 @@ impl InteractiveDeviceCodeCredential {
             if let Some(new_refresh_token) = token_res.refresh_token {
                 let mut rt_lock = self.refresh_token.write().await;
                 *rt_lock = Some(new_refresh_token);
+                info!("Refresh token updated");
             }
 
             let expires_in = token_res.expires_in.unwrap_or(3600);
             let expires_on = OffsetDateTime::now_utc() + std::time::Duration::from_secs(expires_in);
             let access_token = AccessToken::new(Secret::new(token_res.access_token), expires_on);
 
-            // Cache the token for this scope (using original scope as key)
+            // Cache the token for this scope
             {
                 let mut cache = self.cached_tokens.write().await;
                 cache.insert(scope.to_string(), access_token.clone());
@@ -110,22 +93,6 @@ impl InteractiveDeviceCodeCredential {
         } else {
             let error_text = response.text().await.unwrap_or_default();
             log_error!("Failed to refresh token for scope {}: {}", scope, error_text);
-
-            // Check if this is the common "personal account can't access enterprise resources" error
-            if error_text.contains("AADSTS70011") &&
-               (error_text.contains("management.azure.com") || error_text.contains("does not exist")) {
-                return Err(Error::with_message(
-                    azure_core::error::ErrorKind::Credential,
-                    format!(
-                        "Personal Microsoft accounts cannot access Azure Resource Manager API directly.\n\n\
-                        To access Azure resources with your personal account, you have two options:\n\
-                        1. Use Azure CLI authentication instead (run 'az login' then restart VaultRaider)\n\
-                        2. Ask an Azure AD administrator to add your account as a guest user to their tenant\n\n\
-                        Error details: {}", error_text
-                    ),
-                ));
-            }
-
             Err(Error::with_message(
                 azure_core::error::ErrorKind::Credential,
                 format!("Failed to get token for scope {}: {}", scope, error_text),
@@ -158,16 +125,16 @@ impl TokenCredential for InteractiveDeviceCodeCredential {
             }
         }
 
-        // Check if we have a refresh token - if so, use it
+        // Check if we have a refresh token - if so, use it to get a new token
         {
             let rt_lock = self.refresh_token.read().await;
             if rt_lock.is_some() {
-                drop(rt_lock); // Release the lock before calling async function
+                drop(rt_lock);
                 return self.get_token_with_refresh(&scope).await;
             }
         }
 
-        // No refresh token yet - need to do initial device code flow
+        // No refresh token yet - need to poll for device code completion
         let state = {
             let state_lock = DEVICE_CODE_STATE.lock().await;
             state_lock.clone().ok_or_else(|| {
@@ -190,8 +157,7 @@ impl TokenCredential for InteractiveDeviceCodeCredential {
                 ));
             }
 
-            // Note: For device code flow, we don't pass 'scope' in the token request.
-            // The scopes are determined by what was requested during the device code request.
+            // For device code flow, scopes are determined by the initial device code request
             let response = client
                 .post(&url)
                 .form(&[
@@ -210,9 +176,9 @@ impl TokenCredential for InteractiveDeviceCodeCredential {
                     Error::with_message(azure_core::error::ErrorKind::DataConversion, e.to_string())
                 })?;
 
-                // Store refresh token for later use
+                // Store refresh token for later use (for getting tokens for other resources)
                 if let Some(ref refresh_token) = token_res.refresh_token {
-                    info!("Storing refresh token for future scope requests");
+                    info!("Storing refresh token for multi-resource access");
                     let mut rt_lock = self.refresh_token.write().await;
                     *rt_lock = Some(refresh_token.clone());
                 }
@@ -223,10 +189,11 @@ impl TokenCredential for InteractiveDeviceCodeCredential {
                 let access_token =
                     AccessToken::new(Secret::new(token_res.access_token), expires_on);
 
-                // Cache token (for identity scopes)
+                // Cache the token for the AUTH_SCOPES (management.azure.com)
                 {
                     let mut cache = self.cached_tokens.write().await;
-                    cache.insert(AUTH_SCOPES.to_string(), access_token.clone());
+                    // Cache under the management scope since that's what we requested
+                    cache.insert("https://management.azure.com/.default".to_string(), access_token.clone());
                 }
 
                 return Ok(access_token);

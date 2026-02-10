@@ -31,9 +31,6 @@ pub async fn get_token_for_scope(scope: &str) -> Result<String, String> {
 }
 
 /// Decode JWT token without verification to extract user info.
-///
-/// Note: Personal Microsoft accounts (MSA) may return opaque tokens instead of JWTs.
-/// In that case, we won't be able to extract user info from the token itself.
 pub fn extract_user_info_from_token(
     token: &str,
 ) -> Result<(Option<String>, Option<String>), String> {
@@ -41,9 +38,8 @@ pub fn extract_user_info_from_token(
     let parts: Vec<&str> = token.split('.').collect();
 
     if parts.len() != 3 {
-        // This is likely an opaque token (common with personal Microsoft accounts)
-        // We can't extract user info from it, but that's okay
-        info!("Token is not a JWT (opaque access token) - user info will be fetched separately");
+        // Not a standard JWT format
+        info!("Token is not a JWT format - user info will be fetched separately");
         return Ok((None, None));
     }
 
@@ -109,26 +105,15 @@ pub async fn store_auth_result(
             auth_method,
             cred.is_some()
         );
-
-        // Verify it's actually there
-        if cred.is_some() {
-            info!("AUTH_CREDENTIAL verification: Some");
-        } else {
-            error!("AUTH_CREDENTIAL verification: None! This should not happen.");
-        }
     }
 
-    // Store user info (will use fallback for personal accounts if no info available)
+    // Store user info
     store_user_info(user_email.clone(), user_name.clone()).await;
-
-    // For personal accounts without email in token, provide a friendly message
-    let display_email = user_email.clone().or_else(|| Some("Microsoft Account".to_string()));
-    let display_name = user_name.clone().or_else(|| Some("Personal Account".to_string()));
 
     Ok(AuthResult {
         success: true,
         message: format!("Successfully authenticated with {}!", auth_method),
-        user_email: display_email,
-        user_name: display_name,
+        user_email,
+        user_name,
     })
 }
