@@ -177,7 +177,7 @@ function DeletedSecrets() {
             <div className="flex items-center gap-3">
               <Link
                 to="/keyvault"
-                search={{ vaultUri, name, subscriptionId }}
+                search={{ vaultUri, name, subscriptionId, enableSoftDelete }}
                 className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-gray-600 dark:text-gray-400"
                 title="Back to active secrets"
               >
@@ -207,7 +207,7 @@ function DeletedSecrets() {
             <div className="flex items-center gap-2">
               <Link
                 to="/keyvault"
-                search={{ vaultUri, name, subscriptionId }}
+                search={{ vaultUri, name, subscriptionId, enableSoftDelete }}
               >
                 <Button
                   variant="secondary"
