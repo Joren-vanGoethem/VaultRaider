@@ -1,5 +1,6 @@
 import { useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, redirect } from "@tanstack/react-router";
+import { invoke } from "@tauri-apps/api/core";
 import { Suspense, useCallback, useMemo, useState } from "react";
 import { BulkDeleteModal } from "../components/BulkDeleteModal";
 import { CompareVaultsModal } from "../components/CompareVaultsModal";
@@ -35,6 +36,13 @@ export const Route = createFileRoute("/keyvault")({
       name: search.name as string,
       subscriptionId: search.subscriptionId as string | undefined,
     };
+  },
+  beforeLoad: async () => {
+    // Check if user is authenticated before loading this route
+    const isAuthenticated = await invoke<boolean>("check_auth");
+    if (!isAuthenticated) {
+      throw redirect({ to: "/" });
+    }
   },
 });
 

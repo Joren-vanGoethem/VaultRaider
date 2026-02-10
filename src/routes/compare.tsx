@@ -5,7 +5,8 @@
   useQueryClient,
   useSuspenseQuery,
 } from "@tanstack/react-query";
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
+import { invoke } from "@tauri-apps/api/core";
 import {
   AlertTriangleIcon,
   ArrowLeftIcon,
@@ -17,6 +18,7 @@ import {
   RefreshCwIcon,
 } from "lucide-react";
 import { Suspense, useEffect, useMemo, useState } from "react";
+import { CustomSelector } from "../components/CustomSelector.tsx";
 import { LoadingSpinner } from "../components/LoadingSpinner";
 import { useToast } from "../contexts/ToastContext";
 import {
@@ -30,7 +32,6 @@ import {
   fetchSubscriptionsKey,
 } from "../services/azureService";
 import type { Secret, SecretBundle } from "../types/secrets";
-import {CustomSelector} from "../components/CustomSelector.tsx";
 
 type CompareSearch = {
   sourceVaultUri: string;
@@ -54,6 +55,13 @@ export const Route = createFileRoute("/compare")({
       sourceSubscriptionId: search.sourceSubscriptionId as string | undefined,
       targetSubscriptionId: search.targetSubscriptionId as string | undefined,
     };
+  },
+  beforeLoad: async () => {
+    // Check if user is authenticated before loading this route
+    const isAuthenticated = await invoke<boolean>("check_auth");
+    if (!isAuthenticated) {
+      throw redirect({ to: "/" });
+    }
   },
 });
 
@@ -606,41 +614,41 @@ function CompareVaults() {
         <div className="flex-none px-6 py-4 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900">
           <div className="flex items-center gap-4">
             <CustomSelector
-                label="Target Subscription"
-                value={selectedTargetSubscription}
-                onChange={(value) => {
-                  setSelectedTargetSubscription(value);
-                  setTargetVaultUri("");
-                  setTargetName("");
-                }}
-                options={[
-                  { value: '', label: 'Select subscription...' },
-                  ...subscriptions.map(sub => ({
-                    value: sub.subscriptionId,
-                    label: sub.displayName
-                  }))
-                ]}
-                placeholder="Select subscription..."
-                className="flex-1"
+              label="Target Subscription"
+              value={selectedTargetSubscription}
+              onChange={(value) => {
+                setSelectedTargetSubscription(value);
+                setTargetVaultUri("");
+                setTargetName("");
+              }}
+              options={[
+                { value: "", label: "Select subscription..." },
+                ...subscriptions.map((sub) => ({
+                  value: sub.subscriptionId,
+                  label: sub.displayName,
+                })),
+              ]}
+              placeholder="Select subscription..."
+              className="flex-1"
             />
 
             <CustomSelector
-                label="Target Key Vault"
-                value={targetVaultUri}
-                onChange={handleTargetVaultChange}
-                options={[
-                  { value: '', label: loadingTargetKeyvaults ? 'Loading...' : 'Select vault...' },
-                  ...targetKeyvaults
-                      .filter((kv) => kv.properties.vaultUri !== sourceVaultUri)
-                      .map(kv => ({
-                        value: kv.properties.vaultUri,
-                        label: kv.name
-                      }))
-                ]}
-                placeholder="Select vault..."
-                disabled={!selectedTargetSubscription || loadingTargetKeyvaults}
-                loading={loadingTargetKeyvaults}
-                className="flex-1"
+              label="Target Key Vault"
+              value={targetVaultUri}
+              onChange={handleTargetVaultChange}
+              options={[
+                { value: "", label: loadingTargetKeyvaults ? "Loading..." : "Select vault..." },
+                ...targetKeyvaults
+                  .filter((kv) => kv.properties.vaultUri !== sourceVaultUri)
+                  .map((kv) => ({
+                    value: kv.properties.vaultUri,
+                    label: kv.name,
+                  })),
+              ]}
+              placeholder="Select vault..."
+              disabled={!selectedTargetSubscription || loadingTargetKeyvaults}
+              loading={loadingTargetKeyvaults}
+              className="flex-1"
             />
           </div>
         </div>

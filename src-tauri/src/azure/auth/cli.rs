@@ -1,4 +1,4 @@
-use crate::azure::auth::constants::{TENANT_ID, VAULT_SCOPE};
+use crate::azure::auth::constants::VAULT_SCOPE;
 use crate::azure::auth::token::store_auth_result;
 use crate::azure::auth::types::AuthResult;
 use azure_core::credentials::TokenCredential;
@@ -7,9 +7,9 @@ use azure_identity::{AzureCliCredential, AzureCliCredentialOptions};
 /// Initiates Azure authentication using Azure CLI
 /// Note: This requires the user to be logged in via Azure CLI (az login)
 pub async fn try_azure_cli_login() -> Result<AuthResult, String> {
-    // Create Azure CLI credential with tenant ID
-    let mut options = AzureCliCredentialOptions::default();
-    options.tenant_id = Some(TENANT_ID.to_string());
+    // Use default options - let Azure CLI use its own context
+    // Don't override tenant_id as the CLI already knows which tenant the user logged into
+    let options = AzureCliCredentialOptions::default();
 
     let credential = AzureCliCredential::new(Some(options))
         .map_err(|e| format!("Failed to create Azure CLI credential: {}", e))?;

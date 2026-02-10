@@ -30,25 +30,43 @@ pub async fn get_token_for_scope(scope: &str) -> Result<String, String> {
         .map_err(|e| e.to_string())
 }
 
-/// Decode JWT token without verification to extract user info
+/// Decode JWT token without verification to extract user info.
 pub fn extract_user_info_from_token(
     token: &str,
 ) -> Result<(Option<String>, Option<String>), String> {
-    // Split the JWT token (format: header.payload.signature)
+    // Check if this looks like a JWT (has 3 dot-separated parts)
     let parts: Vec<&str> = token.split('.').collect();
+
     if parts.len() != 3 {
-        return Err("Invalid token format".to_string());
+        // Not a standard JWT format
+        info!("Token is not a JWT format - user info will be fetched separately");
+        return Ok((None, None));
     }
 
     // Decode the payload (second part)
     let payload = parts[1];
 
-    let decoded = BASE64URL
-        .decode(payload.as_bytes())
-        .map_err(|e| format!("Failed to decode token: {}", e))?;
+    let decoded = match BASE64URL.decode(payload.as_bytes()) {
+        Ok(d) => d,
+        Err(e) => {
+            // Try standard base64 as fallback
+            match base64::engine::general_purpose::STANDARD.decode(payload.as_bytes()) {
+                Ok(d) => d,
+                Err(_) => {
+                    warn!("Failed to decode token payload: {}", e);
+                    return Ok((None, None));
+                }
+            }
+        }
+    };
 
-    let claims: TokenClaims = serde_json::from_slice(&decoded)
-        .map_err(|e| format!("Failed to parse token claims: {}", e))?;
+    let claims: TokenClaims = match serde_json::from_slice(&decoded) {
+        Ok(c) => c,
+        Err(e) => {
+            warn!("Failed to parse token claims: {}", e);
+            return Ok((None, None));
+        }
+    };
 
     // Try to get email from various possible fields (ordered by preference)
     let email = claims
@@ -87,13 +105,6 @@ pub async fn store_auth_result(
             auth_method,
             cred.is_some()
         );
-
-        // Verify it's actually there
-        if cred.is_some() {
-            info!("AUTH_CREDENTIAL verification: Some");
-        } else {
-            error!("AUTH_CREDENTIAL verification: None! This should not happen.");
-        }
     }
 
     // Store user info

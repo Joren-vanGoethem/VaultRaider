@@ -19,16 +19,86 @@ use crate::azure::auth::types::{
   AuthResult, DeviceCodeInfo, DeviceCodeResponse, DeviceCodeState, TokenResponse,
 };
 use crate::config::{
-  AUTH_SCOPES, CLIENT_ID, DEVICE_CODE_ENDPOINT, MAX_POLL_ATTEMPTS, POLL_SLOWDOWN_SECONDS,
-  TENANT_ID, TOKEN_ENDPOINT,
+  AUTH_SCOPES, DEVICE_CODE_ENDPOINT, MAX_POLL_ATTEMPTS, POLL_SLOWDOWN_SECONDS,
+  TOKEN_ENDPOINT,
 };
+use crate::user_config::{get_client_id, get_tenant_id};
 
 /// Credential implementation for interactive device code flow
+/// Supports requesting tokens for different scopes using refresh tokens
 #[derive(Debug)]
 struct InteractiveDeviceCodeCredential {
     client_id: String,
     tenant_id: String,
-    access_token: Arc<tokio::sync::RwLock<Option<AccessToken>>>,
+    /// Cached access tokens keyed by scope
+    cached_tokens: Arc<tokio::sync::RwLock<HashMap<String, AccessToken>>>,
+    /// Refresh token for obtaining new access tokens for different resources
+    refresh_token: Arc<tokio::sync::RwLock<Option<String>>>,
+}
+
+impl InteractiveDeviceCodeCredential {
+    /// Get a token using the refresh token for a specific scope
+    async fn get_token_with_refresh(&self, scope: &str) -> azure_core::Result<AccessToken> {
+        let refresh_token = {
+            let rt_lock = self.refresh_token.read().await;
+            rt_lock.clone().ok_or_else(|| {
+                Error::with_message(
+                    azure_core::error::ErrorKind::Credential,
+                    "No refresh token available - please re-authenticate",
+                )
+            })?
+        };
+
+        info!("Using refresh token to get access token for scope: {}", scope);
+
+        let client = reqwest::Client::new();
+        let url = format!("{}/{}/oauth2/v2.0/token", TOKEN_ENDPOINT, self.tenant_id);
+
+        let response = client
+            .post(&url)
+            .form(&[
+                ("grant_type", "refresh_token"),
+                ("client_id", &self.client_id),
+                ("refresh_token", &refresh_token),
+                ("scope", scope),
+            ])
+            .send()
+            .await
+            .map_err(|e| Error::with_message(azure_core::error::ErrorKind::Io, e.to_string()))?;
+
+        if response.status().is_success() {
+            let token_res: TokenResponse = response.json().await.map_err(|e| {
+                Error::with_message(azure_core::error::ErrorKind::DataConversion, e.to_string())
+            })?;
+
+            // Update refresh token if a new one was provided
+            if let Some(new_refresh_token) = token_res.refresh_token {
+                let mut rt_lock = self.refresh_token.write().await;
+                *rt_lock = Some(new_refresh_token);
+                info!("Refresh token updated");
+            }
+
+            let expires_in = token_res.expires_in.unwrap_or(3600);
+            let expires_on = OffsetDateTime::now_utc() + std::time::Duration::from_secs(expires_in);
+            let access_token = AccessToken::new(Secret::new(token_res.access_token), expires_on);
+
+            // Cache the token for this scope
+            {
+                let mut cache = self.cached_tokens.write().await;
+                cache.insert(scope.to_string(), access_token.clone());
+            }
+
+            info!("Successfully obtained access token for scope: {}", scope);
+            Ok(access_token)
+        } else {
+            let error_text = response.text().await.unwrap_or_default();
+            log_error!("Failed to refresh token for scope {}: {}", scope, error_text);
+            Err(Error::with_message(
+                azure_core::error::ErrorKind::Credential,
+                format!("Failed to get token for scope {}: {}", scope, error_text),
+            ))
+        }
+    }
 }
 
 #[async_trait]
@@ -38,28 +108,39 @@ impl TokenCredential for InteractiveDeviceCodeCredential {
         scopes: &[&str],
         _options: Option<TokenRequestOptions<'_>>,
     ) -> azure_core::Result<AccessToken> {
+        let scope = scopes.join(" ");
         info!(
-            "Getting token from InteractiveDeviceCodeCredential for scopes: {:?}",
-            scopes
+            "Getting token from InteractiveDeviceCodeCredential for scope: {}",
+            scope
         );
 
-        // Check if we already have a valid token
+        // Check if we have a valid cached token for this scope
         {
-            let token_lock = self.access_token.read().await;
-            if let Some(token) = token_lock.as_ref() {
+            let cache = self.cached_tokens.read().await;
+            if let Some(token) = cache.get(&scope) {
                 if token.expires_on > OffsetDateTime::now_utc() {
+                    info!("Using cached token for scope: {}", scope);
                     return Ok(token.clone());
                 }
             }
         }
 
-        // If not, we try to poll for it
+        // Check if we have a refresh token - if so, use it to get a new token
+        {
+            let rt_lock = self.refresh_token.read().await;
+            if rt_lock.is_some() {
+                drop(rt_lock);
+                return self.get_token_with_refresh(&scope).await;
+            }
+        }
+
+        // No refresh token yet - need to poll for device code completion
         let state = {
             let state_lock = DEVICE_CODE_STATE.lock().await;
             state_lock.clone().ok_or_else(|| {
                 Error::with_message(
                     azure_core::error::ErrorKind::Other,
-                    "No device code state found",
+                    "No device code state found - please start authentication first",
                 )
             })?
         };
@@ -76,13 +157,13 @@ impl TokenCredential for InteractiveDeviceCodeCredential {
                 ));
             }
 
+            // For device code flow, scopes are determined by the initial device code request
             let response = client
                 .post(&url)
                 .form(&[
                     ("grant_type", "urn:ietf:params:oauth:grant-type:device_code"),
                     ("client_id", &self.client_id),
                     ("device_code", &state.device_code),
-                    ("scope", &scopes.join(" ")),
                 ])
                 .send()
                 .await
@@ -95,14 +176,25 @@ impl TokenCredential for InteractiveDeviceCodeCredential {
                     Error::with_message(azure_core::error::ErrorKind::DataConversion, e.to_string())
                 })?;
 
+                // Store refresh token for later use (for getting tokens for other resources)
+                if let Some(ref refresh_token) = token_res.refresh_token {
+                    info!("Storing refresh token for multi-resource access");
+                    let mut rt_lock = self.refresh_token.write().await;
+                    *rt_lock = Some(refresh_token.clone());
+                }
+
                 let expires_in = token_res.expires_in.unwrap_or(3600);
                 let expires_on =
                     OffsetDateTime::now_utc() + std::time::Duration::from_secs(expires_in);
                 let access_token =
                     AccessToken::new(Secret::new(token_res.access_token), expires_on);
 
-                let mut token_lock = self.access_token.write().await;
-                *token_lock = Some(access_token.clone());
+                // Cache the token for the AUTH_SCOPES (management.azure.com)
+                {
+                    let mut cache = self.cached_tokens.write().await;
+                    // Cache under the management scope since that's what we requested
+                    cache.insert("https://management.azure.com/.default".to_string(), access_token.clone());
+                }
 
                 return Ok(access_token);
             } else {
@@ -139,13 +231,17 @@ impl TokenCredential for InteractiveDeviceCodeCredential {
 pub async fn start_interactive_browser_login() -> Result<DeviceCodeInfo, String> {
     info!("Starting interactive browser login flow...");
 
+    // Get dynamic configuration
+    let client_id = get_client_id().await;
+    let tenant_id = get_tenant_id().await;
+
     let device_code_url = format!(
         "{}/{}/oauth2/v2.0/devicecode",
-        DEVICE_CODE_ENDPOINT, TENANT_ID
+        DEVICE_CODE_ENDPOINT, tenant_id
     );
 
     let mut params = HashMap::new();
-    params.insert("client_id", CLIENT_ID);
+    params.insert("client_id", client_id.as_str());
     params.insert("scope", AUTH_SCOPES);
 
     let client = reqwest::Client::new();
@@ -177,9 +273,10 @@ pub async fn start_interactive_browser_login() -> Result<DeviceCodeInfo, String>
 
     // Initialize the credential and store it in AUTH_CREDENTIAL
     let credential = InteractiveDeviceCodeCredential {
-        client_id: CLIENT_ID.to_string(),
-        tenant_id: TENANT_ID.to_string(),
-        access_token: Arc::new(tokio::sync::RwLock::new(None)),
+        client_id,
+        tenant_id,
+        cached_tokens: Arc::new(tokio::sync::RwLock::new(HashMap::new())),
+        refresh_token: Arc::new(tokio::sync::RwLock::new(None)),
     };
 
     {

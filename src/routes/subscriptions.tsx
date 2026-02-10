@@ -1,5 +1,6 @@
 ﻿import { useMutation, useQueries, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, redirect } from "@tanstack/react-router";
+import { invoke } from "@tauri-apps/api/core";
 import { PlusIcon } from "lucide-react";
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import type { Subscription } from "~/types/subscriptions.ts";
@@ -7,6 +8,7 @@ import { CreateKeyvaultModal } from "../components/CreateKeyvaultModal";
 import { KeyvaultsList } from "../components/KeyvaultsList.tsx";
 import { LoadingSpinner } from "../components/LoadingSpinner";
 import { PageHeader } from "../components/PageHeader";
+import { SubscriptionSelector } from "../components/SubscriptionSelector.tsx";
 import { useToast } from "../contexts/ToastContext";
 import {
   createKeyvault,
@@ -15,7 +17,6 @@ import {
   fetchSubscriptions,
   fetchSubscriptionsKey,
 } from "../services/azureService";
-import { SubscriptionSelector } from "../components/SubscriptionSelector.tsx";
 
 const subscriptionQueryOptions = { queryKey: [fetchSubscriptionsKey], queryFn: fetchSubscriptions };
 
@@ -31,6 +32,13 @@ export const Route = createFileRoute("/subscriptions")({
     return {
       subscriptionId: search.subscriptionId as string | undefined,
     };
+  },
+  beforeLoad: async () => {
+    // Check if user is authenticated before loading this route
+    const isAuthenticated = await invoke<boolean>("check_auth");
+    if (!isAuthenticated) {
+      throw redirect({ to: "/" });
+    }
   },
   loader: async ({ context: { queryClient } }) => {
     // Fetch subscriptions and prefetch key vaults in the background

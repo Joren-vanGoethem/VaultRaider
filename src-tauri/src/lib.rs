@@ -6,15 +6,17 @@ mod azure;
 mod cache;
 mod commands;
 mod config;
+mod user_config;
 
 use commands::auth::{
-  azure_login, azure_logout, check_auth, complete_browser_login, complete_device_code,
-  get_current_user, start_browser_login, start_device_code,
+  azure_login, azure_logout, check_auth, complete_browser_login,
+  get_current_user, start_browser_login,
 };
 use commands::cache::{
   clear_cache, get_cache_stats, invalidate_keyvaults_cache, invalidate_resource_groups_cache,
   invalidate_subscriptions_cache, invalidate_vault_cache,
 };
+use commands::config::{get_azure_config, save_azure_config};
 use commands::keyvault::{
   check_keyvault_access, create_keyvault, create_secret, delete_secret, export_secrets,
   fetch_keyvaults, get_secret, get_secrets, parse_import_file, update_secret,
@@ -24,7 +26,8 @@ use commands::subscription::fetch_subscriptions;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    // Initialize structured logging with tracing
+    // Initialize user configuration
+    user_config::init_config();
 
     tauri::Builder::default()
         .plugin(tauri_plugin_updater::Builder::new().build())
@@ -35,13 +38,14 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             // Auth commands
             azure_login,
-            start_device_code,
-            complete_device_code,
             start_browser_login,
             complete_browser_login,
             check_auth,
             get_current_user,
             azure_logout,
+            // Config commands
+            get_azure_config,
+            save_azure_config,
             // Subscription commands
             fetch_subscriptions,
             // Key Vault commands

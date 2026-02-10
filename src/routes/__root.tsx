@@ -1,6 +1,6 @@
 ﻿import type { QueryClient } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
-import { createRootRouteWithContext, Link, Outlet } from "@tanstack/react-router";
+import { createRootRouteWithContext, Link, Outlet, useNavigate } from "@tanstack/react-router";
 import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
 import { ChevronLeft, ChevronRight, Shield } from "lucide-react";
 import { useState } from "react";
@@ -12,11 +12,14 @@ import { ToastProvider } from "../contexts/ToastContext";
 
 function Sidebar() {
   const { isAuthenticated, userInfo, logout } = useAuth();
+  const navigate = useNavigate();
   const [isCollapsed, setIsCollapsed] = useState(true);
 
   const handleLogout = async () => {
     try {
       await logout();
+      // Redirect to login page after logout
+      navigate({ to: "/" });
     } catch (error) {
       console.error("Logout failed:", error);
     }

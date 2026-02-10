@@ -1,6 +1,5 @@
 //! Authentication-related Tauri commands
 
-use crate::azure::auth::device_code::{complete_device_code_login, start_device_code_login};
 use crate::azure::auth::interactive::{
   complete_interactive_browser_login, start_interactive_browser_login,
 };
@@ -19,18 +18,6 @@ pub struct UserInfo {
 #[tauri::command]
 pub async fn azure_login() -> Result<AuthResult, String> {
     login().await
-}
-
-/// Explicitly start device code flow
-#[tauri::command]
-pub async fn start_device_code() -> Result<DeviceCodeInfo, String> {
-    start_device_code_login().await
-}
-
-/// Complete device code authentication
-#[tauri::command]
-pub async fn complete_device_code() -> Result<AuthResult, String> {
-    complete_device_code_login().await
 }
 
 /// Start interactive browser authentication (RECOMMENDED - no secret needed!)
