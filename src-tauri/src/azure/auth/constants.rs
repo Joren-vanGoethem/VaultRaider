@@ -8,10 +8,15 @@
 // Azure endpoints
 pub const DEVICE_CODE_ENDPOINT: &str = "https://login.microsoftonline.com";
 pub const TOKEN_ENDPOINT: &str = "https://login.microsoftonline.com";
+
+// Token scopes for API calls
 pub const VAULT_SCOPE: &str = "https://vault.azure.net/.default";
 pub const ARM_SCOPE: &str = "https://management.azure.com/.default";
-pub const AUTH_SCOPES: &str =
-    "https://management.azure.com/.default offline_access openid profile email";
+
+/// Auth scopes for interactive login - only basic identity scopes
+/// This allows personal Microsoft accounts to sign in.
+/// Resource-specific tokens are obtained via refresh token after initial auth.
+pub const AUTH_SCOPES: &str = "offline_access openid profile email";
 
 // Polling configuration
 pub const MAX_POLL_ATTEMPTS: u32 = 60;

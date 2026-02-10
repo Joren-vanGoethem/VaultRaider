@@ -9,8 +9,8 @@ mod config;
 mod user_config;
 
 use commands::auth::{
-  azure_login, azure_logout, check_auth, complete_browser_login, complete_device_code,
-  get_current_user, start_browser_login, start_device_code,
+  azure_login, azure_logout, check_auth, complete_browser_login,
+  get_current_user, start_browser_login,
 };
 use commands::cache::{
   clear_cache, get_cache_stats, invalidate_keyvaults_cache, invalidate_resource_groups_cache,
@@ -38,8 +38,6 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             // Auth commands
             azure_login,
-            start_device_code,
-            complete_device_code,
             start_browser_login,
             complete_browser_login,
             check_auth,

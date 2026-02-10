@@ -16,9 +16,12 @@ pub const MANAGEMENT_SCOPE: &str = "https://management.azure.com/.default";
 /// Azure Key Vault data plane API scope
 pub const KEYVAULT_SCOPE: &str = "https://vault.azure.net/.default";
 
-/// Combined auth scopes for interactive login
-pub const AUTH_SCOPES: &str =
-    "https://management.azure.com/.default offline_access openid profile email";
+/// Auth scopes for interactive login
+/// Only request basic identity scopes for initial auth - this avoids the
+/// "personal accounts not allowed" error that occurs when requesting
+/// Azure resource scopes during the initial device code flow.
+/// Resource-specific tokens will be obtained via refresh token.
+pub const AUTH_SCOPES: &str = "offline_access openid profile email";
 
 // ============================================================================
 // Azure AD Endpoints

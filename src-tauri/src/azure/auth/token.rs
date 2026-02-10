@@ -30,25 +30,47 @@ pub async fn get_token_for_scope(scope: &str) -> Result<String, String> {
         .map_err(|e| e.to_string())
 }
 
-/// Decode JWT token without verification to extract user info
+/// Decode JWT token without verification to extract user info.
+///
+/// Note: Personal Microsoft accounts (MSA) may return opaque tokens instead of JWTs.
+/// In that case, we won't be able to extract user info from the token itself.
 pub fn extract_user_info_from_token(
     token: &str,
 ) -> Result<(Option<String>, Option<String>), String> {
-    // Split the JWT token (format: header.payload.signature)
+    // Check if this looks like a JWT (has 3 dot-separated parts)
     let parts: Vec<&str> = token.split('.').collect();
+
     if parts.len() != 3 {
-        return Err("Invalid token format".to_string());
+        // This is likely an opaque token (common with personal Microsoft accounts)
+        // We can't extract user info from it, but that's okay
+        info!("Token is not a JWT (opaque access token) - user info will be fetched separately");
+        return Ok((None, None));
     }
 
     // Decode the payload (second part)
     let payload = parts[1];
 
-    let decoded = BASE64URL
-        .decode(payload.as_bytes())
-        .map_err(|e| format!("Failed to decode token: {}", e))?;
+    let decoded = match BASE64URL.decode(payload.as_bytes()) {
+        Ok(d) => d,
+        Err(e) => {
+            // Try standard base64 as fallback
+            match base64::engine::general_purpose::STANDARD.decode(payload.as_bytes()) {
+                Ok(d) => d,
+                Err(_) => {
+                    warn!("Failed to decode token payload: {}", e);
+                    return Ok((None, None));
+                }
+            }
+        }
+    };
 
-    let claims: TokenClaims = serde_json::from_slice(&decoded)
-        .map_err(|e| format!("Failed to parse token claims: {}", e))?;
+    let claims: TokenClaims = match serde_json::from_slice(&decoded) {
+        Ok(c) => c,
+        Err(e) => {
+            warn!("Failed to parse token claims: {}", e);
+            return Ok((None, None));
+        }
+    };
 
     // Try to get email from various possible fields (ordered by preference)
     let email = claims
@@ -96,13 +118,17 @@ pub async fn store_auth_result(
         }
     }
 
-    // Store user info
+    // Store user info (will use fallback for personal accounts if no info available)
     store_user_info(user_email.clone(), user_name.clone()).await;
+
+    // For personal accounts without email in token, provide a friendly message
+    let display_email = user_email.clone().or_else(|| Some("Microsoft Account".to_string()));
+    let display_name = user_name.clone().or_else(|| Some("Personal Account".to_string()));
 
     Ok(AuthResult {
         success: true,
         message: format!("Successfully authenticated with {}!", auth_method),
-        user_email,
-        user_name,
+        user_email: display_email,
+        user_name: display_name,
     })
 }

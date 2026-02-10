@@ -68,13 +68,14 @@ impl TokenCredential for InteractiveDeviceCodeCredential {
                 ));
             }
 
+            // Note: For device code flow, we don't pass 'scope' in the token request.
+            // The scopes are determined by what was requested during the device code request.
             let response = client
                 .post(&url)
                 .form(&[
                     ("grant_type", "urn:ietf:params:oauth:grant-type:device_code"),
                     ("client_id", &self.client_id),
                     ("device_code", &state.device_code),
-                    ("scope", &scopes.join(" ")),
                 ])
                 .send()
                 .await
@@ -197,7 +198,7 @@ pub async fn complete_interactive_browser_login() -> Result<AuthResult, String> 
     };
 
     let token_response = credential
-        .get_token(&["https://management.azure.com/.default"], None)
+        .get_token(&["https://management.azure.com/user_impersonation"], None)
         .await
         .map_err(|e| {
             log_error!("Failed to complete authentication: {}", e);

@@ -5,9 +5,8 @@
 //!
 //! # Multi-tenant Authentication
 //!
-//! By default, the application uses Microsoft's multi-tenant endpoint ("organizations")
-//! which allows users from any Azure AD tenant to authenticate without needing to
-//! configure their own app registration.
+//! By default, the application uses Microsoft's "common" endpoint which allows
+//! users from any Azure AD tenant AND personal Microsoft accounts to authenticate.
 //!
 //! Users can optionally configure their own Client ID and/or Tenant ID for:
 //! - Using a custom app registration with specific permissions
@@ -22,12 +21,13 @@ use tokio::sync::RwLock;
 /// VaultRaider's published multi-tenant app registration Client ID
 /// This app is registered as a multi-tenant public client application
 /// Users from any Azure AD tenant can use this to authenticate
-pub const VAULTRAIDER_CLIENT_ID: &str = "1c22b568-af02-49db-9799-fbafdd025e19";
+pub const VAULTRAIDER_CLIENT_ID: &str = "a58ed96c-b73d-4652-9f05-fc8f49154c8d";
 
-/// Multi-tenant endpoint - allows users from any Azure AD organization to sign in
-/// Use "organizations" for work/school accounts only
-/// Use "common" to also allow personal Microsoft accounts
-pub const MULTI_TENANT_ENDPOINT: &str = "organizations";
+/// Multi-tenant endpoint - "common" allows both:
+/// - Work/school accounts (any Azure AD organization)
+/// - Personal Microsoft accounts (outlook.com, hotmail.com, etc.)
+/// Other options: "organizations" (work/school only), "consumers" (personal only)
+pub const MULTI_TENANT_ENDPOINT: &str = "common";
 
 /// Configuration file name
 const CONFIG_FILE_NAME: &str = "config.json";
@@ -170,7 +170,8 @@ pub async fn get_client_id() -> String {
 }
 
 /// Get the effective Tenant ID / Authority endpoint
-/// Returns user-configured value if set, otherwise "organizations" for multi-tenant auth
+/// Returns user-configured value if set, otherwise "common" for multi-tenant auth
+/// (allows both work/school and personal Microsoft accounts)
 pub async fn get_tenant_id() -> String {
     get_config()
         .await
@@ -193,6 +194,6 @@ mod tests {
     fn test_effective_values() {
         // When None, should use defaults
         assert_eq!(VAULTRAIDER_CLIENT_ID.len(), 36); // GUID length
-        assert_eq!(MULTI_TENANT_ENDPOINT, "organizations");
+        assert_eq!(MULTI_TENANT_ENDPOINT, "common");
     }
 }
