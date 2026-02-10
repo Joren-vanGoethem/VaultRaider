@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { Suspense, useCallback, useMemo, useState } from "react";
 import { BulkDeleteModal } from "../components/BulkDeleteModal";
 import { CompareVaultsModal } from "../components/CompareVaultsModal";
@@ -24,6 +24,7 @@ type KeyvaultSearch = {
   vaultUri: string;
   name: string;
   subscriptionId?: string;
+  enableSoftDelete?: boolean;
 };
 
 export const Route = createFileRoute("/keyvault")({
@@ -35,13 +36,15 @@ export const Route = createFileRoute("/keyvault")({
       vaultUri: search.vaultUri as string,
       name: search.name as string,
       subscriptionId: search.subscriptionId as string | undefined,
+      enableSoftDelete: search.enableSoftDelete as boolean | undefined,
     };
   },
   beforeLoad: requireAuth,
 });
 
 function Keyvaults() {
-  const { vaultUri, name, subscriptionId } = Route.useSearch();
+  const { vaultUri, name, subscriptionId, enableSoftDelete } = Route.useSearch();
+  const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
@@ -53,6 +56,13 @@ function Keyvaults() {
   const [showBulkDeleteModal, setShowBulkDeleteModal] = useState(false);
   const queryClient = useQueryClient();
   const { showSuccess, showError } = useToast();
+
+  const handleViewDeleted = useCallback(() => {
+    navigate({
+      to: "/deleted-secrets",
+      search: { vaultUri, name, subscriptionId, enableSoftDelete },
+    });
+  }, [navigate, vaultUri, name, subscriptionId, enableSoftDelete]);
 
   // Use React Query to fetch secrets list
   const { data: secrets } = useSuspenseQuery({
@@ -192,6 +202,8 @@ function Keyvaults() {
           onImport={() => setShowImportModal(true)}
           onCompare={() => setShowCompareModal(true)}
           onCreate={() => setShowCreateModal(true)}
+          onViewDeleted={handleViewDeleted}
+          softDeleteEnabled={enableSoftDelete === true}
         />
 
         {/* Main Content */}

@@ -173,6 +173,50 @@ pub mod urls {
             clean_uri, secret_name, KEYVAULT_DATA_API_VERSION
         )
     }
+
+    /// Get the URL to list all deleted secrets in a Key Vault
+    pub fn deleted_secrets(keyvault_uri: &str) -> String {
+        let clean_uri = keyvault_uri
+            .trim_start_matches("https://")
+            .trim_end_matches('/');
+        format!(
+            "https://{}/deletedsecrets?api-version={}",
+            clean_uri, KEYVAULT_DATA_API_VERSION
+        )
+    }
+
+    /// Get the URL to get a specific deleted secret
+    pub fn deleted_secret(keyvault_uri: &str, secret_name: &str) -> String {
+        let clean_uri = keyvault_uri
+            .trim_start_matches("https://")
+            .trim_end_matches('/');
+        format!(
+            "https://{}/deletedsecrets/{}?api-version={}",
+            clean_uri, secret_name, KEYVAULT_DATA_API_VERSION
+        )
+    }
+
+    /// Get the URL to recover a deleted secret
+    pub fn recover_deleted_secret(keyvault_uri: &str, secret_name: &str) -> String {
+        let clean_uri = keyvault_uri
+            .trim_start_matches("https://")
+            .trim_end_matches('/');
+        format!(
+            "https://{}/deletedsecrets/{}/recover?api-version={}",
+            clean_uri, secret_name, KEYVAULT_DATA_API_VERSION
+        )
+    }
+
+    /// Get the URL to purge a deleted secret (permanently delete)
+    pub fn purge_deleted_secret(keyvault_uri: &str, secret_name: &str) -> String {
+        let clean_uri = keyvault_uri
+            .trim_start_matches("https://")
+            .trim_end_matches('/');
+        format!(
+            "https://{}/deletedsecrets/{}?api-version={}",
+            clean_uri, secret_name, KEYVAULT_DATA_API_VERSION
+        )
+    }
 }
 
 #[cfg(test)]

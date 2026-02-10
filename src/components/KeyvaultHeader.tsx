@@ -4,6 +4,7 @@
   GitCompareIcon,
   KeyIcon,
   PlusIcon,
+  Trash2,
   UploadIcon,
 } from "lucide-react";
 import { Button } from "./common";
@@ -17,6 +18,8 @@ interface KeyvaultHeaderProps {
   onImport: () => void;
   onCompare: () => void;
   onCreate: () => void;
+  onViewDeleted?: () => void;
+  softDeleteEnabled?: boolean;
 }
 
 export function KeyvaultHeader({
@@ -28,6 +31,8 @@ export function KeyvaultHeader({
   onImport,
   onCompare,
   onCreate,
+  onViewDeleted,
+  softDeleteEnabled,
 }: KeyvaultHeaderProps) {
   return (
     <div className="flex-none px-6 py-4 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
@@ -90,6 +95,18 @@ export function KeyvaultHeader({
           >
             Compare
           </Button>
+
+          {softDeleteEnabled && onViewDeleted && (
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={onViewDeleted}
+              leftIcon={<Trash2 className="w-4 h-4" />}
+              title="View deleted secrets"
+            >
+              Deleted
+            </Button>
+          )}
 
           <div className="h-6 w-px bg-gray-300 dark:bg-gray-600 mx-1" />
 

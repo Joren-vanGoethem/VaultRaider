@@ -8,7 +8,7 @@ use crate::azure::auth::token::get_token_for_scope;
 use crate::azure::http::{fetch_all_paginated, AzureHttpClient, AzureHttpError};
 use crate::config::{urls, KEYVAULT_SCOPE};
 
-use super::types::{Secret, SecretBundle};
+use super::types::{DeletedSecretBundle, DeletedSecretItem, Secret, SecretBundle};
 
 /// Request body for creating/updating a secret
 #[derive(Serialize)]
@@ -397,4 +397,188 @@ async fn update_secret_internal(
 
     info!("Secret updated successfully");
     Ok(updated_secret)
+}
+
+// ============================================================================
+// Deleted Secret Operations
+// ============================================================================
+
+/// Fetch all deleted secrets from a Key Vault.
+///
+/// Requires soft-delete to be enabled on the vault.
+pub async fn get_deleted_secrets(keyvault_uri: &str) -> Result<Vec<DeletedSecretItem>, String> {
+    get_deleted_secrets_internal(keyvault_uri)
+        .await
+        .map_err(|e| {
+            error!("Failed to get deleted secrets: {}", e);
+            if let Some(root_cause) = e.root_cause().downcast_ref::<AzureHttpError>() {
+                root_cause.to_string()
+            } else {
+                e.to_string()
+            }
+        })
+}
+
+async fn get_deleted_secrets_internal(keyvault_uri: &str) -> Result<Vec<DeletedSecretItem>> {
+    info!("Fetching deleted secrets");
+
+    let url = urls::deleted_secrets(keyvault_uri);
+    let token = get_token_for_scope(KEYVAULT_SCOPE)
+        .await
+        .map_err(|e| anyhow::anyhow!(e))
+        .context("Failed to retrieve Key Vault token")?;
+
+    let client =
+        AzureHttpClient::with_token(&token).context("Failed to create HTTP client with token")?;
+
+    let deleted_list = fetch_all_paginated::<DeletedSecretItem>(&url, &client)
+        .await
+        .with_context(|| format!("Failed to fetch deleted secrets from {}", keyvault_uri))?;
+
+    info!(
+        "Successfully fetched {} deleted secrets",
+        deleted_list.len()
+    );
+    Ok(deleted_list)
+}
+
+/// Get a specific deleted secret with its value.
+pub async fn get_deleted_secret(
+    keyvault_uri: &str,
+    secret_name: &str,
+) -> Result<DeletedSecretBundle, String> {
+    get_deleted_secret_internal(keyvault_uri, secret_name)
+        .await
+        .map_err(|e| {
+            error!("Failed to get deleted secret: {}", e);
+            if let Some(root_cause) = e.root_cause().downcast_ref::<AzureHttpError>() {
+                root_cause.to_string()
+            } else {
+                e.to_string()
+            }
+        })
+}
+
+async fn get_deleted_secret_internal(
+    keyvault_uri: &str,
+    secret_name: &str,
+) -> Result<DeletedSecretBundle> {
+    info!("Fetching deleted secret '{}'", secret_name);
+
+    let url = urls::deleted_secret(keyvault_uri, secret_name);
+    let token = get_token_for_scope(KEYVAULT_SCOPE)
+        .await
+        .map_err(|e| anyhow::anyhow!(e))
+        .context("Failed to retrieve Key Vault token")?;
+
+    let client =
+        AzureHttpClient::with_token(&token).context("Failed to create HTTP client with token")?;
+
+    let deleted_secret: DeletedSecretBundle =
+        client.get(&url).await.with_context(|| {
+            format!(
+                "Failed to fetch deleted secret '{}' from {}",
+                secret_name, keyvault_uri
+            )
+        })?;
+
+    info!("Deleted secret fetched successfully");
+    Ok(deleted_secret)
+}
+
+/// Recover a deleted secret back to active state.
+///
+/// This is only possible if the vault has soft-delete enabled
+/// and the secret hasn't been purged yet.
+pub async fn recover_deleted_secret(
+    keyvault_uri: &str,
+    secret_name: &str,
+) -> Result<Secret, String> {
+    recover_deleted_secret_internal(keyvault_uri, secret_name)
+        .await
+        .map_err(|e| {
+            error!("Failed to recover deleted secret: {}", e);
+            if let Some(root_cause) = e.root_cause().downcast_ref::<AzureHttpError>() {
+                root_cause.to_string()
+            } else {
+                e.to_string()
+            }
+        })
+}
+
+async fn recover_deleted_secret_internal(
+    keyvault_uri: &str,
+    secret_name: &str,
+) -> Result<Secret> {
+    info!("Recovering deleted secret '{}'", secret_name);
+
+    let url = urls::recover_deleted_secret(keyvault_uri, secret_name);
+    let token = get_token_for_scope(KEYVAULT_SCOPE)
+        .await
+        .map_err(|e| anyhow::anyhow!(e))
+        .context("Failed to retrieve Key Vault token")?;
+
+    let client =
+        AzureHttpClient::with_token(&token).context("Failed to create HTTP client with token")?;
+
+    // The recover API is a POST with an empty body and returns Secret (without value)
+    let recovered_secret: Secret = client
+        .post(&url, &serde_json::json!({}))
+        .await
+        .with_context(|| {
+            format!(
+                "Failed to recover deleted secret '{}' from {}",
+                secret_name, keyvault_uri
+            )
+        })?;
+
+    info!("Secret '{}' recovered successfully", secret_name);
+    Ok(recovered_secret)
+}
+
+/// Permanently delete (purge) a deleted secret.
+///
+/// This is irreversible. Only possible if the vault does NOT have
+/// purge protection enabled, or the scheduled purge date has passed.
+pub async fn purge_deleted_secret(
+    keyvault_uri: &str,
+    secret_name: &str,
+) -> Result<(), String> {
+    purge_deleted_secret_internal(keyvault_uri, secret_name)
+        .await
+        .map_err(|e| {
+            error!("Failed to purge deleted secret: {}", e);
+            if let Some(root_cause) = e.root_cause().downcast_ref::<AzureHttpError>() {
+                root_cause.to_string()
+            } else {
+                e.to_string()
+            }
+        })
+}
+
+async fn purge_deleted_secret_internal(
+    keyvault_uri: &str,
+    secret_name: &str,
+) -> Result<()> {
+    info!("Purging deleted secret '{}'", secret_name);
+
+    let url = urls::purge_deleted_secret(keyvault_uri, secret_name);
+    let token = get_token_for_scope(KEYVAULT_SCOPE)
+        .await
+        .map_err(|e| anyhow::anyhow!(e))
+        .context("Failed to retrieve Key Vault token")?;
+
+    let client =
+        AzureHttpClient::with_token(&token).context("Failed to create HTTP client with token")?;
+
+    // Purge uses DELETE and returns 204 No Content on success
+    client.delete_no_content(&url).await.with_context(|| {
+        format!(
+            "Failed to purge deleted secret '{}' from {}",
+            secret_name, keyvault_uri
+        )
+    })?;
+
+    info!("Secret '{}' purged successfully", secret_name);
+    Ok(())
 }

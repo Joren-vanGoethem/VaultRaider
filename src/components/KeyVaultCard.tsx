@@ -52,7 +52,12 @@ export function KeyVaultCard({ vault, subscriptionId }: KeyVaultCardProps) {
   return (
     <Link
       to="/keyvault"
-      search={{ vaultUri: vault.properties.vaultUri, name: vault.name, subscriptionId }}
+      search={{
+        vaultUri: vault.properties.vaultUri,
+        name: vault.name,
+        subscriptionId,
+        enableSoftDelete: vault.properties.enableSoftDelete,
+      }}
       className="block p-4 rounded-lg bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 hover:border-primary-500 dark:hover:border-primary-400 hover:shadow-md transition-all cursor-pointer"
     >
       <div className="flex justify-between items-start">

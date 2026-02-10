@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as SubscriptionsRouteImport } from './routes/subscriptions'
 import { Route as KeyvaultRouteImport } from './routes/keyvault'
+import { Route as DeletedSecretsRouteImport } from './routes/deleted-secrets'
 import { Route as CompareRouteImport } from './routes/compare'
 import { Route as IndexRouteImport } from './routes/index'
 
@@ -22,6 +23,11 @@ const SubscriptionsRoute = SubscriptionsRouteImport.update({
 const KeyvaultRoute = KeyvaultRouteImport.update({
   id: '/keyvault',
   path: '/keyvault',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DeletedSecretsRoute = DeletedSecretsRouteImport.update({
+  id: '/deleted-secrets',
+  path: '/deleted-secrets',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CompareRoute = CompareRouteImport.update({
@@ -38,12 +44,14 @@ const IndexRoute = IndexRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/compare': typeof CompareRoute
+  '/deleted-secrets': typeof DeletedSecretsRoute
   '/keyvault': typeof KeyvaultRoute
   '/subscriptions': typeof SubscriptionsRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/compare': typeof CompareRoute
+  '/deleted-secrets': typeof DeletedSecretsRoute
   '/keyvault': typeof KeyvaultRoute
   '/subscriptions': typeof SubscriptionsRoute
 }
@@ -51,20 +59,33 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/compare': typeof CompareRoute
+  '/deleted-secrets': typeof DeletedSecretsRoute
   '/keyvault': typeof KeyvaultRoute
   '/subscriptions': typeof SubscriptionsRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/compare' | '/keyvault' | '/subscriptions'
+  fullPaths:
+    | '/'
+    | '/compare'
+    | '/deleted-secrets'
+    | '/keyvault'
+    | '/subscriptions'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/compare' | '/keyvault' | '/subscriptions'
-  id: '__root__' | '/' | '/compare' | '/keyvault' | '/subscriptions'
+  to: '/' | '/compare' | '/deleted-secrets' | '/keyvault' | '/subscriptions'
+  id:
+    | '__root__'
+    | '/'
+    | '/compare'
+    | '/deleted-secrets'
+    | '/keyvault'
+    | '/subscriptions'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   CompareRoute: typeof CompareRoute
+  DeletedSecretsRoute: typeof DeletedSecretsRoute
   KeyvaultRoute: typeof KeyvaultRoute
   SubscriptionsRoute: typeof SubscriptionsRoute
 }
@@ -83,6 +104,13 @@ declare module '@tanstack/react-router' {
       path: '/keyvault'
       fullPath: '/keyvault'
       preLoaderRoute: typeof KeyvaultRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/deleted-secrets': {
+      id: '/deleted-secrets'
+      path: '/deleted-secrets'
+      fullPath: '/deleted-secrets'
+      preLoaderRoute: typeof DeletedSecretsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/compare': {
@@ -105,6 +133,7 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   CompareRoute: CompareRoute,
+  DeletedSecretsRoute: DeletedSecretsRoute,
   KeyvaultRoute: KeyvaultRoute,
   SubscriptionsRoute: SubscriptionsRoute,
 }

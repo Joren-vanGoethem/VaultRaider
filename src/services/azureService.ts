@@ -1,7 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import type { KeyVault, KeyVaultAccess } from "~/types/keyvault.ts";
 import type { ResourceGroup } from "~/types/resourceGroups.ts";
-import type { Secret, SecretBundle } from "~/types/secrets.ts";
+import type { DeletedSecretItem, Secret, SecretBundle } from "~/types/secrets.ts";
 import type { Subscription } from "~/types/subscriptions.ts";
 import { RequestQueue } from "./requestQueue.ts";
 
@@ -9,6 +9,7 @@ export const fetchResourceGroupsKey = "fetch_resourcegroups";
 export const fetchSubscriptionsKey = "fetch_subscriptions";
 export const fetchKeyvaultsKey = "fetch_keyvaults";
 export const fetchSecretsKey = "fetch_secrets";
+export const fetchDeletedSecretsKey = "fetch_deleted_secrets";
 export const createKeyvaultKey = "create_keyvault";
 
 export async function fetchResourceGroups(subscriptionId: string): Promise<ResourceGroup[]> {
@@ -206,4 +207,50 @@ export interface ImportedSecret {
 
 export async function parseImportFile(content: string, format?: string): Promise<ImportedSecret[]> {
   return await invoke<ImportedSecret[]>("parse_import_file", { content, format });
+}
+
+// ============================================================================
+// Deleted Secret Operations
+// ============================================================================
+
+export async function fetchDeletedSecrets(keyvaultUri: string): Promise<DeletedSecretItem[]> {
+  try {
+    return await invoke<DeletedSecretItem[]>("get_deleted_secrets", { keyvaultUri });
+  } catch (err) {
+    const errorMessage = err instanceof Error ? err.message : String(err);
+    console.error(`Failed to fetch deleted secrets for keyvault ${keyvaultUri}:`, errorMessage);
+    throw new Error(errorMessage);
+  }
+}
+
+export async function recoverDeletedSecret(
+  keyvaultUri: string,
+  secretName: string,
+): Promise<Secret> {
+  try {
+    return await invoke<Secret>("recover_deleted_secret", { keyvaultUri, secretName });
+  } catch (err) {
+    const errorMessage = err instanceof Error ? err.message : String(err);
+    console.error(
+      `Failed to recover deleted secret ${secretName} from keyvault ${keyvaultUri}:`,
+      errorMessage,
+    );
+    throw new Error(errorMessage);
+  }
+}
+
+export async function purgeDeletedSecret(
+  keyvaultUri: string,
+  secretName: string,
+): Promise<void> {
+  try {
+    await invoke<void>("purge_deleted_secret", { keyvaultUri, secretName });
+  } catch (err) {
+    const errorMessage = err instanceof Error ? err.message : String(err);
+    console.error(
+      `Failed to purge deleted secret ${secretName} from keyvault ${keyvaultUri}:`,
+      errorMessage,
+    );
+    throw new Error(errorMessage);
+  }
 }

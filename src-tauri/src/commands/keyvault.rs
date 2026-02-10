@@ -2,7 +2,7 @@
 
 use crate::azure::keyvault::secret::export::ExportOptions;
 use crate::azure::keyvault::secret::import::ImportedSecret;
-use crate::azure::keyvault::secret::types::{Secret, SecretBundle};
+use crate::azure::keyvault::secret::types::{Secret, SecretBundle, DeletedSecretItem};
 use crate::azure::keyvault::service::get_keyvaults;
 use crate::azure::keyvault::types::{KeyVault, KeyVaultAccessCheck};
 use crate::cache::AZURE_CACHE;
@@ -191,4 +191,38 @@ pub fn parse_import_file(
     format: Option<String>,
 ) -> Result<Vec<ImportedSecret>, String> {
     crate::azure::keyvault::secret::import::parse_import_file(&content, format.as_deref())
+}
+
+/// Fetch all deleted secrets from a Key Vault
+#[tauri::command]
+pub async fn get_deleted_secrets(keyvault_uri: String) -> Result<Vec<DeletedSecretItem>, String> {
+    crate::azure::keyvault::secret::service::get_deleted_secrets(&keyvault_uri).await
+}
+
+/// Recover a deleted secret back to active state
+/// Invalidates relevant caches after successful recovery
+#[tauri::command]
+pub async fn recover_deleted_secret(
+    keyvault_uri: String,
+    secret_name: String,
+) -> Result<Secret, String> {
+    let result =
+        crate::azure::keyvault::secret::service::recover_deleted_secret(&keyvault_uri, &secret_name)
+            .await;
+
+    if result.is_ok() {
+        // Invalidate secrets list so the recovered secret shows up
+        AZURE_CACHE.invalidate_secrets_list(&keyvault_uri).await;
+    }
+
+    result
+}
+
+/// Permanently delete (purge) a deleted secret
+#[tauri::command]
+pub async fn purge_deleted_secret(
+    keyvault_uri: String,
+    secret_name: String,
+) -> Result<(), String> {
+    crate::azure::keyvault::secret::service::purge_deleted_secret(&keyvault_uri, &secret_name).await
 }
