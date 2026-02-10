@@ -130,6 +130,22 @@ export async function deleteSecret(keyvaultUri: string, secretName: string): Pro
   return await invoke("delete_secret", { keyvaultUri, secretName });
 }
 
+export async function fetchSecretVersions(
+  keyvaultUri: string,
+  secretName: string,
+): Promise<Secret[]> {
+  try {
+    return await invoke<Secret[]>("get_secret_versions", { keyvaultUri, secretName });
+  } catch (err) {
+    const errorMessage = err instanceof Error ? err.message : String(err);
+    console.error(
+      `Failed to fetch versions for secret ${secretName} from keyvault ${keyvaultUri}:`,
+      errorMessage,
+    );
+    return [];
+  }
+}
+
 export async function createSecret(
   keyvaultUri: string,
   secretName: string,

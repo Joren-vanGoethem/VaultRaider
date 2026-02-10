@@ -1,4 +1,4 @@
-﻿import { EditIcon, TrashIcon } from "lucide-react";
+﻿import { EditIcon, HistoryIcon, TrashIcon } from "lucide-react";
 import { IconButton } from "./common";
 
 interface SecretHeaderProps {
@@ -6,6 +6,7 @@ interface SecretHeaderProps {
   enabled: boolean;
   onDelete: () => void;
   onEdit?: () => void;
+  onVersions?: () => void;
   isDeleting?: boolean;
   hasValue?: boolean;
 }
@@ -15,6 +16,7 @@ export function SecretHeader({
   enabled,
   onDelete,
   onEdit,
+  onVersions,
   isDeleting = false,
   hasValue = false,
 }: SecretHeaderProps) {
@@ -37,6 +39,16 @@ export function SecretHeader({
             </span>
           </div>
           <div className="flex gap-2">
+            {onVersions && (
+              <IconButton
+                icon={<HistoryIcon className="w-4 h-4" />}
+                label="View versions"
+                variant="secondary"
+                size="sm"
+                onClick={onVersions}
+                disabled={isDeleting}
+              />
+            )}
             {onEdit && hasValue && (
               <IconButton
                 icon={<EditIcon className="w-4 h-4" />}

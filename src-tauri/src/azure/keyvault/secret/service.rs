@@ -137,6 +137,54 @@ async fn get_secret_internal(
     Ok(secret)
 }
 
+/// Fetch all versions of a specific secret.
+///
+/// # Arguments
+///
+/// * `keyvault_uri` - The Key Vault URI
+/// * `secret_name` - The name of the secret
+///
+/// # Returns
+///
+/// A vector of Secret metadata for each version (not including values).
+pub async fn get_secret_versions(keyvault_uri: &str, secret_name: &str) -> Result<Vec<Secret>, String> {
+    get_secret_versions_internal(keyvault_uri, secret_name)
+        .await
+        .map_err(|e| {
+            error!("Failed to get secret versions: {}", e);
+            e.to_string()
+        })
+}
+
+async fn get_secret_versions_internal(keyvault_uri: &str, secret_name: &str) -> Result<Vec<Secret>> {
+    info!("Fetching versions for secret '{}'", secret_name);
+
+    let url = urls::secret_versions(keyvault_uri, secret_name);
+    let token = get_token_for_scope(KEYVAULT_SCOPE)
+        .await
+        .map_err(|e| anyhow::anyhow!(e))
+        .context("Failed to retrieve Key Vault token")?;
+
+    let client =
+        AzureHttpClient::with_token(&token).context("Failed to create HTTP client with token")?;
+
+    let versions = fetch_all_paginated::<Secret>(&url, &client)
+        .await
+        .with_context(|| {
+            format!(
+                "Failed to fetch versions for secret '{}' from {}",
+                secret_name, keyvault_uri
+            )
+        })?;
+
+    info!(
+        "Successfully fetched {} versions for secret '{}'",
+        versions.len(),
+        secret_name
+    );
+    Ok(versions)
+}
+
 /// Delete a secret from a Key Vault.
 ///
 /// # Arguments
