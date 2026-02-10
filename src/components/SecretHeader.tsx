@@ -1,4 +1,5 @@
 ﻿import { EditIcon, TrashIcon } from "lucide-react";
+import { IconButton } from "./common";
 
 interface SecretHeaderProps {
   name: string;
@@ -37,25 +38,23 @@ export function SecretHeader({
           </div>
           <div className="flex gap-2">
             {onEdit && hasValue && (
-              <button
-                type="button"
+              <IconButton
+                icon={<EditIcon className="w-4 h-4" />}
+                label="Edit secret"
+                variant="primary"
+                size="sm"
                 onClick={onEdit}
-                className="text-xs px-2 py-1.5 rounded bg-blue-500 hover:bg-blue-600 text-white transition-colors font-medium shrink-0"
-                title="Edit secret"
                 disabled={isDeleting}
-              >
-                <EditIcon className="w-4 h-4" />
-              </button>
+              />
             )}
-            <button
-              type="button"
+            <IconButton
+              icon={<TrashIcon className="w-4 h-4" />}
+              label="Delete secret"
+              variant="danger"
+              size="sm"
               onClick={onDelete}
-              className="text-xs px-2 py-1.5 rounded bg-red-500 hover:bg-red-600 text-white transition-colors font-medium shrink-0"
-              title="Delete secret"
               disabled={isDeleting}
-            >
-              <TrashIcon className="w-4 h-4" />
-            </button>
+            />
           </div>
         </div>
       </div>

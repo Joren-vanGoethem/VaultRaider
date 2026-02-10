@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
-import { createFileRoute, redirect } from "@tanstack/react-router";
-import { invoke } from "@tauri-apps/api/core";
+import { createFileRoute } from "@tanstack/react-router";
 import { Suspense, useMemo, useState } from "react";
+import { PageError, PageLoadingSpinner } from "../components/common";
 import {
   CompareEmptyState,
   CompareHeader,
@@ -26,11 +26,12 @@ import {
   fetchSubscriptionsKey,
 } from "../services/azureService";
 import type { SecretBundle } from "../types/secrets";
+import { requireAuth } from "../utils/routeGuards";
 
 export const Route = createFileRoute("/compare")({
   component: CompareVaults,
-  pendingComponent: CompareLoadingSpinner,
-  errorComponent: CompareError,
+  pendingComponent: PageLoadingSpinner,
+  errorComponent: ({ error }) => <PageError error={error} />,
   validateSearch: (search: Record<string, unknown>): CompareSearch => {
     return {
       sourceVaultUri: search.sourceVaultUri as string,
@@ -41,22 +42,8 @@ export const Route = createFileRoute("/compare")({
       targetSubscriptionId: search.targetSubscriptionId as string | undefined,
     };
   },
-  beforeLoad: async () => {
-    // Check if user is authenticated before loading this route
-    const isAuthenticated = await invoke<boolean>("check_auth");
-    if (!isAuthenticated) {
-      throw redirect({ to: "/" });
-    }
-  },
+  beforeLoad: requireAuth,
 });
-
-function CompareLoadingSpinner() {
-  return (
-    <div className="h-full flex items-center justify-center p-10">
-      <LoadingSpinner size="md" />
-    </div>
-  );
-}
 
 function CompareVaults() {
   const {
@@ -275,7 +262,7 @@ function CompareVaults() {
   };
 
   return (
-    <Suspense fallback={<CompareLoadingSpinner />}>
+    <Suspense fallback={<PageLoadingSpinner />}>
       <div className="h-full flex flex-col">
         <CompareHeader
           sourceVaultUri={sourceVaultUri}
@@ -377,25 +364,5 @@ function CompareVaults() {
         isCreating={createMutation.isPending || createInSourceMutation.isPending}
       />
     </Suspense>
-  );
-}
-
-function CompareError({ error }: { error: Error }) {
-  return (
-    <div className="h-full flex items-center justify-center px-4">
-      <div className="max-w-md w-full bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-6">
-        <h2 className="text-lg font-semibold text-red-700 dark:text-red-300 mb-2">
-          Something went wrong
-        </h2>
-        <p className="text-sm text-red-600 dark:text-red-400 mb-4">{error.message}</p>
-        <button
-          type="button"
-          onClick={() => window.location.reload()}
-          className="px-4 py-2 rounded bg-red-600 text-white hover:bg-red-700"
-        >
-          Retry
-        </button>
-      </div>
-    </div>
   );
 }

@@ -8,6 +8,7 @@ import {
   updateSecret,
 } from "../services/azureService";
 import type { Secret, SecretBundle } from "../types/secrets";
+import { Button, Modal, ModalFooter, ModalTitle } from "./common";
 import { DeleteConfirmationModal } from "./DeleteConfirmationModal";
 import { SecretAttributes } from "./SecretAttributes";
 import { SecretHeader } from "./SecretHeader";
@@ -280,77 +281,66 @@ export function SecretCard({
       />
 
       {/* Edit Secret Modal */}
-      {showEditModal && (
-        <div
-          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
-          onClick={handleCancelEdit}
+      <Modal isOpen={showEditModal} onClose={handleCancelEdit}>
+        <ModalTitle>Edit Secret</ModalTitle>
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            handleConfirmEdit();
+          }}
         >
-          <div
-            className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4 shadow-xl"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
-              Edit Secret
-            </h3>
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                handleConfirmEdit();
-              }}
+          <div className="mb-4">
+            <label
+              htmlFor={"secretNameInput"}
+              className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
             >
-              <div className="mb-4">
-                <label
-                  htmlFor={"secretNameInput"}
-                  className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
-                >
-                  Secret Name
-                </label>
-                <input
-                  id="secretNameInput"
-                  type="text"
-                  value={secretName}
-                  disabled
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 font-mono text-sm"
-                />
-              </div>
-              <div className="mb-4">
-                <label
-                  htmlFor={"secretValueInput"}
-                  className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
-                >
-                  Secret Value
-                </label>
-                <textarea
-                  id="secretValueInput"
-                  value={editValue}
-                  onChange={(e) => setEditValue(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 font-mono text-sm min-h-25 resize-y"
-                  placeholder="Enter secret value"
-                  // biome-ignore lint/a11y/noAutofocus: weird rule
-                  autoFocus
-                />
-              </div>
-              <div className="flex gap-3 justify-end">
-                <button
-                  type="button"
-                  onClick={handleCancelEdit}
-                  className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded transition-colors"
-                  disabled={updateMutation.isPending}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                  disabled={updateMutation.isPending}
-                >
-                  {updateMutation.isPending ? "Updating..." : "Update"}
-                </button>
-              </div>
-            </form>
+              Secret Name
+            </label>
+            <input
+              id="secretNameInput"
+              type="text"
+              value={secretName}
+              disabled
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 font-mono text-sm"
+            />
           </div>
-        </div>
-      )}
+          <div className="mb-4">
+            <label
+              htmlFor={"secretValueInput"}
+              className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+            >
+              Secret Value
+            </label>
+            <textarea
+              id="secretValueInput"
+              value={editValue}
+              onChange={(e) => setEditValue(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 font-mono text-sm min-h-25 resize-y"
+              placeholder="Enter secret value"
+              // biome-ignore lint/a11y/noAutofocus: weird rule
+              autoFocus
+            />
+          </div>
+          <ModalFooter>
+            <Button
+              variant="secondary"
+              onClick={handleCancelEdit}
+              disabled={updateMutation.isPending}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              variant="primary"
+              disabled={updateMutation.isPending}
+              isLoading={updateMutation.isPending}
+              loadingText="Updating..."
+            >
+              Update
+            </Button>
+          </ModalFooter>
+        </form>
+      </Modal>
     </div>
   );
 }

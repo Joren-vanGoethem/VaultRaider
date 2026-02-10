@@ -1,15 +1,14 @@
 import { useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
-import { createFileRoute, redirect } from "@tanstack/react-router";
-import { invoke } from "@tauri-apps/api/core";
+import { createFileRoute } from "@tanstack/react-router";
 import { Suspense, useCallback, useMemo, useState } from "react";
 import { BulkDeleteModal } from "../components/BulkDeleteModal";
 import { CompareVaultsModal } from "../components/CompareVaultsModal";
 import { CreateSecretModal } from "../components/CreateSecretModal";
+import { Button, PageError, PageLoadingSpinner } from "../components/common";
 import { ExportSecretsModal } from "../components/ExportSecretsModal";
 import { ImportSecretsModal } from "../components/ImportSecretsModal";
 import { KeyvaultHeader } from "../components/KeyvaultHeader";
 import { KeyvaultSearchBar } from "../components/KeyvaultSearchBar";
-import { LoadingSpinner } from "../components/LoadingSpinner";
 import { SecretsEmptyState } from "../components/SecretsEmptyState";
 import { SecretsList } from "../components/SecretsList";
 import { useToast } from "../contexts/ToastContext";
@@ -19,6 +18,7 @@ import {
   fetchSecrets,
   fetchSecretsKey,
 } from "../services/azureService";
+import { requireAuth } from "../utils/routeGuards";
 
 type KeyvaultSearch = {
   vaultUri: string;
@@ -28,8 +28,8 @@ type KeyvaultSearch = {
 
 export const Route = createFileRoute("/keyvault")({
   component: Keyvaults,
-  pendingComponent: SecretsLoadingSpinner,
-  errorComponent: SecretsError,
+  pendingComponent: PageLoadingSpinner,
+  errorComponent: ({ error }) => <PageError error={error} />,
   validateSearch: (search: Record<string, unknown>): KeyvaultSearch => {
     return {
       vaultUri: search.vaultUri as string,
@@ -37,22 +37,8 @@ export const Route = createFileRoute("/keyvault")({
       subscriptionId: search.subscriptionId as string | undefined,
     };
   },
-  beforeLoad: async () => {
-    // Check if user is authenticated before loading this route
-    const isAuthenticated = await invoke<boolean>("check_auth");
-    if (!isAuthenticated) {
-      throw redirect({ to: "/" });
-    }
-  },
+  beforeLoad: requireAuth,
 });
-
-function SecretsLoadingSpinner() {
-  return (
-    <div className="h-full flex items-center justify-center p-10">
-      <LoadingSpinner size="md" />
-    </div>
-  );
-}
 
 function Keyvaults() {
   const { vaultUri, name, subscriptionId } = Route.useSearch();
@@ -194,7 +180,7 @@ function Keyvaults() {
   };
 
   return (
-    <Suspense fallback={<SecretsLoadingSpinner />}>
+    <Suspense fallback={<PageLoadingSpinner />}>
       <div className="h-full flex flex-col">
         {/* Header */}
         <KeyvaultHeader
@@ -221,37 +207,29 @@ function Keyvaults() {
               />
             )}
 
-            <button
-              type="button"
+            <Button
+              variant={selectionMode ? "primary" : "secondary"}
+              size="sm"
               onClick={handleToggleSelectionMode}
-              className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-colors ${
-                selectionMode
-                  ? "bg-primary-600 text-white hover:bg-primary-700"
-                  : "bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"
-              }`}
             >
               {selectionMode ? "Exit Selection Mode" : "Select Multiple"}
-            </button>
+            </Button>
           </div>
 
           {secrets.length > 0 && selectionMode && (
             <div className="flex items-center gap-3 mb-3 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700">
-              <button
-                type="button"
-                onClick={handleSelectAll}
-                className="px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors"
-              >
+              <Button variant="secondary" size="sm" onClick={handleSelectAll}>
                 Select All ({filteredSecrets.length})
-              </button>
+              </Button>
 
-              <button
-                type="button"
+              <Button
+                variant="secondary"
+                size="sm"
                 onClick={handleDeselectAll}
-                className="px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors"
                 disabled={selectedSecrets.size === 0}
               >
                 Deselect All
-              </button>
+              </Button>
 
               <div className="flex-1" />
 
@@ -259,14 +237,14 @@ function Keyvaults() {
                 {selectedSecrets.size} selected
               </span>
 
-              <button
-                type="button"
+              <Button
+                variant="danger"
+                size="sm"
                 onClick={handleBulkDelete}
                 disabled={selectedSecrets.size === 0}
-                className="px-3 py-1.5 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Delete Selected
-              </button>
+              </Button>
             </div>
           )}
 
@@ -334,27 +312,5 @@ function Keyvaults() {
         />
       </div>
     </Suspense>
-  );
-}
-
-function SecretsError({ error }: { error: Error }) {
-  return (
-    <div className="h-full flex items-center justify-center px-4">
-      <div className="max-w-md w-full bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-6">
-        <h2 className="text-lg font-semibold text-red-700 dark:text-red-300 mb-2">
-          Something went wrong
-        </h2>
-
-        <p className="text-sm text-red-600 dark:text-red-400 mb-4">{error.message}</p>
-
-        <button
-          type="button"
-          onClick={() => window.location.reload()}
-          className="px-4 py-2 rounded bg-red-600 text-white hover:bg-red-700"
-        >
-          Retry
-        </button>
-      </div>
-    </div>
   );
 }

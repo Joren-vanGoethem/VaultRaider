@@ -1,12 +1,17 @@
 ﻿import { useMutation, useQueries, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
-import { createFileRoute, redirect } from "@tanstack/react-router";
-import { invoke } from "@tauri-apps/api/core";
+import { createFileRoute } from "@tanstack/react-router";
 import { PlusIcon } from "lucide-react";
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import type { Subscription } from "~/types/subscriptions.ts";
 import { CreateKeyvaultModal } from "../components/CreateKeyvaultModal";
+import {
+  Button,
+  EmptyStateAlert,
+  LoadingAlert,
+  PageError,
+  PageLoadingSpinner,
+} from "../components/common";
 import { KeyvaultsList } from "../components/KeyvaultsList.tsx";
-import { LoadingSpinner } from "../components/LoadingSpinner";
 import { PageHeader } from "../components/PageHeader";
 import { SubscriptionSelector } from "../components/SubscriptionSelector.tsx";
 import { useToast } from "../contexts/ToastContext";
@@ -17,6 +22,7 @@ import {
   fetchSubscriptions,
   fetchSubscriptionsKey,
 } from "../services/azureService";
+import { requireAuth } from "../utils/routeGuards";
 
 const subscriptionQueryOptions = { queryKey: [fetchSubscriptionsKey], queryFn: fetchSubscriptions };
 
@@ -26,20 +32,14 @@ type SubscriptionsSearch = {
 
 export const Route = createFileRoute("/subscriptions")({
   component: Subscriptions,
-  pendingComponent: VaultsLoadingSpinner,
-  errorComponent: VaultsError,
+  pendingComponent: PageLoadingSpinner,
+  errorComponent: ({ error }) => <PageError error={error} />,
   validateSearch: (search: Record<string, unknown>): SubscriptionsSearch => {
     return {
       subscriptionId: search.subscriptionId as string | undefined,
     };
   },
-  beforeLoad: async () => {
-    // Check if user is authenticated before loading this route
-    const isAuthenticated = await invoke<boolean>("check_auth");
-    if (!isAuthenticated) {
-      throw redirect({ to: "/" });
-    }
-  },
+  beforeLoad: requireAuth,
   loader: async ({ context: { queryClient } }) => {
     // Fetch subscriptions and prefetch key vaults in the background
     // We don't await the key vault queries so the UI shows immediately
@@ -55,14 +55,6 @@ export const Route = createFileRoute("/subscriptions")({
     });
   },
 });
-
-function VaultsLoadingSpinner() {
-  return (
-    <div className="h-full flex items-center justify-center p-10">
-      <LoadingSpinner size="md" />
-    </div>
-  );
-}
 
 function Subscriptions() {
   const { subscriptionId: urlSubscriptionId } = Route.useSearch();
@@ -168,7 +160,7 @@ function Subscriptions() {
   };
 
   return (
-    <Suspense fallback={<VaultsLoadingSpinner />}>
+    <Suspense fallback={<PageLoadingSpinner />}>
       <div className="h-full px-4 py-4">
         <div className="max-w-6xl mx-auto">
           <div className="flex items-center justify-between mb-6">
@@ -184,36 +176,6 @@ function Subscriptions() {
                 keyvaultLoadingStates={keyvaultLoadingStates}
               />
             )}
-            {/* {subscriptions.length > 0 && (
-              <div className="flex items-center gap-3">
-                <label
-                  htmlFor="subscription-select"
-                  className="text-sm font-medium text-gray-700 dark:text-gray-300"
-                >
-                  Subscription:
-                </label>
-                <select
-                  id="subscription-select"
-                  value={selectedSubscription || ""}
-                  onChange={(e) => setSelectedSubscription(e.target.value)}
-                  className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary-500 dark:focus:ring-primary-400 min-w-[300px]"
-                >
-                  {subscriptions.map((sub) => {
-                    const count = keyvaultCounts.get(sub.subscriptionId) || 0;
-                    const isLoading = keyvaultLoadingStates.get(sub.subscriptionId) || false;
-
-                    return (
-                      <option key={sub.subscriptionId} value={sub.subscriptionId}>
-                        {isLoading ? "⏳" : count > 0 ? "✓" : "○"} {sub.displayName}{" "}
-                        {isLoading
-                          ? "(loading...)"
-                          : `(${count} ${count === 1 ? "vault" : "vaults"})`}
-                      </option>
-                    );
-                  })}
-                </select>
-              </div>
-            )} */}
           </div>
 
           <div className="card">
@@ -222,40 +184,35 @@ function Subscriptions() {
                 Key Vaults in {selectedSubscriptionName}
               </h2>
               {selectedSubscription && (
-                <button
-                  type="button"
+                <Button
+                  variant="success"
                   onClick={() => setShowCreateModal(true)}
-                  className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-lg transition-colors"
-                  title="Create new Key Vault"
+                  leftIcon={<PlusIcon className="w-4 h-4" />}
                 >
-                  <PlusIcon className="w-4 h-4" />
                   Create Key Vault
-                </button>
+                </Button>
               )}
             </div>
 
             {anyQueriesLoading && (
-              <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
-                <p className="text-sm text-blue-800 dark:text-blue-300 flex items-center gap-2">
-                  <LoadingSpinner size="sm" />
-                  Loading key vaults for all subscriptions...
-                </p>
-              </div>
+              <LoadingAlert
+                message="Loading key vaults for all subscriptions..."
+                className="mb-4"
+              />
             )}
 
             {allQueriesLoaded &&
               selectedSubscription &&
               keyvaultCounts.get(selectedSubscription) === 0 && (
-                <div className="mb-4 p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
-                  <p className="text-sm text-yellow-800 dark:text-yellow-300">
-                    ⚠️ No Key Vaults found in this subscription. You can create a new Key Vault using
-                    the button above, or this could be due to:
-                  </p>
-                  <ul className="mt-2 text-sm text-yellow-700 dark:text-yellow-400 list-disc list-inside space-y-1">
-                    <li>Insufficient permissions to access Key Vaults</li>
-                    <li>Network or firewall restrictions</li>
-                  </ul>
-                </div>
+                <EmptyStateAlert
+                  className="mb-4"
+                  title="⚠️ No Key Vaults found in this subscription."
+                  description="You can create a new Key Vault using the button above, or this could be due to:"
+                  suggestions={[
+                    "Insufficient permissions to access Key Vaults",
+                    "Network or firewall restrictions",
+                  ]}
+                />
               )}
 
             {selectedSubscription && <KeyvaultsList subscriptionId={selectedSubscription} />}
@@ -275,34 +232,5 @@ function Subscriptions() {
         />
       )}
     </Suspense>
-  );
-}
-
-function VaultsError({ error }: { error: Error }) {
-  return (
-    <div className="h-full flex items-center justify-center px-4">
-      <div className="max-w-md w-full bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-6">
-        <h2 className="text-lg font-semibold text-red-700 dark:text-red-300 mb-2">
-          Something went wrong
-        </h2>
-
-        <p className="text-sm text-red-600 dark:text-red-400 mb-4">{error.message}</p>
-
-        <button
-          type="button"
-          onClick={() => window.location.reload()}
-          className="px-4 py-2 rounded bg-red-600 text-white hover:bg-red-700"
-        >
-          Retry
-        </button>
-
-        {/*<button*/}
-        {/*  type="button"*/}
-        {/*  className="px-4 py-2 rounded bg-red-600 text-white hover:bg-red-700"*/}
-        {/*  onClick={() => router.invalidate()}>*/}
-        {/*  Retry*/}
-        {/*</button>*/}
-      </div>
-    </div>
   );
 }
