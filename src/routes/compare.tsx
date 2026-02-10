@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, redirect } from "@tanstack/react-router";
+import { invoke } from "@tauri-apps/api/core";
 import { Suspense, useMemo, useState } from "react";
 import {
   CompareEmptyState,
