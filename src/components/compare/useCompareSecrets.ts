@@ -63,20 +63,33 @@ export function useCompareSecrets({
   const secretValuesLoadedCount = secretValueQueries.filter((q) => q.isSuccess).length;
   const secretValuesTotalCount = secretValueQueries.length;
 
-  // Create a map for efficient query result lookup by vault and secret name
-  const queryMap = useMemo(() => {
-    const map = new Map<string, typeof secretValueQueries[0]>();
-    for (const query of secretValueQueries) {
-      // The queryKey is in the format ["secret", vaultUri, secretName]
-      const queryKey = (query as any).queryKey;
-      if (Array.isArray(queryKey) && queryKey.length === 3) {
-        const [, vaultUri, secretName] = queryKey;
-        const key = `${vaultUri}:${secretName}`;
-        map.set(key, query);
+  // Build a list of query keys in the same order as secretValueQueries
+  const queryKeys = useMemo(() => {
+    if (!targetVaultUri) return [];
+    const keys: { vaultUri: string; secretName: string }[] = [];
+    for (const name of allSecretNames) {
+      const sourceSecret = sourceSecrets.find((s) => getSecretName(s.id) === name);
+      const targetSecret = targetSecrets.find((s) => getSecretName(s.id) === name);
+      if (sourceSecret) {
+        keys.push({ vaultUri: sourceVaultUri, secretName: name });
+      }
+      if (targetSecret && targetVaultUri) {
+        keys.push({ vaultUri: targetVaultUri, secretName: name });
       }
     }
+    return keys;
+  }, [allSecretNames, sourceSecrets, targetSecrets, sourceVaultUri, targetVaultUri]);
+
+  // Create a map for efficient query result lookup by vault and secret name
+  const queryMap = useMemo(() => {
+    const map = new Map<string, (typeof secretValueQueries)[0]>();
+    for (let i = 0; i < secretValueQueries.length && i < queryKeys.length; i++) {
+      const keyInfo = queryKeys[i];
+      const key = `${keyInfo.vaultUri}:${keyInfo.secretName}`;
+      map.set(key, secretValueQueries[i]);
+    }
     return map;
-  }, [secretValueQueries]);
+  }, [secretValueQueries, queryKeys]);
 
   // Build comparison data
   const comparedSecrets = useMemo((): ComparedSecret[] => {
@@ -126,14 +139,7 @@ export function useCompareSecrets({
         targetValueFetched,
       };
     });
-  }, [
-    allSecretNames,
-    sourceSecrets,
-    targetSecrets,
-    sourceVaultUri,
-    targetVaultUri,
-    queryMap,
-  ]);
+  }, [allSecretNames, sourceSecrets, targetSecrets, sourceVaultUri, targetVaultUri, queryMap]);
 
   // Summary stats
   const stats: ComparisonStats = useMemo(() => {
