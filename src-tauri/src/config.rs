@@ -2,16 +2,9 @@
 //!
 //! This module contains all configuration values, API endpoints,
 //! and constants used throughout the application.
-
-// ============================================================================
-// Azure App Registration
-// ============================================================================
-
-/// Azure AD App Registration Client ID
-pub const CLIENT_ID: &str = "d904e24e-ef24-4c0c-b361-597ec4ef69cf";
-
-/// Azure AD Tenant ID
-pub const TENANT_ID: &str = "8948bc3d-2462-4abf-b447-84b07161f34e";
+//!
+//! Note: Azure Client ID and Tenant ID are stored in user_config.rs
+//! and can be configured by the user at runtime.
 
 // ============================================================================
 // OAuth2 Scopes

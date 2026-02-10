@@ -1,11 +1,12 @@
 use crate::azure::auth::constants::{
-  AUTH_SCOPES, CLIENT_ID, DEVICE_CODE_ENDPOINT, TENANT_ID, TOKEN_ENDPOINT,
+  AUTH_SCOPES, DEVICE_CODE_ENDPOINT, TOKEN_ENDPOINT,
 };
 use crate::azure::auth::state::{AUTH_CREDENTIAL, DEVICE_CODE_STATE};
 use crate::azure::auth::token::store_auth_result;
 use crate::azure::auth::types::{
   AuthResult, DeviceCodeInfo, DeviceCodeResponse, DeviceCodeState, TokenResponse,
 };
+use crate::user_config::{get_client_id, get_tenant_id};
 use async_trait::async_trait;
 use azure_core::credentials::{AccessToken, Secret, TokenCredential, TokenRequestOptions};
 use azure_core::Error;
@@ -152,10 +153,15 @@ impl TokenCredential for ManualDeviceCodeCredential {
 /// Initiates Azure authentication using Device Code Flow
 pub async fn start_device_code_login() -> Result<DeviceCodeInfo, String> {
     info!("Starting device code login flow...");
+
+    // Get dynamic configuration
+    let client_id = get_client_id().await;
+    let tenant_id = get_tenant_id().await;
+
     let client = reqwest::Client::new();
     let url = format!(
         "{}/{}/oauth2/v2.0/devicecode",
-        DEVICE_CODE_ENDPOINT, TENANT_ID
+        DEVICE_CODE_ENDPOINT, tenant_id
     );
 
     info!(
@@ -164,7 +170,7 @@ pub async fn start_device_code_login() -> Result<DeviceCodeInfo, String> {
     );
     let response = client
         .post(&url)
-        .form(&[("client_id", CLIENT_ID), ("scope", AUTH_SCOPES)])
+        .form(&[("client_id", client_id.as_str()), ("scope", AUTH_SCOPES)])
         .send()
         .await
         .map_err(|e| {
@@ -201,8 +207,8 @@ pub async fn start_device_code_login() -> Result<DeviceCodeInfo, String> {
 
     // Store the manual credential
     let credential = ManualDeviceCodeCredential {
-        client_id: CLIENT_ID.to_string(),
-        tenant_id: TENANT_ID.to_string(),
+        client_id: client_id,
+        tenant_id: tenant_id,
         access_token: Arc::new(tokio::sync::RwLock::new(None)),
     };
 

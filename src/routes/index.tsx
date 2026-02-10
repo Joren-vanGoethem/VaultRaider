@@ -2,6 +2,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import { useEffect, useState } from "react";
 import { Avatar } from "../components/Avatar";
+import { AzureConfigEditor } from "../components/AzureConfigEditor";
 import { CopyIcon } from "../components/icons";
 import { LoadingSpinner } from "../components/LoadingSpinner";
 import { useAuth } from "../contexts/AuthContext";
@@ -283,6 +284,9 @@ function Index() {
                 <p className="text-sm whitespace-pre-wrap">{message}</p>
               </div>
             )}
+
+            {/* Azure Configuration Editor */}
+            <AzureConfigEditor />
           </div>
         ) : (
           <div className="card">

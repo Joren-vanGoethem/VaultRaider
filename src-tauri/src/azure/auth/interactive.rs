@@ -19,9 +19,10 @@ use crate::azure::auth::types::{
   AuthResult, DeviceCodeInfo, DeviceCodeResponse, DeviceCodeState, TokenResponse,
 };
 use crate::config::{
-  AUTH_SCOPES, CLIENT_ID, DEVICE_CODE_ENDPOINT, MAX_POLL_ATTEMPTS, POLL_SLOWDOWN_SECONDS,
-  TENANT_ID, TOKEN_ENDPOINT,
+  AUTH_SCOPES, DEVICE_CODE_ENDPOINT, MAX_POLL_ATTEMPTS, POLL_SLOWDOWN_SECONDS,
+  TOKEN_ENDPOINT,
 };
+use crate::user_config::{get_client_id, get_tenant_id};
 
 /// Credential implementation for interactive device code flow
 #[derive(Debug)]
@@ -139,13 +140,17 @@ impl TokenCredential for InteractiveDeviceCodeCredential {
 pub async fn start_interactive_browser_login() -> Result<DeviceCodeInfo, String> {
     info!("Starting interactive browser login flow...");
 
+    // Get dynamic configuration
+    let client_id = get_client_id().await;
+    let tenant_id = get_tenant_id().await;
+
     let device_code_url = format!(
         "{}/{}/oauth2/v2.0/devicecode",
-        DEVICE_CODE_ENDPOINT, TENANT_ID
+        DEVICE_CODE_ENDPOINT, tenant_id
     );
 
     let mut params = HashMap::new();
-    params.insert("client_id", CLIENT_ID);
+    params.insert("client_id", client_id.as_str());
     params.insert("scope", AUTH_SCOPES);
 
     let client = reqwest::Client::new();
@@ -177,8 +182,8 @@ pub async fn start_interactive_browser_login() -> Result<DeviceCodeInfo, String>
 
     // Initialize the credential and store it in AUTH_CREDENTIAL
     let credential = InteractiveDeviceCodeCredential {
-        client_id: CLIENT_ID.to_string(),
-        tenant_id: TENANT_ID.to_string(),
+        client_id: client_id,
+        tenant_id: tenant_id,
         access_token: Arc::new(tokio::sync::RwLock::new(None)),
     };
 

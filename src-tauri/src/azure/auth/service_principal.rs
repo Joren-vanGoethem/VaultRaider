@@ -1,6 +1,7 @@
-use crate::azure::auth::constants::{CLIENT_ID, TENANT_ID, VAULT_SCOPE};
+use crate::azure::auth::constants::VAULT_SCOPE;
 use crate::azure::auth::token::store_auth_result;
 use crate::azure::auth::types::AuthResult;
+use crate::user_config::{get_client_id, get_tenant_id};
 use azure_core::credentials::{Secret, TokenCredential};
 use azure_identity::{ClientSecretCredential, ClientSecretCredentialOptions};
 use log::info;
@@ -12,17 +13,19 @@ use std::env;
 pub async fn try_environment_credential() -> Result<AuthResult, String> {
     info!("try_environment_credential...");
 
-    // Check if environment variables are set
+    // Get dynamic configuration as fallback
+    let default_client_id = get_client_id().await;
+    let default_tenant_id = get_tenant_id().await;
+
+    // Check if environment variables are set, fall back to user config
     let client_id = env::var("AZURE_CLIENT_ID")
-        .or_else(|_| Ok::<String, std::env::VarError>(CLIENT_ID.to_string()))
-        .map_err(|e| format!("AZURE_CLIENT_ID not set: {}", e))?;
+        .unwrap_or(default_client_id);
 
     let client_secret = env::var("AZURE_CLIENT_SECRET")
         .map_err(|_| "AZURE_CLIENT_SECRET environment variable not set".to_string())?;
 
     let tenant_id = env::var("AZURE_TENANT_ID")
-        .or_else(|_| Ok::<String, std::env::VarError>(TENANT_ID.to_string()))
-        .map_err(|e| format!("AZURE_TENANT_ID not set: {}", e))?;
+        .unwrap_or(default_tenant_id);
 
     let options = ClientSecretCredentialOptions::default();
 
