@@ -152,6 +152,17 @@ pub mod urls {
         )
     }
 
+    /// Get the URL to list all versions of a secret
+    pub fn secret_versions(keyvault_uri: &str, secret_name: &str) -> String {
+        let clean_uri = keyvault_uri
+            .trim_start_matches("https://")
+            .trim_end_matches('/');
+        format!(
+            "https://{}/secrets/{}/versions?api-version={}",
+            clean_uri, secret_name, KEYVAULT_DATA_API_VERSION
+        )
+    }
+
     /// Get the URL to delete a secret
     pub fn delete_secret(keyvault_uri: &str, secret_name: &str) -> String {
         let clean_uri = keyvault_uri

@@ -89,6 +89,15 @@ pub async fn get_secret(
     }
 }
 
+/// Fetch all versions of a specific secret
+#[tauri::command]
+pub async fn get_secret_versions(
+    keyvault_uri: String,
+    secret_name: String,
+) -> Result<Vec<Secret>, String> {
+    crate::azure::keyvault::secret::service::get_secret_versions(&keyvault_uri, &secret_name).await
+}
+
 /// Delete a secret
 /// Invalidates the cache after successful deletion
 #[tauri::command]

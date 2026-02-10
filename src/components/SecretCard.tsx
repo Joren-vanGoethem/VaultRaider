@@ -13,6 +13,7 @@ import { DeleteConfirmationModal } from "./DeleteConfirmationModal";
 import { SecretAttributes } from "./SecretAttributes";
 import { SecretHeader } from "./SecretHeader";
 import { SecretValue } from "./SecretValue";
+import { SecretVersionsModal } from "./SecretVersionsModal";
 
 interface SecretCardProps {
   secret: Secret;
@@ -35,6 +36,7 @@ export function SecretCard({
 }: SecretCardProps) {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showVersionsModal, setShowVersionsModal] = useState(false);
   const [manualLoad, setManualLoad] = useState(false);
   const [editValue, setEditValue] = useState("");
   const queryClient = useQueryClient();
@@ -248,6 +250,7 @@ export function SecretCard({
         enabled={secret.attributes.enabled}
         onDelete={handleDeleteClick}
         onEdit={handleEditClick}
+        onVersions={() => setShowVersionsModal(true)}
         isDeleting={deleteMutation.isPending}
         hasValue={!!secretBundle?.value}
       />
@@ -278,6 +281,13 @@ export function SecretCard({
             ? "This secret can be recovered after deletion."
             : "This action cannot be undone."
         }
+      />
+
+      <SecretVersionsModal
+        isOpen={showVersionsModal}
+        onClose={() => setShowVersionsModal(false)}
+        secretName={secretName}
+        vaultUri={vaultUri}
       />
 
       {/* Edit Secret Modal */}
