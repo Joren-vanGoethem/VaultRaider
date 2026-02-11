@@ -4,7 +4,15 @@ import { useCallback, useState } from "react";
 import { useToast } from "../contexts/ToastContext";
 import { fetchSecret, fetchSecretVersions, updateSecret } from "../services/azureService";
 import type { Secret, SecretBundle } from "../types/secrets";
-import { Button, IconButton, Modal, ModalDescription, ModalFooter, ModalTitle } from "./common";
+import {
+  Button,
+  formatDate,
+  IconButton,
+  Modal,
+  ModalDescription,
+  ModalFooter,
+  ModalTitle,
+} from "./common";
 import { LoadingSpinner } from "./LoadingSpinner";
 
 interface SecretVersionsModalProps {
@@ -18,16 +26,6 @@ interface SecretVersionsModalProps {
 function extractVersion(id: string): string {
   const parts = id.split("/");
   return parts[parts.length - 1];
-}
-
-function formatDate(timestamp: number): string {
-  return new Date(timestamp * 1000).toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
 }
 
 function VersionValueCell({

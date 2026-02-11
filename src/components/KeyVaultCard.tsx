@@ -3,6 +3,7 @@ import { Link } from "@tanstack/react-router";
 import { CheckCircle, Loader2, Trash2, XCircle } from "lucide-react";
 import { checkKeyvaultAccess } from "../services/azureService";
 import type { KeyVault } from "../types/azure";
+import { extractResourceGroup } from "../utils/stringUtils";
 
 interface KeyVaultCardProps {
   vault: KeyVault;
@@ -59,11 +60,6 @@ export function KeyVaultCard({ vault, subscriptionId, onDelete }: KeyVaultCardPr
   };
 
   // Extract resource group from vault ID
-  // Format: /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.KeyVault/vaults/{vaultName}
-  const extractResourceGroup = (vaultId: string): string | undefined => {
-    const match = vaultId.match(/\/resourceGroups\/([^/]+)\//i);
-    return match ? match[1] : undefined;
-  };
 
   const resourceGroup = extractResourceGroup(vault.id);
 

@@ -1,10 +1,8 @@
-﻿import { open } from "@tauri-apps/plugin-dialog";
-import { readTextFile } from "@tauri-apps/plugin-fs";
+﻿import { readTextFile } from "@tauri-apps/plugin-fs";
 import {
   AlertTriangleIcon,
   CheckIcon,
   FileUpIcon,
-  FolderIcon,
   RefreshCwIcon,
   SkipForwardIcon,
   XIcon,
@@ -13,7 +11,16 @@ import { useCallback, useState } from "react";
 import { useToast } from "../contexts/ToastContext";
 import { createSecret, parseImportFile, updateSecret } from "../services/azureService";
 import type { Secret } from "../types/secrets";
-import { ActionButton, Alert, Button, IconButton, Modal, ModalFooter } from "./common";
+import {
+  ActionButton,
+  Alert,
+  Button,
+  FileOpenSelector,
+  IconButton,
+  Modal,
+  ModalFooter,
+  ProgressBar,
+} from "./common";
 
 type ImportFormat = "auto" | "full" | "simple" | "keyValue" | "dotenv";
 type ConflictResolution = "skip" | "override" | "ask";
@@ -79,25 +86,16 @@ export function ImportSecretsModal({
     onClose();
   }, [resetState, onClose]);
 
-  const handleSelectFile = async () => {
-    try {
-      const selected = await open({
-        multiple: false,
-        filters: [
-          { name: "JSON Files", extensions: ["json"] },
-          { name: "Environment Files", extensions: ["env"] },
-          { name: "Text Files", extensions: ["txt"] },
-          { name: "All Files", extensions: ["*"] },
-        ],
-      });
-      if (selected) {
-        setFilePath(selected);
-        const content = await readTextFile(selected);
+  const handleFileChange = async (path: string | null) => {
+    if (path) {
+      setFilePath(path);
+      try {
+        const content = await readTextFile(path);
         setFileContent(content);
+      } catch (error) {
+        console.error("Failed to read file:", error);
+        showError("Failed to read file", error instanceof Error ? error.message : String(error));
       }
-    } catch (error) {
-      console.error("Failed to select file:", error);
-      showError("Failed to select file", error instanceof Error ? error.message : String(error));
     }
   };
 
@@ -266,23 +264,11 @@ export function ImportSecretsModal({
             >
               Select File
             </label>
-            <div className="flex gap-2">
-              <input
-                type="text"
-                value={filePath || ""}
-                readOnly
-                placeholder="Select a file to import..."
-                className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 text-sm"
-              />
-              <Button
-                id="importFileInput"
-                variant="secondary"
-                onClick={handleSelectFile}
-                leftIcon={<FolderIcon className="w-4 h-4" />}
-              >
-                Browse
-              </Button>
-            </div>
+            <FileOpenSelector
+              value={filePath}
+              onChange={handleFileChange}
+              placeholder="Select a file to import..."
+            />
           </div>
 
           {/* Format Selection */}
@@ -531,23 +517,15 @@ export function ImportSecretsModal({
           <div className="mb-4">
             <div className="animate-spin inline-block w-8 h-8 border-4 border-green-500 border-t-transparent rounded-full" />
           </div>
-          <p className="text-lg font-medium text-gray-900 dark:text-gray-100">
+          <p className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-4">
             Importing secrets...
           </p>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
-            {importProgress.current} of {importProgress.total} completed
-          </p>
-          <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2 mt-4 max-w-xs mx-auto">
-            <div
-              className="bg-green-500 h-2 rounded-full transition-all duration-300"
-              style={{
-                width:
-                  importProgress.total > 0
-                    ? `${(importProgress.current / importProgress.total) * 100}%`
-                    : "0%",
-              }}
-            />
-          </div>
+          <ProgressBar
+            current={importProgress.current}
+            total={importProgress.total}
+            variant="success"
+            className="max-w-xs mx-auto"
+          />
         </div>
       )}
 

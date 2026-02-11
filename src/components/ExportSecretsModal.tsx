@@ -1,11 +1,10 @@
-﻿import { save } from "@tauri-apps/plugin-dialog";
-import { writeTextFile } from "@tauri-apps/plugin-fs";
-import { FileJsonIcon, FolderIcon, XIcon } from "lucide-react";
+﻿import { writeTextFile } from "@tauri-apps/plugin-fs";
+import { FileJsonIcon, XIcon } from "lucide-react";
 import { useState } from "react";
 import { useToast } from "../contexts/ToastContext";
 import { exportSecrets } from "../services/azureService";
 import type { Secret } from "../types/secrets";
-import { Button, IconButton, Modal, ModalFooter } from "./common";
+import { Button, FileSaveSelector, IconButton, Modal, ModalFooter } from "./common";
 
 type ExportFormat = "full" | "simple" | "keyValue" | "dotenv";
 
@@ -52,23 +51,6 @@ export function ExportSecretsModal({
 
   const handleOptionChange = (key: keyof ExportOptions) => {
     setOptions((prev) => ({ ...prev, [key]: !prev[key] }));
-  };
-
-  const handleSelectLocation = async () => {
-    try {
-      const path = await save({
-        defaultPath: `${vaultName}-secrets-${new Date().toISOString().split("T")[0]}.json`,
-        filters: [
-          { name: "JSON", extensions: ["json"] },
-          { name: "Text", extensions: ["txt", "env"] },
-        ],
-      });
-      if (path) {
-        setSavePath(path);
-      }
-    } catch (error) {
-      console.error("Failed to select save location:", error);
-    }
   };
 
   const handleExport = async () => {
@@ -269,22 +251,15 @@ ANOTHER_SECRET="another-value"`,
         >
           Save Location
         </label>
-        <div id="saveLocation" className="flex gap-2">
-          <input
-            type="text"
-            value={savePath || ""}
-            readOnly
-            placeholder="Select a location to save the file..."
-            className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 text-sm"
-          />
-          <Button
-            variant="secondary"
-            onClick={handleSelectLocation}
-            leftIcon={<FolderIcon className="w-4 h-4" />}
-          >
-            Browse
-          </Button>
-        </div>
+        <FileSaveSelector
+          value={savePath}
+          onChange={setSavePath}
+          defaultFileName={`${vaultName}-secrets-${new Date().toISOString().split("T")[0]}.json`}
+          filters={[
+            { name: "JSON", extensions: ["json"] },
+            { name: "Text", extensions: ["txt", "env"] },
+          ]}
+        />
       </div>
 
       {/* Export Info */}

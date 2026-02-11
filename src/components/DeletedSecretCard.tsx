@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { RotateCcw, Trash2 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { useToast } from "../contexts/ToastContext";
 import {
   fetchDeletedSecretsKey,
@@ -9,7 +9,16 @@ import {
   recoverDeletedSecret,
 } from "../services/azureService";
 import type { DeletedSecretItem } from "../types/secrets";
-import { Button, Modal, ModalDescription, ModalFooter, ModalTitle } from "./common";
+import { extractSecretName } from "../utils/stringUtils";
+import {
+  Button,
+  formatDate,
+  Modal,
+  ModalDescription,
+  ModalFooter,
+  ModalTitle,
+  StatusBadge,
+} from "./common";
 
 interface DeletedSecretCardProps {
   secret: DeletedSecretItem;
@@ -29,20 +38,11 @@ export function DeletedSecretCard({
   const queryClient = useQueryClient();
   const { showSuccess, showError } = useToast();
 
-  const secretName = useMemo(() => {
-    const parts = secret.id.split("/");
-    return parts[parts.length - 1];
-  }, [secret.id]);
+  const secretName = extractSecretName(secret.id);
 
-  const formatDate = (timestamp?: number) => {
+  const formatDateSafe = (timestamp?: number) => {
     if (!timestamp) return "Unknown";
-    return new Date(timestamp * 1000).toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
+    return formatDate(timestamp);
   };
 
   const recoverMutation = useMutation({
@@ -82,9 +82,7 @@ export function DeletedSecretCard({
           <span className="font-mono text-sm font-semibold text-gray-900 dark:text-gray-100 truncate">
             {secretName}
           </span>
-          <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300 shrink-0">
-            Deleted
-          </span>
+          <StatusBadge variant="deleted">Deleted</StatusBadge>
         </div>
         <div className="flex items-center gap-1 shrink-0 ml-2">
           {canRecover && (
@@ -123,13 +121,13 @@ export function DeletedSecretCard({
         <div className="flex items-center gap-1">
           <span className="text-gray-500 dark:text-gray-500">Deleted:</span>
           <span className="text-gray-900 dark:text-gray-100">
-            {formatDate(secret.deletedDate)}
+            {formatDateSafe(secret.deletedDate)}
           </span>
         </div>
         <div className="flex items-center gap-1">
           <span className="text-gray-500 dark:text-gray-500">Scheduled purge:</span>
           <span className="text-gray-900 dark:text-gray-100">
-            {formatDate(secret.scheduledPurgeDate)}
+            {formatDateSafe(secret.scheduledPurgeDate)}
           </span>
         </div>
         <div className="flex items-center gap-1">

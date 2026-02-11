@@ -4,8 +4,7 @@ import { Suspense, useCallback, useMemo, useState } from "react";
 import { BulkDeleteModal } from "../components/BulkDeleteModal";
 import { CompareVaultsModal } from "../components/CompareVaultsModal";
 import { CreateSecretModal } from "../components/CreateSecretModal";
-import { Button, PageError, PageLoadingSpinner } from "../components/common";
-import { DeleteKeyvaultModal } from "../components/DeleteKeyvaultModal";
+import { Button, ConfirmWithText, PageError, PageLoadingSpinner } from "../components/common";
 import { ExportSecretsModal } from "../components/ExportSecretsModal";
 import { ImportSecretsModal } from "../components/ImportSecretsModal";
 import { KeyvaultHeader } from "../components/KeyvaultHeader";
@@ -59,6 +58,7 @@ function Keyvaults() {
   const [selectedSecrets, setSelectedSecrets] = useState<Set<string>>(new Set());
   const [showBulkDeleteModal, setShowBulkDeleteModal] = useState(false);
   const [showDeleteVaultModal, setShowDeleteVaultModal] = useState(false);
+  const [deleteVaultConfirmText, setDeleteVaultConfirmText] = useState("");
   const queryClient = useQueryClient();
   const { showSuccess, showError } = useToast();
 
@@ -367,12 +367,27 @@ function Keyvaults() {
           isDeleting={bulkDeleteMutation.isPending}
         />
 
-        <DeleteKeyvaultModal
+        <ConfirmWithText
           isOpen={showDeleteVaultModal}
+          onClose={() => {
+            setShowDeleteVaultModal(false);
+            setDeleteVaultConfirmText("");
+          }}
           onConfirm={handleConfirmDeleteVault}
-          onCancel={() => setShowDeleteVaultModal(false)}
-          keyvaultName={name}
-          isDeleting={deleteVaultMutation.isPending}
+          title="Delete Key Vault"
+          description={
+            <>
+              This action cannot be undone. This will permanently delete the Key Vault{" "}
+              <span className="font-semibold text-gray-900 dark:text-gray-100">{name}</span> and all
+              of its secrets.
+            </>
+          }
+          confirmationText={name}
+          currentText={deleteVaultConfirmText}
+          onTextChange={setDeleteVaultConfirmText}
+          confirmText="Delete Key Vault"
+          isLoading={deleteVaultMutation.isPending}
+          loadingText="Deleting..."
         />
       </div>
     </Suspense>
