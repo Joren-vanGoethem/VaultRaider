@@ -11,7 +11,7 @@ import {
   X,
   XCircle,
 } from "lucide-react";
-import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { KeyVault } from "~/types/keyvault.ts";
 import type { Secret } from "~/types/secrets.ts";
 import { Alert, Button, EmptyState, PageError, PageLoadingSpinner } from "../components/common";
@@ -82,6 +82,9 @@ function GlobalSearch() {
   const [showFilters, setShowFilters] = useState(false);
   const [searchProgress, setSearchProgress] = useState({ current: 0, total: 0 });
 
+  // Track if keyvaults have been initialized to prevent re-selecting after user deselects
+  const keyvaultsInitialized = useRef(false);
+
   // Fetch all key vaults for all subscriptions
   const keyvaultQueries = useQueries({
     queries: subscriptions.map((sub) => ({
@@ -131,6 +134,9 @@ function GlobalSearch() {
   // Initialize selected keyvaults when they load - only accessible ones
   // biome-ignore lint/correctness/useExhaustiveDependencies: Intentionally excluding selectedKeyvaults.size and accessQueries to prevent infinite loop
   useEffect(() => {
+    // Only initialize once, don't re-run if user has already interacted
+    if (keyvaultsInitialized.current) return;
+
     if (selectedKeyvaults.size === 0 && allKeyvaults.length > 0) {
       // Wait for at least one access check to complete
       const anyAccessChecked = accessQueries.some((q) => !q.isLoading);
@@ -143,6 +149,7 @@ function GlobalSearch() {
 
       if (accessibleVaults.length > 0) {
         setSelectedKeyvaults(new Set(accessibleVaults.map((kv) => kv.properties.vaultUri)));
+        keyvaultsInitialized.current = true;
       }
     }
   }, [allKeyvaults, accessMap]);
@@ -194,12 +201,25 @@ function GlobalSearch() {
       return access?.hasAccess && !access?.isLoading;
     });
 
-    if (selectedKeyvaults.size === accessibleVaults.length) {
-      setSelectedKeyvaults(new Set());
+    const accessibleVaultUris = new Set(accessibleVaults.map((kv) => kv.properties.vaultUri));
+
+    // Check if all accessible vaults are currently selected
+    const allAccessibleSelected = accessibleVaults.every((kv) =>
+      selectedKeyvaults.has(kv.properties.vaultUri),
+    );
+
+    if (allAccessibleSelected && accessibleVaults.length > 0) {
+      // Deselect all accessible vaults
+      setSelectedKeyvaults(
+        new Set(Array.from(selectedKeyvaults).filter((uri) => !accessibleVaultUris.has(uri))),
+      );
     } else {
-      setSelectedKeyvaults(new Set(accessibleVaults.map((kv) => kv.properties.vaultUri)));
+      // Select all accessible vaults (merge with existing selections from other subscriptions)
+      setSelectedKeyvaults(
+        new Set([...Array.from(selectedKeyvaults), ...Array.from(accessibleVaultUris)]),
+      );
     }
-  }, [selectedKeyvaults.size, filteredKeyvaults, accessMap]);
+  }, [selectedKeyvaults, filteredKeyvaults, accessMap]);
 
   // Perform the search
   const performSearch = useCallback(async () => {
@@ -521,13 +541,18 @@ function GlobalSearch() {
                       onClick={toggleAllKeyvaults}
                       className="text-sm text-primary-600 dark:text-primary-400 hover:underline"
                     >
-                      {selectedKeyvaults.size ===
-                      filteredKeyvaults.filter((kv) => {
-                        const access = accessMap.get(kv.properties.vaultUri);
-                        return access?.hasAccess && !access?.isLoading;
-                      }).length
-                        ? "Deselect All"
-                        : "Select All"}
+                      {(() => {
+                        const accessibleVaults = filteredKeyvaults.filter((kv) => {
+                          const access = accessMap.get(kv.properties.vaultUri);
+                          return access?.hasAccess && !access?.isLoading;
+                        });
+                        const allAccessibleSelected = accessibleVaults.every((kv) =>
+                          selectedKeyvaults.has(kv.properties.vaultUri),
+                        );
+                        return allAccessibleSelected && accessibleVaults.length > 0
+                          ? "Deselect All"
+                          : "Select All";
+                      })()}
                     </button>
                   </div>
                   <div className="space-y-2 max-h-64 overflow-y-auto border border-gray-200 dark:border-gray-700 rounded-lg p-3">
