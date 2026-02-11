@@ -2,7 +2,7 @@
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import { createRootRouteWithContext, Link, Outlet, useNavigate } from "@tanstack/react-router";
 import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
-import { ChevronLeft, ChevronRight, Shield } from "lucide-react";
+import { ChevronLeft, ChevronRight, Search, Shield } from "lucide-react";
 import { useState } from "react";
 import { Breadcrumbs } from "../components/Breadcrumbs";
 import { ThemeToggle } from "../components/ThemeToggle";
@@ -51,19 +51,34 @@ function Sidebar() {
       <nav className="flex-1 p-3 overflow-y-auto">
         <ul className="space-y-1">
           {isAuthenticated && (
-            <li>
-              <Link
-                to="/subscriptions"
-                className={`flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors ${isCollapsed ? "justify-center" : ""}`}
-                activeProps={{
-                  className: `flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-lg bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400 ${isCollapsed ? "justify-center" : ""}`,
-                }}
-                title={isCollapsed ? "Key Vaults" : ""}
-              >
-                <Shield className="w-4 h-4 flex-shrink-0" />
-                {!isCollapsed && <span>Key Vaults</span>}
-              </Link>
-            </li>
+            <>
+              <li>
+                <Link
+                  to="/subscriptions"
+                  className={`flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors ${isCollapsed ? "justify-center" : ""}`}
+                  activeProps={{
+                    className: `flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-lg bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400 ${isCollapsed ? "justify-center" : ""}`,
+                  }}
+                  title={isCollapsed ? "Key Vaults" : ""}
+                >
+                  <Shield className="w-4 h-4 flex-shrink-0" />
+                  {!isCollapsed && <span>Key Vaults</span>}
+                </Link>
+              </li>
+              <li>
+                <Link
+                  to="/search"
+                  className={`flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors ${isCollapsed ? "justify-center" : ""}`}
+                  activeProps={{
+                    className: `flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-lg bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400 ${isCollapsed ? "justify-center" : ""}`,
+                  }}
+                  title={isCollapsed ? "Global Search" : ""}
+                >
+                  <Search className="w-4 h-4 flex-shrink-0" />
+                  {!isCollapsed && <span>Global Search</span>}
+                </Link>
+              </li>
+            </>
           )}
         </ul>
       </nav>

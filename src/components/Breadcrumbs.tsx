@@ -1,5 +1,5 @@
 ﻿import { Link, useMatches } from "@tanstack/react-router";
-import { ChevronRight, GitCompare, Key, Shield, Trash2 } from "lucide-react";
+import { ChevronRight, GitCompare, Key, Search, Shield, Trash2 } from "lucide-react";
 
 interface BreadcrumbItem {
   label: string;
@@ -16,6 +16,14 @@ export function Breadcrumbs() {
 
   // Build breadcrumb items based on current route
   const breadcrumbs: BreadcrumbItem[] = [];
+
+  // Check for search route
+  if (currentPath.startsWith("/search")) {
+    breadcrumbs.push({
+      label: "Global Search",
+      icon: <Search className="w-4 h-4" />,
+    });
+  }
 
   // Check for subscriptions route or keyvault route or compare route or deleted-secrets route
   if (
