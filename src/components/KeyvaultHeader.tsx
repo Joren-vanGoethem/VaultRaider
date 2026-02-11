@@ -83,14 +83,14 @@ export function KeyvaultHeader({
 
   return (
     <div className="flex-none px-6 py-4 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
-      <div className="flex flex-col gap-4">
+      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
         {/* Title Section */}
-        <div className="flex items-center gap-3">
-          <div className="p-2 rounded-lg bg-primary-100 dark:bg-primary-900/30">
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="p-2 rounded-lg bg-primary-100 dark:bg-primary-900/30 shrink-0">
             <KeyIcon className="w-6 h-6 text-primary-600 dark:text-primary-400" />
           </div>
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">{name}</h1>
+          <div className="min-w-0">
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 truncate">{name}</h1>
             <p className="text-sm text-gray-500 dark:text-gray-400">
               {secretsCount} secret{secretsCount !== 1 ? "s" : ""}
             </p>
@@ -98,7 +98,7 @@ export function KeyvaultHeader({
         </div>
 
         {/* Action Buttons Section */}
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2 shrink-0">
           {secretsCount > 0 && !loadAll && (
             <Button
               variant="secondary"
