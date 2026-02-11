@@ -1,6 +1,6 @@
 [package]
 name = "vaultraider"
-version = "0.1.1"
+version = "0.1.0"
 description = "A cross platform app for managing azure keyvaults"
 authors = ["joren vangoethem"]
 edition = "2024"
