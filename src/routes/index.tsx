@@ -296,7 +296,7 @@ function Index() {
                     Sign in using your browser with a device code.
                   </p>
                   <p className="text-xs text-amber-600 dark:text-amber-400 mb-3">
-                    ?? May require admin consent in some organizations
+                    May require admin consent in some organizations
                   </p>
                   <Button
                     variant="secondary"
