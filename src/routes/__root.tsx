@@ -2,7 +2,7 @@
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import { createRootRouteWithContext, Link, Outlet, useNavigate } from "@tanstack/react-router";
 import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
-import { ChevronLeft, ChevronRight, Search, Shield } from "lucide-react";
+import { ChevronLeft, ChevronRight, Search, Settings, Shield } from "lucide-react";
 import { useState } from "react";
 import { Breadcrumbs } from "../components/Breadcrumbs";
 import { ThemeToggle } from "../components/ThemeToggle";
@@ -83,8 +83,19 @@ function Sidebar() {
         </ul>
       </nav>
 
-      {/* Bottom section: User profile & theme toggle - Fixed at bottom */}
+      {/* Bottom section: Settings, User profile & theme toggle - Fixed at bottom */}
       <div className="flex-none p-3 border-t border-gray-200 dark:border-gray-700 space-y-3">
+        <Link
+          to="/settings"
+          className={`flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors ${isCollapsed ? "justify-center" : ""}`}
+          activeProps={{
+            className: `flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-lg bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400 ${isCollapsed ? "justify-center" : ""}`,
+          }}
+          title={isCollapsed ? "Settings" : ""}
+        >
+          <Settings className="w-4 h-4 flex-shrink-0" />
+          {!isCollapsed && <span>Settings</span>}
+        </Link>
         <ThemeToggle isCollapsed={isCollapsed} />
         {isAuthenticated && userInfo && (
           <UserProfile

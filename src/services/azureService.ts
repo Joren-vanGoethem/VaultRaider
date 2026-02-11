@@ -105,7 +105,7 @@ export async function fetchSecrets(keyvaultUri: string): Promise<Secret[]> {
 }
 
 // Global request queue for secret fetching (max 10 concurrent requests)
-const secretRequestQueue = new RequestQueue(10);
+const secretRequestQueue = new RequestQueue(25);
 
 export async function fetchSecret(
   keyvaultUri: string,
