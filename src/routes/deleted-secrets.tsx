@@ -2,9 +2,16 @@ import { useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-q
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowLeft, KeyIcon, RotateCcw, SearchIcon, Trash2 } from "lucide-react";
 import { Suspense, useCallback, useMemo, useState } from "react";
+import {
+  Button,
+  Modal,
+  ModalDescription,
+  ModalFooter,
+  ModalTitle,
+  PageError,
+  PageLoadingSpinner,
+} from "../components/common";
 import { DeletedSecretsList } from "../components/DeletedSecretsList";
-import { Button, PageError, PageLoadingSpinner } from "../components/common";
-import { Modal, ModalDescription, ModalFooter, ModalTitle } from "../components/common";
 import { useToast } from "../contexts/ToastContext";
 import {
   fetchDeletedSecrets,
@@ -20,6 +27,7 @@ type DeletedSecretsSearch = {
   vaultUri: string;
   name: string;
   subscriptionId?: string;
+  resourceGroup?: string;
   enablePurgeProtection?: boolean;
   enableSoftDelete?: boolean;
 };
@@ -33,6 +41,7 @@ export const Route = createFileRoute("/deleted-secrets")({
       vaultUri: search.vaultUri as string,
       name: search.name as string,
       subscriptionId: search.subscriptionId as string | undefined,
+      resourceGroup: search.resourceGroup as string | undefined,
       enablePurgeProtection: search.enablePurgeProtection as boolean | undefined,
       enableSoftDelete: search.enableSoftDelete as boolean | undefined,
     };
@@ -41,7 +50,7 @@ export const Route = createFileRoute("/deleted-secrets")({
 });
 
 function DeletedSecrets() {
-  const { vaultUri, name, subscriptionId, enablePurgeProtection, enableSoftDelete } =
+  const { vaultUri, name, subscriptionId, resourceGroup, enablePurgeProtection, enableSoftDelete } =
     Route.useSearch();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectionMode, setSelectionMode] = useState(false);
@@ -177,7 +186,7 @@ function DeletedSecrets() {
             <div className="flex items-center gap-3">
               <Link
                 to="/keyvault"
-                search={{ vaultUri, name, subscriptionId, enableSoftDelete }}
+                search={{ vaultUri, name, subscriptionId, resourceGroup, enableSoftDelete }}
                 className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-gray-600 dark:text-gray-400"
                 title="Back to active secrets"
               >
@@ -207,13 +216,9 @@ function DeletedSecrets() {
             <div className="flex items-center gap-2">
               <Link
                 to="/keyvault"
-                search={{ vaultUri, name, subscriptionId, enableSoftDelete }}
+                search={{ vaultUri, name, subscriptionId, resourceGroup, enableSoftDelete }}
               >
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  leftIcon={<KeyIcon className="w-4 h-4" />}
-                >
+                <Button variant="secondary" size="sm" leftIcon={<KeyIcon className="w-4 h-4" />}>
                   Active Secrets
                 </Button>
               </Link>
@@ -336,10 +341,7 @@ function DeletedSecrets() {
         </div>
 
         {/* Bulk Recover Modal */}
-        <Modal
-          isOpen={showBulkRecoverModal}
-          onClose={() => setShowBulkRecoverModal(false)}
-        >
+        <Modal isOpen={showBulkRecoverModal} onClose={() => setShowBulkRecoverModal(false)}>
           <ModalTitle>Recover {selectedSecrets.size} Secret(s)</ModalTitle>
           <ModalDescription>
             Are you sure you want to recover the following secret(s)?
@@ -374,10 +376,7 @@ function DeletedSecrets() {
         </Modal>
 
         {/* Bulk Purge Modal */}
-        <Modal
-          isOpen={showBulkPurgeModal}
-          onClose={() => setShowBulkPurgeModal(false)}
-        >
+        <Modal isOpen={showBulkPurgeModal} onClose={() => setShowBulkPurgeModal(false)}>
           <ModalTitle>Purge {selectedSecrets.size} Secret(s)</ModalTitle>
           <ModalDescription>
             Are you sure you want to <strong>permanently delete</strong> the following secret(s)?

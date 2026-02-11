@@ -5,6 +5,7 @@ import { BulkDeleteModal } from "../components/BulkDeleteModal";
 import { CompareVaultsModal } from "../components/CompareVaultsModal";
 import { CreateSecretModal } from "../components/CreateSecretModal";
 import { Button, PageError, PageLoadingSpinner } from "../components/common";
+import { DeleteKeyvaultModal } from "../components/DeleteKeyvaultModal";
 import { ExportSecretsModal } from "../components/ExportSecretsModal";
 import { ImportSecretsModal } from "../components/ImportSecretsModal";
 import { KeyvaultHeader } from "../components/KeyvaultHeader";
@@ -14,6 +15,7 @@ import { SecretsList } from "../components/SecretsList";
 import { useToast } from "../contexts/ToastContext";
 import {
   createSecret,
+  deleteKeyvault,
   deleteSecret,
   fetchSecrets,
   fetchSecretsKey,
@@ -24,6 +26,7 @@ type KeyvaultSearch = {
   vaultUri: string;
   name: string;
   subscriptionId?: string;
+  resourceGroup?: string;
   enableSoftDelete?: boolean;
 };
 
@@ -36,6 +39,7 @@ export const Route = createFileRoute("/keyvault")({
       vaultUri: search.vaultUri as string,
       name: search.name as string,
       subscriptionId: search.subscriptionId as string | undefined,
+      resourceGroup: search.resourceGroup as string | undefined,
       enableSoftDelete: search.enableSoftDelete as boolean | undefined,
     };
   },
@@ -43,7 +47,7 @@ export const Route = createFileRoute("/keyvault")({
 });
 
 function Keyvaults() {
-  const { vaultUri, name, subscriptionId, enableSoftDelete } = Route.useSearch();
+  const { vaultUri, name, subscriptionId, resourceGroup, enableSoftDelete } = Route.useSearch();
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -54,15 +58,16 @@ function Keyvaults() {
   const [selectionMode, setSelectionMode] = useState(false);
   const [selectedSecrets, setSelectedSecrets] = useState<Set<string>>(new Set());
   const [showBulkDeleteModal, setShowBulkDeleteModal] = useState(false);
+  const [showDeleteVaultModal, setShowDeleteVaultModal] = useState(false);
   const queryClient = useQueryClient();
   const { showSuccess, showError } = useToast();
 
   const handleViewDeleted = useCallback(() => {
     navigate({
       to: "/deleted-secrets",
-      search: { vaultUri, name, subscriptionId, enableSoftDelete },
+      search: { vaultUri, name, subscriptionId, resourceGroup, enableSoftDelete },
     });
-  }, [navigate, vaultUri, name, subscriptionId, enableSoftDelete]);
+  }, [navigate, vaultUri, name, subscriptionId, resourceGroup, enableSoftDelete]);
 
   // Use React Query to fetch secrets list
   const { data: secrets } = useSuspenseQuery({
@@ -138,6 +143,44 @@ function Keyvaults() {
     },
   });
 
+  // Mutation for deleting the key vault
+  const deleteVaultMutation = useMutation({
+    mutationFn: ({ resourceGroup }: { resourceGroup: string }) => {
+      if (!subscriptionId) throw new Error("Subscription ID is required");
+      return deleteKeyvault(subscriptionId, resourceGroup, name);
+    },
+    onSuccess: () => {
+      setShowDeleteVaultModal(false);
+      showSuccess(`Key Vault "${name}" deleted successfully`);
+      // Navigate back to subscriptions page
+      navigate({
+        to: "/subscriptions",
+        search: { subscriptionId },
+      });
+    },
+    onError: (error) => {
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      console.error("Failed to delete key vault:", errorMsg);
+      showError(`Failed to delete Key Vault "${name}"`, errorMsg);
+    },
+  });
+
+  const handleDeleteVault = useCallback(() => {
+    setShowDeleteVaultModal(true);
+  }, []);
+
+  const handleConfirmDeleteVault = useCallback(() => {
+    if (!resourceGroup) {
+      showError(
+        "Cannot delete vault",
+        "Resource group information is required. Please delete from the subscriptions page.",
+      );
+      setShowDeleteVaultModal(false);
+      return;
+    }
+    deleteVaultMutation.mutate({ resourceGroup });
+  }, [resourceGroup, deleteVaultMutation, showError]);
+
   // Handler functions
   const handleConfirmCreate = (name: string, value: string) => {
     createMutation.mutate({ name, value });
@@ -203,6 +246,7 @@ function Keyvaults() {
           onCompare={() => setShowCompareModal(true)}
           onCreate={() => setShowCreateModal(true)}
           onViewDeleted={handleViewDeleted}
+          onDeleteVault={resourceGroup ? handleDeleteVault : undefined}
           softDeleteEnabled={enableSoftDelete === true}
         />
 
@@ -321,6 +365,14 @@ function Keyvaults() {
           onCancel={() => setShowBulkDeleteModal(false)}
           secretNames={selectedSecretNames}
           isDeleting={bulkDeleteMutation.isPending}
+        />
+
+        <DeleteKeyvaultModal
+          isOpen={showDeleteVaultModal}
+          onConfirm={handleConfirmDeleteVault}
+          onCancel={() => setShowDeleteVaultModal(false)}
+          keyvaultName={name}
+          isDeleting={deleteVaultMutation.isPending}
         />
       </div>
     </Suspense>

@@ -18,7 +18,7 @@ use commands::cache::{
 };
 use commands::config::{get_azure_config, save_azure_config};
 use commands::keyvault::{
-  check_keyvault_access, create_keyvault, create_secret, delete_secret, export_secrets,
+  check_keyvault_access, create_keyvault, delete_keyvault, create_secret, delete_secret, export_secrets,
   fetch_keyvaults, get_deleted_secrets, get_secret, get_secret_versions, get_secrets,
   parse_import_file, purge_deleted_secret, recover_deleted_secret, update_secret,
 };
@@ -53,6 +53,7 @@ pub fn run() {
             fetch_keyvaults,
             check_keyvault_access,
             create_keyvault,
+            delete_keyvault,
             // Secret commands
             get_secrets,
             get_secret,

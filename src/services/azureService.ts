@@ -63,6 +63,27 @@ export async function createKeyvault(
   }
 }
 
+export async function deleteKeyvault(
+  subscriptionId: string,
+  resourceGroup: string,
+  keyvaultName: string,
+): Promise<void> {
+  try {
+    await invoke<void>("delete_keyvault", {
+      subscriptionId,
+      resourceGroup,
+      keyvaultName,
+    });
+  } catch (err) {
+    const errorMessage = err instanceof Error ? err.message : String(err);
+    console.error(
+      `Failed to delete keyvault ${keyvaultName} in resource group ${resourceGroup}:`,
+      errorMessage,
+    );
+    throw new Error(errorMessage);
+  }
+}
+
 export async function checkKeyvaultAccess(keyvaultUri: string): Promise<KeyVaultAccess | null> {
   try {
     return await invoke<KeyVaultAccess>("check_keyvault_access", { keyvaultUri });
@@ -239,10 +260,7 @@ export async function recoverDeletedSecret(
   }
 }
 
-export async function purgeDeletedSecret(
-  keyvaultUri: string,
-  secretName: string,
-): Promise<void> {
+export async function purgeDeletedSecret(keyvaultUri: string, secretName: string): Promise<void> {
   try {
     await invoke<void>("purge_deleted_secret", { keyvaultUri, secretName });
   } catch (err) {
