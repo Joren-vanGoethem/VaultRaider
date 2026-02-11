@@ -8,11 +8,12 @@ import {
   updateSecret,
 } from "../services/azureService";
 import type { Secret, SecretBundle } from "../types/secrets";
-import { Button, Modal, ModalFooter, ModalTitle } from "./common";
-import { DeleteConfirmationModal } from "./DeleteConfirmationModal";
+import { extractSecretName, parseAzureError } from "../utils/stringUtils";
+import { Button, ConfirmDialog, Modal, ModalFooter, ModalTitle } from "./common";
 import { SecretAttributes } from "./SecretAttributes";
 import { SecretHeader } from "./SecretHeader";
 import { SecretValue } from "./SecretValue";
+import { SecretVersionsModal } from "./SecretVersionsModal";
 
 interface SecretCardProps {
   secret: Secret;
@@ -22,6 +23,7 @@ interface SecretCardProps {
   selectionMode?: boolean;
   isSelected?: boolean;
   onSelectionChange?: (secretId: string, selected: boolean) => void;
+  showDetails?: boolean;
 }
 
 export function SecretCard({
@@ -32,19 +34,18 @@ export function SecretCard({
   selectionMode = false,
   isSelected = false,
   onSelectionChange,
+  showDetails = false,
 }: SecretCardProps) {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showVersionsModal, setShowVersionsModal] = useState(false);
   const [manualLoad, setManualLoad] = useState(false);
   const [editValue, setEditValue] = useState("");
   const queryClient = useQueryClient();
   const { showSuccess, showError } = useToast();
 
   // Extract secret name from ID
-  const secretName = useMemo(() => {
-    const parts = secret.id.split("/");
-    return parts[parts.length - 1];
-  }, [secret.id]);
+  const secretName = extractSecretName(secret.id);
 
   // Determine if we should fetch the secret value
   const shouldFetch = shouldLoad || manualLoad;
@@ -102,27 +103,7 @@ export function SecretCard({
     },
     onError: (error, _variables, context) => {
       // Parse the error message to extract the actual error details
-      let errorMsg = error instanceof Error ? error.message : String(error);
-
-      // Try to extract the error message from the Azure API error response
-      try {
-        // The error might be in format: "API request failed: {...}"
-        const apiFailedPrefix = "API request failed: ";
-        if (errorMsg.includes(apiFailedPrefix)) {
-          const jsonPart = errorMsg.substring(
-            errorMsg.indexOf(apiFailedPrefix) + apiFailedPrefix.length,
-          );
-          const errorObj = JSON.parse(jsonPart);
-          if (errorObj.error?.message) {
-            errorMsg = errorObj.error.message;
-          } else if (errorObj.error?.code) {
-            errorMsg = `${errorObj.error.code}: ${errorObj.error.message || "Unknown error"}`;
-          }
-        }
-      } catch (parseError) {
-        // If parsing fails, use the original error message
-        console.error("Failed to parse error message:", parseError);
-      }
+      const errorMsg = parseAzureError(error);
 
       console.error("Failed to delete secret:", errorMsg);
       showError("Failed to delete secret", errorMsg);
@@ -143,9 +124,10 @@ export function SecretCard({
       showSuccess(`Secret "${secretName}" updated successfully`);
       setShowEditModal(false);
       setEditValue("");
-      // Invalidate both the secrets list and the individual secret cache
+      // Invalidate the secrets list, individual secret cache, and version history
       queryClient.invalidateQueries({ queryKey: [fetchSecretsKey, vaultUri] });
       queryClient.invalidateQueries({ queryKey: ["secret", vaultUri, secretName] });
+      queryClient.invalidateQueries({ queryKey: ["secret-versions", vaultUri, secretName] });
     },
     onError: (error) => {
       const errorMsg = error instanceof Error ? error.message : String(error);
@@ -248,6 +230,7 @@ export function SecretCard({
         enabled={secret.attributes.enabled}
         onDelete={handleDeleteClick}
         onEdit={handleEditClick}
+        onVersions={() => setShowVersionsModal(true)}
         isDeleting={deleteMutation.isPending}
         hasValue={!!secretBundle?.value}
       />
@@ -260,24 +243,43 @@ export function SecretCard({
         onCopy={copyToClipboard}
       />
 
-      <SecretAttributes
-        recoveryLevel={secret.attributes.recoveryLevel}
-        created={secret.attributes.created}
-        updated={secret.attributes.updated}
+      {showDetails && (
+        <SecretAttributes
+          recoveryLevel={secret.attributes.recoveryLevel}
+          created={secret.attributes.created}
+          updated={secret.attributes.updated}
+        />
+      )}
+
+      <ConfirmDialog
+        isOpen={showDeleteModal}
+        onClose={handleCancelDelete}
+        onConfirm={handleConfirmDelete}
+        title="Delete Secret"
+        description={
+          <>
+            Are you sure you want to delete the secret{" "}
+            <span className="font-mono font-semibold text-gray-900 dark:text-gray-100">
+              "{secretName}"
+            </span>
+            ?{" "}
+            {secret.attributes.recoveryLevel?.includes("Recoverable")
+              ? "This secret can be recovered after deletion."
+              : "This action cannot be undone."}
+          </>
+        }
+        variant="danger"
+        isLoading={deleteMutation.isPending}
+        loadingText="Deleting..."
+        confirmText="Delete"
+        showWarningIcon
       />
 
-      <DeleteConfirmationModal
-        isOpen={showDeleteModal}
-        onConfirm={handleConfirmDelete}
-        onCancel={handleCancelDelete}
-        itemName={secretName}
-        itemType="Secret"
-        isDeleting={deleteMutation.isPending}
-        recoveryMessage={
-          secret.attributes.recoveryLevel?.includes("Recoverable")
-            ? "This secret can be recovered after deletion."
-            : "This action cannot be undone."
-        }
+      <SecretVersionsModal
+        isOpen={showVersionsModal}
+        onClose={() => setShowVersionsModal(false)}
+        secretName={secretName}
+        vaultUri={vaultUri}
       />
 
       {/* Edit Secret Modal */}

@@ -19,22 +19,22 @@ use crate::azure::resource_group::types::ResourceGroup;
 use crate::azure::subscription::types::Subscription;
 
 /// Default TTL for subscriptions (10 minutes - they don't change often)
-const SUBSCRIPTION_TTL_SECS: u64 = 600;
+const SUBSCRIPTION_TTL_SECS: u64 = 3_600;
 
 /// Default TTL for resource groups (5 minutes)
-const RESOURCE_GROUP_TTL_SECS: u64 = 300;
+const RESOURCE_GROUP_TTL_SECS: u64 = 3_600;
 
 /// Default TTL for keyvaults (5 minutes)
-const KEYVAULT_TTL_SECS: u64 = 300;
+const KEYVAULT_TTL_SECS: u64 = 3_600;
 
 /// Default TTL for secrets list (3 minutes)
-const SECRETS_LIST_TTL_SECS: u64 = 180;
+const SECRETS_LIST_TTL_SECS: u64 = 3_600;
 
 /// Default TTL for secret values (3 minutes)
-const SECRET_VALUE_TTL_SECS: u64 = 180;
+const SECRET_VALUE_TTL_SECS: u64 = 3_600;
 
 /// Maximum cache entries
-const MAX_CACHE_ENTRIES: u64 = 25_000;
+const MAX_CACHE_ENTRIES: u64 = 50_000;
 
 /// Wrapper to store Vec in cache (since Moka needs Clone)
 #[derive(Clone, Debug)]
@@ -460,6 +460,7 @@ impl AzureCache {
     /// Invalidate secrets list cache for a vault
     pub async fn invalidate_secrets_list(&self, vault_uri: &str) {
         self.secrets_list.invalidate(vault_uri).await;
+        self.secrets_list.run_pending_tasks().await;
         debug!("Invalidated secrets list cache for vault {}", vault_uri);
     }
 
@@ -535,6 +536,7 @@ impl AzureCache {
     pub async fn invalidate_secret_value(&self, vault_uri: &str, secret_name: &str) {
         let key = Self::secret_key(vault_uri, secret_name);
         self.secret_values.invalidate(&key).await;
+        self.secret_values.run_pending_tasks().await;
         debug!(
             "Invalidated secret {} cache for vault {}",
             secret_name, vault_uri
@@ -545,6 +547,7 @@ impl AzureCache {
     pub async fn invalidate_vault_secrets(&self, vault_uri: &str) {
         // Invalidate the secrets list
         self.secrets_list.invalidate(vault_uri).await;
+        self.secrets_list.run_pending_tasks().await;
 
         // Note: We can't easily invalidate all secret values for a vault
         // since Moka doesn't support prefix-based invalidation.
@@ -572,6 +575,14 @@ impl AzureCache {
         self.keyvaults.invalidate_all();
         self.secrets_list.invalidate_all();
         self.secret_values.invalidate_all();
+
+        // Run pending tasks to ensure invalidations are processed immediately
+        self.subscriptions.run_pending_tasks().await;
+        self.resource_groups.run_pending_tasks().await;
+        self.keyvaults.run_pending_tasks().await;
+        self.secrets_list.run_pending_tasks().await;
+        self.secret_values.run_pending_tasks().await;
+
         info!("Cleared all caches");
     }
 }

@@ -1,5 +1,5 @@
 ﻿import { Link, useMatches } from "@tanstack/react-router";
-import { ChevronRight, GitCompare, Key, Shield } from "lucide-react";
+import { ChevronRight, GitCompare, Key, Search, Shield, Trash2 } from "lucide-react";
 
 interface BreadcrumbItem {
   label: string;
@@ -17,18 +17,31 @@ export function Breadcrumbs() {
   // Build breadcrumb items based on current route
   const breadcrumbs: BreadcrumbItem[] = [];
 
-  // Check for subscriptions route or keyvault route or compare route
+  // Check for search route
+  if (currentPath.startsWith("/search")) {
+    breadcrumbs.push({
+      label: "Global Search",
+      icon: <Search className="w-4 h-4" />,
+    });
+  }
+
+  // Check for subscriptions route or keyvault route or compare route or deleted-secrets route
   if (
     currentPath.startsWith("/subscriptions") ||
     currentPath.startsWith("/keyvault") ||
-    currentPath.startsWith("/compare")
+    currentPath.startsWith("/compare") ||
+    currentPath.startsWith("/deleted-secrets")
   ) {
     // Get the subscriptionId from the keyvault route or compare route if available
     const keyvaultMatch = matches.find((m) => m.pathname === "/keyvault");
     const compareMatch = matches.find((m) => m.pathname === "/compare");
+    const deletedSecretsMatch = matches.find((m) => m.pathname === "/deleted-secrets");
     const keyvaultSearchParams = keyvaultMatch?.search as { subscriptionId?: string } | undefined;
     const compareSearchParams = compareMatch?.search as
       | { sourceSubscriptionId?: string }
+      | undefined;
+    const deletedSecretsSearchParams = deletedSecretsMatch?.search as
+      | { subscriptionId?: string }
       | undefined;
 
     breadcrumbs.push({
@@ -38,7 +51,9 @@ export function Breadcrumbs() {
         ? { subscriptionId: keyvaultSearchParams.subscriptionId }
         : compareSearchParams?.sourceSubscriptionId
           ? { subscriptionId: compareSearchParams.sourceSubscriptionId }
-          : undefined,
+          : deletedSecretsSearchParams?.subscriptionId
+            ? { subscriptionId: deletedSecretsSearchParams.subscriptionId }
+            : undefined,
       icon: <Shield className="w-4 h-4" />,
     });
   }
@@ -92,6 +107,38 @@ export function Breadcrumbs() {
     breadcrumbs.push({
       label: "Compare",
       icon: <GitCompare className="w-4 h-4" />,
+    });
+  }
+
+  // Check for deleted-secrets route
+  if (currentPath.startsWith("/deleted-secrets")) {
+    const deletedSecretsMatch = matches.find((m) => m.pathname === "/deleted-secrets");
+    const searchParams = deletedSecretsMatch?.search as
+      | {
+          name?: string;
+          vaultUri?: string;
+          subscriptionId?: string;
+        }
+      | undefined;
+
+    // Add vault breadcrumb that links back to active secrets
+    if (searchParams?.name && searchParams?.vaultUri) {
+      breadcrumbs.push({
+        label: searchParams.name,
+        to: "/keyvault",
+        search: {
+          name: searchParams.name,
+          vaultUri: searchParams.vaultUri,
+          subscriptionId: searchParams.subscriptionId,
+        },
+        icon: <Key className="w-4 h-4" />,
+      });
+    }
+
+    // Add deleted secrets breadcrumb
+    breadcrumbs.push({
+      label: "Deleted Secrets",
+      icon: <Trash2 className="w-4 h-4" />,
     });
   }
 

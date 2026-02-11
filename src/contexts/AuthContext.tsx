@@ -13,6 +13,13 @@ interface UserInfo {
   name?: string;
 }
 
+interface AuthResult {
+  success: boolean;
+  message: string;
+  user_email?: string;
+  user_name?: string;
+}
+
 interface AuthContextType {
   isAuthenticated: boolean;
   userInfo: UserInfo | null;
@@ -69,9 +76,54 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  // Check authentication status on mount
+  // Check authentication status on mount and attempt auto-login if enabled
   useEffect(() => {
-    checkAuthStatus();
+    const initAuth = async () => {
+      try {
+        setIsLoading(true);
+
+        // First check if already authenticated
+        const authenticated = await invoke<boolean>("check_auth");
+
+        if (authenticated) {
+          setIsAuthenticated(true);
+          const info = await invoke<UserInfo | null>("get_current_user");
+          setUserInfo(info);
+        } else {
+          // Not authenticated, check if auto-login is enabled
+          try {
+            const autoLoginEnabled = await invoke<boolean>("get_auto_login");
+
+            if (autoLoginEnabled) {
+              console.log("Auto-login enabled, attempting CLI login...");
+              const result = await invoke<AuthResult>("azure_login");
+
+              if (result.success) {
+                setIsAuthenticated(true);
+                setUserInfo({
+                  email: result.user_email || "",
+                  name: result.user_name,
+                });
+                console.log("Auto-login successful");
+              } else {
+                console.log("Auto-login failed:", result.message);
+              }
+            }
+          } catch (autoLoginError) {
+            console.error("Auto-login error:", autoLoginError);
+            // Don't throw - just log and continue
+          }
+        }
+      } catch (error) {
+        console.error("Error during auth initialization:", error);
+        setIsAuthenticated(false);
+        setUserInfo(null);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    initAuth();
   }, []);
 
   return (

@@ -1,6 +1,6 @@
 [package]
 name = "vaultraider"
-version = "0.1.1"
+version = "0.1.0"
 description = "A cross platform app for managing azure keyvaults"
 authors = ["joren vangoethem"]
 edition = "2024"
@@ -40,6 +40,7 @@ anyhow = "1.0"
 chrono = { version = "0.4", features = ["serde"] }
 moka = { version = "0.12", features = ["future"] }
 dirs = "6.0.0"
+futures = "0.3.31"
 
 [target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
 tauri-plugin-updater = "2"

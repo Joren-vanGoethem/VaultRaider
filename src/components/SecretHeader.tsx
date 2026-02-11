@@ -1,11 +1,12 @@
-﻿import { EditIcon, TrashIcon } from "lucide-react";
-import { IconButton } from "./common";
+﻿import { EditIcon, HistoryIcon, TrashIcon } from "lucide-react";
+import { EnabledBadge, IconButton } from "./common";
 
 interface SecretHeaderProps {
   name: string;
   enabled: boolean;
   onDelete: () => void;
   onEdit?: () => void;
+  onVersions?: () => void;
   isDeleting?: boolean;
   hasValue?: boolean;
 }
@@ -15,6 +16,7 @@ export function SecretHeader({
   enabled,
   onDelete,
   onEdit,
+  onVersions,
   isDeleting = false,
   hasValue = false,
 }: SecretHeaderProps) {
@@ -26,17 +28,19 @@ export function SecretHeader({
             <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100 truncate">
               {name}
             </h3>
-            <span
-              className={`text-xs px-1.5 py-0.5 rounded ${
-                enabled
-                  ? "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400"
-                  : "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400"
-              }`}
-            >
-              {enabled ? "Enabled" : "Disabled"}
-            </span>
+            <EnabledBadge enabled={enabled} />
           </div>
           <div className="flex gap-2">
+            {onVersions && (
+              <IconButton
+                icon={<HistoryIcon className="w-4 h-4" />}
+                label="View versions"
+                variant="secondary"
+                size="sm"
+                onClick={onVersions}
+                disabled={isDeleting}
+              />
+            )}
             {onEdit && hasValue && (
               <IconButton
                 icon={<EditIcon className="w-4 h-4" />}

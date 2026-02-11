@@ -1,22 +1,24 @@
 ﻿import { useSuspenseQuery } from "@tanstack/react-query";
 import { Suspense } from "react";
 import { fetchKeyVaults, fetchKeyvaultsKey } from "../services/azureService";
+import type { KeyVault } from "../types/azure";
 import { KeyVaultCard } from "./KeyVaultCard";
 import { LoadingSpinner } from "./LoadingSpinner";
 
 interface KeyVaultsListProps {
   subscriptionId: string;
+  onDelete?: (vault: KeyVault) => void;
 }
 
-export function KeyvaultsList({ subscriptionId }: KeyVaultsListProps) {
+export function KeyvaultsList({ subscriptionId, onDelete }: KeyVaultsListProps) {
   return (
     <Suspense fallback={<VaultsLoadingSpinner />}>
-      <Content subscriptionId={subscriptionId} />
+      <Content subscriptionId={subscriptionId} onDelete={onDelete} />
     </Suspense>
   );
 }
 
-function Content({ subscriptionId }: KeyVaultsListProps) {
+function Content({ subscriptionId, onDelete }: KeyVaultsListProps) {
   const { data: keyvaults } = useSuspenseQuery({
     queryKey: [fetchKeyvaultsKey, subscriptionId],
     queryFn: () => fetchKeyVaults(subscriptionId),
@@ -29,7 +31,7 @@ function Content({ subscriptionId }: KeyVaultsListProps) {
   return (
     <div className="grid gap-4">
       {keyvaults.map((v) => (
-        <KeyVaultCard key={v.id} vault={v} subscriptionId={subscriptionId} />
+        <KeyVaultCard key={v.id} vault={v} subscriptionId={subscriptionId} onDelete={onDelete} />
       ))}
     </div>
   );

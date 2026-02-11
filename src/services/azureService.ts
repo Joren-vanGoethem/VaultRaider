@@ -1,7 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import type { KeyVault, KeyVaultAccess } from "~/types/keyvault.ts";
 import type { ResourceGroup } from "~/types/resourceGroups.ts";
-import type { Secret, SecretBundle } from "~/types/secrets.ts";
+import type { DeletedSecretItem, Secret, SecretAttributes, SecretBundle } from "~/types/secrets.ts";
 import type { Subscription } from "~/types/subscriptions.ts";
 import { RequestQueue } from "./requestQueue.ts";
 
@@ -9,6 +9,7 @@ export const fetchResourceGroupsKey = "fetch_resourcegroups";
 export const fetchSubscriptionsKey = "fetch_subscriptions";
 export const fetchKeyvaultsKey = "fetch_keyvaults";
 export const fetchSecretsKey = "fetch_secrets";
+export const fetchDeletedSecretsKey = "fetch_deleted_secrets";
 export const createKeyvaultKey = "create_keyvault";
 
 export async function fetchResourceGroups(subscriptionId: string): Promise<ResourceGroup[]> {
@@ -62,6 +63,27 @@ export async function createKeyvault(
   }
 }
 
+export async function deleteKeyvault(
+  subscriptionId: string,
+  resourceGroup: string,
+  keyvaultName: string,
+): Promise<void> {
+  try {
+    await invoke<void>("delete_keyvault", {
+      subscriptionId,
+      resourceGroup,
+      keyvaultName,
+    });
+  } catch (err) {
+    const errorMessage = err instanceof Error ? err.message : String(err);
+    console.error(
+      `Failed to delete keyvault ${keyvaultName} in resource group ${resourceGroup}:`,
+      errorMessage,
+    );
+    throw new Error(errorMessage);
+  }
+}
+
 export async function checkKeyvaultAccess(keyvaultUri: string): Promise<KeyVaultAccess | null> {
   try {
     return await invoke<KeyVaultAccess>("check_keyvault_access", { keyvaultUri });
@@ -83,7 +105,7 @@ export async function fetchSecrets(keyvaultUri: string): Promise<Secret[]> {
 }
 
 // Global request queue for secret fetching (max 10 concurrent requests)
-const secretRequestQueue = new RequestQueue(10);
+const secretRequestQueue = new RequestQueue(25);
 
 export async function fetchSecret(
   keyvaultUri: string,
@@ -128,6 +150,22 @@ export async function fetchSecret(
 
 export async function deleteSecret(keyvaultUri: string, secretName: string): Promise<Secret> {
   return await invoke("delete_secret", { keyvaultUri, secretName });
+}
+
+export async function fetchSecretVersions(
+  keyvaultUri: string,
+  secretName: string,
+): Promise<Secret[]> {
+  try {
+    return await invoke<Secret[]>("get_secret_versions", { keyvaultUri, secretName });
+  } catch (err) {
+    const errorMessage = err instanceof Error ? err.message : String(err);
+    console.error(
+      `Failed to fetch versions for secret ${secretName} from keyvault ${keyvaultUri}:`,
+      errorMessage,
+    );
+    return [];
+  }
 }
 
 export async function createSecret(
@@ -190,4 +228,88 @@ export interface ImportedSecret {
 
 export async function parseImportFile(content: string, format?: string): Promise<ImportedSecret[]> {
   return await invoke<ImportedSecret[]>("parse_import_file", { content, format });
+}
+
+// ============================================================================
+// Deleted Secret Operations
+// ============================================================================
+
+export async function fetchDeletedSecrets(keyvaultUri: string): Promise<DeletedSecretItem[]> {
+  try {
+    return await invoke<DeletedSecretItem[]>("get_deleted_secrets", { keyvaultUri });
+  } catch (err) {
+    const errorMessage = err instanceof Error ? err.message : String(err);
+    console.error(`Failed to fetch deleted secrets for keyvault ${keyvaultUri}:`, errorMessage);
+    throw new Error(errorMessage);
+  }
+}
+
+export async function recoverDeletedSecret(
+  keyvaultUri: string,
+  secretName: string,
+): Promise<Secret> {
+  try {
+    return await invoke<Secret>("recover_deleted_secret", { keyvaultUri, secretName });
+  } catch (err) {
+    const errorMessage = err instanceof Error ? err.message : String(err);
+    console.error(
+      `Failed to recover deleted secret ${secretName} from keyvault ${keyvaultUri}:`,
+      errorMessage,
+    );
+    throw new Error(errorMessage);
+  }
+}
+
+export async function purgeDeletedSecret(keyvaultUri: string, secretName: string): Promise<void> {
+  try {
+    await invoke<void>("purge_deleted_secret", { keyvaultUri, secretName });
+  } catch (err) {
+    const errorMessage = err instanceof Error ? err.message : String(err);
+    console.error(
+      `Failed to purge deleted secret ${secretName} from keyvault ${keyvaultUri}:`,
+      errorMessage,
+    );
+    throw new Error(errorMessage);
+  }
+}
+
+// ============================================================================
+// Global Search Operations
+// ============================================================================
+
+export interface GlobalSearchParams {
+  vaultUris: string[];
+  vaultNames: string[];
+  subscriptionIds: string[];
+  query: string;
+  searchType: "key" | "value" | "both";
+}
+
+export interface GlobalSearchResult {
+  secretId: string;
+  secretName: string;
+  vaultName: string;
+  vaultUri: string;
+  subscriptionId: string;
+  matchType: "key" | "value" | "both";
+  secretValue?: string;
+  attributes: SecretAttributes;
+}
+
+export async function globalSearchSecrets(
+  params: GlobalSearchParams,
+): Promise<GlobalSearchResult[]> {
+  try {
+    return await invoke<GlobalSearchResult[]>("global_search_secrets", {
+      vaultUris: params.vaultUris,
+      vaultNames: params.vaultNames,
+      subscriptionIds: params.subscriptionIds,
+      query: params.query,
+      searchType: params.searchType,
+    });
+  } catch (err) {
+    const errorMessage = err instanceof Error ? err.message : String(err);
+    console.error("Failed to perform global search:", errorMessage);
+    throw new Error(errorMessage);
+  }
 }

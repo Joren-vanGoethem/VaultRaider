@@ -16,10 +16,11 @@ use commands::cache::{
   clear_cache, get_cache_stats, invalidate_keyvaults_cache, invalidate_resource_groups_cache,
   invalidate_subscriptions_cache, invalidate_vault_cache,
 };
-use commands::config::{get_azure_config, save_azure_config};
+use commands::config::{get_azure_config, save_azure_config, get_auto_login, set_auto_login};
 use commands::keyvault::{
-  check_keyvault_access, create_keyvault, create_secret, delete_secret, export_secrets,
-  fetch_keyvaults, get_secret, get_secrets, parse_import_file, update_secret,
+  check_keyvault_access, create_keyvault, delete_keyvault, create_secret, delete_secret, export_secrets,
+  fetch_keyvaults, get_deleted_secrets, get_secret, get_secret_versions, get_secrets,
+  global_search_secrets, parse_import_file, purge_deleted_secret, recover_deleted_secret, update_secret,
 };
 use commands::resource_group::get_resource_groups;
 use commands::subscription::fetch_subscriptions;
@@ -46,20 +47,29 @@ pub fn run() {
             // Config commands
             get_azure_config,
             save_azure_config,
+            get_auto_login,
+            set_auto_login,
             // Subscription commands
             fetch_subscriptions,
             // Key Vault commands
             fetch_keyvaults,
             check_keyvault_access,
             create_keyvault,
+            delete_keyvault,
             // Secret commands
             get_secrets,
             get_secret,
+            get_secret_versions,
             delete_secret,
             create_secret,
             update_secret,
             export_secrets,
             parse_import_file,
+            global_search_secrets,
+            // Deleted secret commands
+            get_deleted_secrets,
+            recover_deleted_secret,
+            purge_deleted_secret,
             // Resource Group commands
             get_resource_groups,
             // Cache commands

@@ -107,16 +107,6 @@ Please run `bun run check` before submitting PRs.
 - Built with [Tauri](https://tauri.app/)
 - UI powered by [React](https://reactjs.org/) and [Tailwind CSS](https://tailwindcss.com/)
 
-
-## 🗺️ Roadmap
-
-- [x] Secret CRUD operations
-- [x] Secret search bar (may seem obvious, but somehow azure does not have this)
-- [x] Export/import functionality (json)
-- [x] Multi-select operations for deleting multiple secrets at once
-- [ ] Secret version history
-- [ ] more authentication flows
-
 ## 💬 Support
 
 If you encounter any issues or have questions, please [open an issue](https://github.com/Joren-vanGoethem/VaultRaider/issues) on GitHub.

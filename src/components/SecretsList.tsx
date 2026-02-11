@@ -9,6 +9,7 @@ interface SecretsListProps {
   selectionMode?: boolean;
   selectedSecrets?: Set<string>;
   onSelectionChange?: (secretId: string, selected: boolean) => void;
+  showDetails?: boolean;
 }
 
 export function SecretsList({
@@ -19,6 +20,7 @@ export function SecretsList({
   selectionMode = false,
   selectedSecrets,
   onSelectionChange,
+  showDetails = false,
 }: SecretsListProps) {
   return (
     <div className="grid gap-3 grid-cols-1 lg:grid-cols-2 2xl:grid-cols-3">
@@ -32,6 +34,7 @@ export function SecretsList({
           selectionMode={selectionMode}
           isSelected={selectedSecrets?.has(secret.id) ?? false}
           onSelectionChange={onSelectionChange}
+          showDetails={showDetails}
         />
       ))}
     </div>

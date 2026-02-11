@@ -2,7 +2,7 @@
 
 use crate::azure::keyvault::secret::export::ExportOptions;
 use crate::azure::keyvault::secret::import::ImportedSecret;
-use crate::azure::keyvault::secret::types::{Secret, SecretBundle};
+use crate::azure::keyvault::secret::types::{Secret, SecretBundle, DeletedSecretItem};
 use crate::azure::keyvault::service::get_keyvaults;
 use crate::azure::keyvault::types::{KeyVault, KeyVaultAccessCheck};
 use crate::cache::AZURE_CACHE;
@@ -35,6 +35,29 @@ pub async fn create_keyvault(
     keyvault_name: String,
 ) -> Result<KeyVault, String> {
     let result = crate::azure::keyvault::service::create_keyvault(
+        &subscription_id,
+        &resource_group,
+        &keyvault_name,
+    )
+    .await;
+
+    if result.is_ok() {
+        // Invalidate keyvaults cache for this subscription
+        AZURE_CACHE.invalidate_keyvaults(&subscription_id).await;
+    }
+
+    result
+}
+
+/// Delete a Key Vault
+/// Invalidates the keyvaults cache after successful deletion
+#[tauri::command]
+pub async fn delete_keyvault(
+    subscription_id: String,
+    resource_group: String,
+    keyvault_name: String,
+) -> Result<(), String> {
+    let result = crate::azure::keyvault::service::delete_keyvault(
         &subscription_id,
         &resource_group,
         &keyvault_name,
@@ -87,6 +110,15 @@ pub async fn get_secret(
         )
         .await
     }
+}
+
+/// Fetch all versions of a specific secret
+#[tauri::command]
+pub async fn get_secret_versions(
+    keyvault_uri: String,
+    secret_name: String,
+) -> Result<Vec<Secret>, String> {
+    crate::azure::keyvault::secret::service::get_secret_versions(&keyvault_uri, &secret_name).await
 }
 
 /// Delete a secret
@@ -183,3 +215,72 @@ pub fn parse_import_file(
 ) -> Result<Vec<ImportedSecret>, String> {
     crate::azure::keyvault::secret::import::parse_import_file(&content, format.as_deref())
 }
+
+/// Fetch all deleted secrets from a Key Vault
+#[tauri::command]
+pub async fn get_deleted_secrets(keyvault_uri: String) -> Result<Vec<DeletedSecretItem>, String> {
+    crate::azure::keyvault::secret::service::get_deleted_secrets(&keyvault_uri).await
+}
+
+/// Recover a deleted secret back to active state
+/// Invalidates relevant caches after successful recovery
+#[tauri::command]
+pub async fn recover_deleted_secret(
+    keyvault_uri: String,
+    secret_name: String,
+) -> Result<Secret, String> {
+    let result =
+        crate::azure::keyvault::secret::service::recover_deleted_secret(&keyvault_uri, &secret_name)
+            .await;
+
+    if result.is_ok() {
+        // Invalidate secrets list so the recovered secret shows up
+        AZURE_CACHE.invalidate_secrets_list(&keyvault_uri).await;
+    }
+
+    result
+}
+
+/// Permanently delete (purge) a deleted secret
+#[tauri::command]
+pub async fn purge_deleted_secret(
+    keyvault_uri: String,
+    secret_name: String,
+) -> Result<(), String> {
+    crate::azure::keyvault::secret::service::purge_deleted_secret(&keyvault_uri, &secret_name).await
+}
+
+/// Search result for global search across key vaults
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SearchResult {
+    pub secret_id: String,
+    pub secret_name: String,
+    pub vault_name: String,
+    pub vault_uri: String,
+    pub subscription_id: String,
+    pub match_type: String, // "key", "value", or "both"
+    pub secret_value: Option<String>,
+    pub attributes: crate::azure::keyvault::secret::types::SecretAttributes,
+}
+
+/// Global search across multiple key vaults
+/// Parallelizes requests to Azure for better performance
+#[tauri::command]
+pub async fn global_search_secrets(
+    vault_uris: Vec<String>,
+    vault_names: Vec<String>,
+    subscription_ids: Vec<String>,
+    query: String,
+    search_type: String, // "key", "value", or "both"
+) -> Result<Vec<SearchResult>, String> {
+    crate::azure::keyvault::secret::service::global_search_secrets(
+        vault_uris,
+        vault_names,
+        subscription_ids,
+        &query,
+        &search_type,
+    )
+    .await
+}
+
