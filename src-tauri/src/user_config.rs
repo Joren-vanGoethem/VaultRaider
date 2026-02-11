@@ -42,6 +42,9 @@ pub struct UserConfig {
     /// Azure AD Tenant ID (optional - uses multi-tenant auth if not set)
     #[serde(default)]
     pub tenant_id: Option<String>,
+    /// Auto-login on app startup (default: false)
+    #[serde(default)]
+    pub auto_login: bool,
 }
 
 impl Default for UserConfig {
@@ -49,6 +52,7 @@ impl Default for UserConfig {
         Self {
             client_id: None,
             tenant_id: None,
+            auto_login: false,
         }
     }
 }

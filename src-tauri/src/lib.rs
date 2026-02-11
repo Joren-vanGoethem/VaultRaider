@@ -16,7 +16,7 @@ use commands::cache::{
   clear_cache, get_cache_stats, invalidate_keyvaults_cache, invalidate_resource_groups_cache,
   invalidate_subscriptions_cache, invalidate_vault_cache,
 };
-use commands::config::{get_azure_config, save_azure_config};
+use commands::config::{get_azure_config, save_azure_config, get_auto_login, set_auto_login};
 use commands::keyvault::{
   check_keyvault_access, create_keyvault, delete_keyvault, create_secret, delete_secret, export_secrets,
   fetch_keyvaults, get_deleted_secrets, get_secret, get_secret_versions, get_secrets,
@@ -47,6 +47,8 @@ pub fn run() {
             // Config commands
             get_azure_config,
             save_azure_config,
+            get_auto_login,
+            set_auto_login,
             // Subscription commands
             fetch_subscriptions,
             // Key Vault commands

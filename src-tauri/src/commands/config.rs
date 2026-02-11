@@ -17,6 +17,8 @@ pub struct AzureConfig {
     pub default_client_id: String,
     /// Default multi-tenant endpoint (for display purposes)
     pub default_tenant_id: String,
+    /// Auto-login on app startup
+    pub auto_login: bool,
 }
 
 /// Get the current Azure configuration
@@ -33,6 +35,7 @@ pub async fn get_azure_config() -> Result<AzureConfig, String> {
         effective_tenant_id,
         default_client_id: VAULTRAIDER_CLIENT_ID.to_string(),
         default_tenant_id: MULTI_TENANT_ENDPOINT.to_string(),
+        auto_login: config.auto_login,
     })
 }
 
@@ -40,6 +43,8 @@ pub async fn get_azure_config() -> Result<AzureConfig, String> {
 /// Pass empty strings to clear custom values and use defaults
 #[tauri::command]
 pub async fn save_azure_config(client_id: String, tenant_id: String) -> Result<(), String> {
+    let current_config = get_config().await;
+
     // Convert empty strings to None (meaning use defaults)
     let client_id_opt = if client_id.trim().is_empty() {
         None
@@ -56,6 +61,23 @@ pub async fn save_azure_config(client_id: String, tenant_id: String) -> Result<(
     let new_config = UserConfig {
         client_id: client_id_opt,
         tenant_id: tenant_id_opt,
+        auto_login: current_config.auto_login, // Preserve auto_login setting
     };
     update_config(new_config).await
 }
+
+/// Set the auto-login preference
+#[tauri::command]
+pub async fn set_auto_login(enabled: bool) -> Result<(), String> {
+    let mut config = get_config().await;
+    config.auto_login = enabled;
+    update_config(config).await
+}
+
+/// Get the auto-login preference
+#[tauri::command]
+pub async fn get_auto_login() -> Result<bool, String> {
+    let config = get_config().await;
+    Ok(config.auto_login)
+}
+
