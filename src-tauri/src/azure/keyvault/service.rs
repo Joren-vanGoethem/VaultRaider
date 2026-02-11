@@ -254,3 +254,68 @@ async fn create_keyvault_internal(
 
     Ok(created_vault)
 }
+
+/// Delete an existing Key Vault.
+///
+/// # Arguments
+///
+/// * `subscription_id` - The Azure subscription ID
+/// * `resource_group` - The resource group name
+/// * `keyvault_name` - The name of the Key Vault to delete
+///
+/// # Returns
+///
+/// Success or an error.
+///
+/// # Errors
+///
+/// This function will return an error if:
+/// - The user is not authenticated
+/// - The resource group doesn't exist
+/// - The Key Vault doesn't exist
+/// - The API request fails
+pub async fn delete_keyvault(
+    subscription_id: &str,
+    resource_group: &str,
+    keyvault_name: &str,
+) -> Result<(), String> {
+    delete_keyvault_internal(subscription_id, resource_group, keyvault_name)
+        .await
+        .map_err(|e| {
+            error!("Failed to delete keyvault: {}", e);
+            // Extract the root cause error message for better user feedback
+            if let Some(root_cause) = e.root_cause().downcast_ref::<AzureHttpError>() {
+                root_cause.to_string()
+            } else {
+                e.to_string()
+            }
+        })
+}
+
+async fn delete_keyvault_internal(
+    subscription_id: &str,
+    resource_group: &str,
+    keyvault_name: &str,
+) -> Result<()> {
+    let url = urls::keyvault(subscription_id, resource_group, keyvault_name);
+
+    let token = get_token_for_scope(MANAGEMENT_SCOPE)
+        .await
+        .map_err(|e| anyhow::anyhow!(e))
+        .context("Failed to retrieve management token")?;
+
+    let client =
+        AzureHttpClient::with_token(&token).context("Failed to create HTTP client with token")?;
+
+    info!("Deleting keyvault: {}", keyvault_name);
+
+    client
+        .delete_no_content(&url)
+        .await
+        .with_context(|| format!("Failed to delete keyvault '{}'", keyvault_name))?;
+
+    info!("Keyvault deleted successfully: {}", keyvault_name);
+
+    Ok(())
+}
+

@@ -19,6 +19,7 @@ interface KeyvaultHeaderProps {
   onCompare: () => void;
   onCreate: () => void;
   onViewDeleted?: () => void;
+  onDeleteVault?: () => void;
   softDeleteEnabled?: boolean;
 }
 
@@ -32,6 +33,7 @@ export function KeyvaultHeader({
   onCompare,
   onCreate,
   onViewDeleted,
+  onDeleteVault,
   softDeleteEnabled,
 }: KeyvaultHeaderProps) {
   return (
@@ -119,6 +121,21 @@ export function KeyvaultHeader({
           >
             Add Secret
           </Button>
+
+          {onDeleteVault && (
+            <>
+              <div className="h-6 w-px bg-gray-300 dark:bg-gray-600 mx-1" />
+              <Button
+                variant="danger"
+                size="sm"
+                onClick={onDeleteVault}
+                leftIcon={<Trash2 className="w-4 h-4" />}
+                title="Delete this Key Vault"
+              >
+                Delete Vault
+              </Button>
+            </>
+          )}
         </div>
       </div>
     </div>

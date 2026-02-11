@@ -49,6 +49,29 @@ pub async fn create_keyvault(
     result
 }
 
+/// Delete a Key Vault
+/// Invalidates the keyvaults cache after successful deletion
+#[tauri::command]
+pub async fn delete_keyvault(
+    subscription_id: String,
+    resource_group: String,
+    keyvault_name: String,
+) -> Result<(), String> {
+    let result = crate::azure::keyvault::service::delete_keyvault(
+        &subscription_id,
+        &resource_group,
+        &keyvault_name,
+    )
+    .await;
+
+    if result.is_ok() {
+        // Invalidate keyvaults cache for this subscription
+        AZURE_CACHE.invalidate_keyvaults(&subscription_id).await;
+    }
+
+    result
+}
+
 /// Fetch all secrets from a Key Vault
 /// Uses caching with automatic loading on cache miss
 #[tauri::command]
