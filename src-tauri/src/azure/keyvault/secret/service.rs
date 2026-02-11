@@ -622,8 +622,14 @@ pub async fn global_search_secrets(
         async move {
             info!("Searching vault {}: {}", idx + 1, vault_name);
 
-            // Fetch secrets list for this vault
-            let secrets = match get_secrets(&vault_uri).await {
+            // Fetch secrets list for this vault using cache
+            let uri_clone = vault_uri.clone();
+            let secrets = match crate::cache::AZURE_CACHE
+                .get_secrets_list_or_load(&vault_uri, || async move {
+                    get_secrets(&uri_clone).await
+                })
+                .await
+            {
                 Ok(s) => s,
                 Err(e) => {
                     error!("Failed to fetch secrets from {}: {}", vault_name, e);
@@ -660,7 +666,16 @@ pub async fn global_search_secrets(
                 }
                 // If searching by value or both, fetch the value
                 else if search_in_values {
-                    match get_secret(&vault_uri, &secret_name, None).await {
+                    // Use cache for secret value
+                    let uri_clone = vault_uri.clone();
+                    let name_clone = secret_name.clone();
+                    let secret_result = crate::cache::AZURE_CACHE
+                        .get_secret_value_or_load(&vault_uri, &secret_name, || async move {
+                            get_secret(&uri_clone, &name_clone, None).await
+                        })
+                        .await;
+
+                    match secret_result {
                         Ok(secret_bundle) => {
                             let value_lower = secret_bundle.value.to_lowercase();
                             let value_matches = value_lower.contains(&query_lower_clone);
