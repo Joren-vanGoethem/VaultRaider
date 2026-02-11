@@ -21,14 +21,12 @@ import {
   checkKeyvaultAccess,
   fetchKeyVaults,
   fetchKeyvaultsKey,
-  fetchSecret,
-  fetchSecrets,
   fetchSubscriptions,
   fetchSubscriptionsKey,
+  globalSearchSecrets,
 } from "../services/azureService";
 import { copyToClipboardWithToast } from "../utils/clipboard";
 import { requireAuth } from "../utils/routeGuards";
-import { extractSecretName } from "../utils/stringUtils";
 
 const subscriptionQueryOptions = { queryKey: [fetchSubscriptionsKey], queryFn: fetchSubscriptions };
 
@@ -232,9 +230,6 @@ function GlobalSearch() {
     setSearchProgress({ current: 0, total: 0 });
 
     try {
-      const results: SearchResult[] = [];
-      const searchLower = searchQuery.toLowerCase();
-
       // Get selected keyvaults to search
       const keyvaultsToSearch = filteredKeyvaults.filter((kv) =>
         selectedKeyvaults.has(kv.properties.vaultUri),
@@ -247,106 +242,71 @@ function GlobalSearch() {
 
       setSearchProgress({ current: 0, total: keyvaultsToSearch.length });
 
-      // Fetch all secrets from selected keyvaults
-      const secretsPromises = keyvaultsToSearch.map(async (kv, index) => {
-        try {
-          const secrets = await fetchSecrets(kv.properties.vaultUri);
-          setSearchProgress((prev) => ({ ...prev, current: index + 1 }));
-          return { keyvault: kv, secrets };
-        } catch (error) {
-          console.error(`Error fetching secrets from ${kv.name}:`, error);
-          setSearchProgress((prev) => ({ ...prev, current: index + 1 }));
-          return { keyvault: kv, secrets: [] as Secret[] };
-        }
-      });
+      // Search each keyvault individually for real-time progress updates
+      const allResults: SearchResult[] = [];
+      let completedCount = 0;
 
-      const secretsByVault = await Promise.all(secretsPromises);
+      // Process keyvaults with a concurrency limit (max 5 at a time)
+      const concurrencyLimit = 5;
+      for (let i = 0; i < keyvaultsToSearch.length; i += concurrencyLimit) {
+        const batch = keyvaultsToSearch.slice(i, i + concurrencyLimit);
 
-      // Search through secrets
-      for (const { keyvault, secrets } of secretsByVault) {
-        for (const secret of secrets) {
-          const secretName = extractSecretName(secret.id);
-          const nameMatch = secretName.toLowerCase().includes(searchLower);
+        const batchPromises = batch.map(async (kv) => {
+          try {
+            // Call backend for single keyvault
+            const results = await globalSearchSecrets({
+              vaultUris: [kv.properties.vaultUri],
+              vaultNames: [kv.name],
+              subscriptionIds: [kv.subscriptionId],
+              query: searchQuery,
+              searchType: searchType,
+            });
 
-          // If searching by key only, check name match
-          if (searchType === "key") {
-            if (nameMatch) {
-              results.push({
-                secretId: secret.id,
-                secretName,
-                vaultName: keyvault.name,
-                vaultUri: keyvault.properties.vaultUri,
-                subscriptionId: keyvault.subscriptionId,
-                subscriptionName: keyvault.subscriptionName,
-                matchType: "key",
-                attributes: secret.attributes,
-              });
-            }
-          } else {
-            // For value or both, we need to fetch the secret value
-            try {
-              const secretBundle = await fetchSecret(
-                keyvault.properties.vaultUri,
-                secretName,
-                undefined,
-              );
+            // Convert backend results to frontend format
+            const formattedResults: SearchResult[] = results.map((result) => ({
+              secretId: result.secretId,
+              secretName: result.secretName,
+              vaultName: result.vaultName,
+              vaultUri: result.vaultUri,
+              subscriptionId: result.subscriptionId,
+              subscriptionName: kv.subscriptionName,
+              matchType: result.matchType as "key" | "value" | "both",
+              secretValue: result.secretValue,
+              attributes: result.attributes,
+            }));
 
-              if (secretBundle) {
-                const valueMatch = secretBundle.value.toLowerCase().includes(searchLower);
-
-                if (searchType === "value" && valueMatch) {
-                  results.push({
-                    secretId: secret.id,
-                    secretName,
-                    vaultName: keyvault.name,
-                    vaultUri: keyvault.properties.vaultUri,
-                    subscriptionId: keyvault.subscriptionId,
-                    subscriptionName: keyvault.subscriptionName,
-                    matchType: "value",
-                    secretValue: secretBundle.value,
-                    attributes: secret.attributes,
-                  });
-                } else if (searchType === "both" && (nameMatch || valueMatch)) {
-                  results.push({
-                    secretId: secret.id,
-                    secretName,
-                    vaultName: keyvault.name,
-                    vaultUri: keyvault.properties.vaultUri,
-                    subscriptionId: keyvault.subscriptionId,
-                    subscriptionName: keyvault.subscriptionName,
-                    matchType: nameMatch && valueMatch ? "both" : nameMatch ? "key" : "value",
-                    secretValue: secretBundle.value,
-                    attributes: secret.attributes,
-                  });
-                }
-              }
-            } catch (error) {
-              console.error(`Error fetching secret value for ${secretName}:`, error);
-              // If we can't fetch the value but name matches in "both" mode, include it
-              if (searchType === "both" && nameMatch) {
-                results.push({
-                  secretId: secret.id,
-                  secretName,
-                  vaultName: keyvault.name,
-                  vaultUri: keyvault.properties.vaultUri,
-                  subscriptionId: keyvault.subscriptionId,
-                  subscriptionName: keyvault.subscriptionName,
-                  matchType: "key",
-                  attributes: secret.attributes,
-                });
-              }
-            }
+            return formattedResults;
+          } catch (error) {
+            console.error(`Error searching vault ${kv.name}:`, error);
+            return [];
+          } finally {
+            // Update progress after each keyvault completes
+            completedCount++;
+            setSearchProgress({ current: completedCount, total: keyvaultsToSearch.length });
           }
+        });
+
+        // Wait for current batch to complete
+        const batchResults = await Promise.all(batchPromises);
+
+        // Add results from this batch and update UI
+        for (const results of batchResults) {
+          allResults.push(...results);
         }
+
+        // Update results incrementally so user sees progress
+        setSearchResults([...allResults]);
       }
 
-      setSearchResults(results);
+      // Final update with all results
+      setSearchResults(allResults);
     } catch (error) {
       console.error("Search error:", error);
+      showError("Search failed", error instanceof Error ? error.message : String(error));
     } finally {
       setIsSearching(false);
     }
-  }, [searchQuery, searchType, filteredKeyvaults, selectedKeyvaults]);
+  }, [searchQuery, searchType, filteredKeyvaults, selectedKeyvaults, showError]);
 
   // Handle enter key in search input
   const handleKeyPress = useCallback(
@@ -662,8 +622,8 @@ function GlobalSearch() {
                   <div className="flex items-center gap-2">
                     <Loader2 className="w-4 h-4 animate-spin" />
                     <span>
-                      Searching key vaults, this can take a while... ({searchProgress.current} of{" "}
-                      {searchProgress.total})
+                      Searching key vaults... ({searchProgress.current} of {searchProgress.total}{" "}
+                      completed)
                     </span>
                   </div>
                 </div>

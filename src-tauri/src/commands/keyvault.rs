@@ -249,3 +249,38 @@ pub async fn purge_deleted_secret(
 ) -> Result<(), String> {
     crate::azure::keyvault::secret::service::purge_deleted_secret(&keyvault_uri, &secret_name).await
 }
+
+/// Search result for global search across key vaults
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SearchResult {
+    pub secret_id: String,
+    pub secret_name: String,
+    pub vault_name: String,
+    pub vault_uri: String,
+    pub subscription_id: String,
+    pub match_type: String, // "key", "value", or "both"
+    pub secret_value: Option<String>,
+    pub attributes: crate::azure::keyvault::secret::types::SecretAttributes,
+}
+
+/// Global search across multiple key vaults
+/// Parallelizes requests to Azure for better performance
+#[tauri::command]
+pub async fn global_search_secrets(
+    vault_uris: Vec<String>,
+    vault_names: Vec<String>,
+    subscription_ids: Vec<String>,
+    query: String,
+    search_type: String, // "key", "value", or "both"
+) -> Result<Vec<SearchResult>, String> {
+    crate::azure::keyvault::secret::service::global_search_secrets(
+        vault_uris,
+        vault_names,
+        subscription_ids,
+        &query,
+        &search_type,
+    )
+    .await
+}
+

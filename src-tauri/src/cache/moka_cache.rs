@@ -19,22 +19,22 @@ use crate::azure::resource_group::types::ResourceGroup;
 use crate::azure::subscription::types::Subscription;
 
 /// Default TTL for subscriptions (10 minutes - they don't change often)
-const SUBSCRIPTION_TTL_SECS: u64 = 600;
+const SUBSCRIPTION_TTL_SECS: u64 = 3_600;
 
 /// Default TTL for resource groups (5 minutes)
-const RESOURCE_GROUP_TTL_SECS: u64 = 300;
+const RESOURCE_GROUP_TTL_SECS: u64 = 3_600;
 
 /// Default TTL for keyvaults (5 minutes)
-const KEYVAULT_TTL_SECS: u64 = 300;
+const KEYVAULT_TTL_SECS: u64 = 3_600;
 
 /// Default TTL for secrets list (3 minutes)
-const SECRETS_LIST_TTL_SECS: u64 = 180;
+const SECRETS_LIST_TTL_SECS: u64 = 3_600;
 
 /// Default TTL for secret values (3 minutes)
-const SECRET_VALUE_TTL_SECS: u64 = 180;
+const SECRET_VALUE_TTL_SECS: u64 = 3_600;
 
 /// Maximum cache entries
-const MAX_CACHE_ENTRIES: u64 = 25_000;
+const MAX_CACHE_ENTRIES: u64 = 50_000;
 
 /// Wrapper to store Vec in cache (since Moka needs Clone)
 #[derive(Clone, Debug)]

@@ -1,7 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import type { KeyVault, KeyVaultAccess } from "~/types/keyvault.ts";
 import type { ResourceGroup } from "~/types/resourceGroups.ts";
-import type { DeletedSecretItem, Secret, SecretBundle } from "~/types/secrets.ts";
+import type { DeletedSecretItem, Secret, SecretAttributes, SecretBundle } from "~/types/secrets.ts";
 import type { Subscription } from "~/types/subscriptions.ts";
 import { RequestQueue } from "./requestQueue.ts";
 
@@ -269,6 +269,47 @@ export async function purgeDeletedSecret(keyvaultUri: string, secretName: string
       `Failed to purge deleted secret ${secretName} from keyvault ${keyvaultUri}:`,
       errorMessage,
     );
+    throw new Error(errorMessage);
+  }
+}
+
+// ============================================================================
+// Global Search Operations
+// ============================================================================
+
+export interface GlobalSearchParams {
+  vaultUris: string[];
+  vaultNames: string[];
+  subscriptionIds: string[];
+  query: string;
+  searchType: "key" | "value" | "both";
+}
+
+export interface GlobalSearchResult {
+  secretId: string;
+  secretName: string;
+  vaultName: string;
+  vaultUri: string;
+  subscriptionId: string;
+  matchType: "key" | "value" | "both";
+  secretValue?: string;
+  attributes: SecretAttributes;
+}
+
+export async function globalSearchSecrets(
+  params: GlobalSearchParams,
+): Promise<GlobalSearchResult[]> {
+  try {
+    return await invoke<GlobalSearchResult[]>("global_search_secrets", {
+      vaultUris: params.vaultUris,
+      vaultNames: params.vaultNames,
+      subscriptionIds: params.subscriptionIds,
+      query: params.query,
+      searchType: params.searchType,
+    });
+  } catch (err) {
+    const errorMessage = err instanceof Error ? err.message : String(err);
+    console.error("Failed to perform global search:", errorMessage);
     throw new Error(errorMessage);
   }
 }
