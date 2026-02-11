@@ -59,6 +59,7 @@ function Keyvaults() {
   const [showBulkDeleteModal, setShowBulkDeleteModal] = useState(false);
   const [showDeleteVaultModal, setShowDeleteVaultModal] = useState(false);
   const [deleteVaultConfirmText, setDeleteVaultConfirmText] = useState("");
+  const [showSecretDetails, setShowSecretDetails] = useState(false);
   const queryClient = useQueryClient();
   const { showSuccess, showError } = useToast();
 
@@ -248,6 +249,8 @@ function Keyvaults() {
           onViewDeleted={handleViewDeleted}
           onDeleteVault={resourceGroup ? handleDeleteVault : undefined}
           softDeleteEnabled={enableSoftDelete === true}
+          showDetails={showSecretDetails}
+          onToggleDetails={() => setShowSecretDetails(!showSecretDetails)}
         />
 
         {/* Main Content */}
@@ -322,6 +325,7 @@ function Keyvaults() {
               selectionMode={selectionMode}
               selectedSecrets={selectedSecrets}
               onSelectionChange={handleSelectionChange}
+              showDetails={showSecretDetails}
             />
           )}
         </div>

@@ -23,6 +23,7 @@ interface SecretCardProps {
   selectionMode?: boolean;
   isSelected?: boolean;
   onSelectionChange?: (secretId: string, selected: boolean) => void;
+  showDetails?: boolean;
 }
 
 export function SecretCard({
@@ -33,6 +34,7 @@ export function SecretCard({
   selectionMode = false,
   isSelected = false,
   onSelectionChange,
+  showDetails = false,
 }: SecretCardProps) {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
@@ -241,11 +243,13 @@ export function SecretCard({
         onCopy={copyToClipboard}
       />
 
-      <SecretAttributes
-        recoveryLevel={secret.attributes.recoveryLevel}
-        created={secret.attributes.created}
-        updated={secret.attributes.updated}
-      />
+      {showDetails && (
+        <SecretAttributes
+          recoveryLevel={secret.attributes.recoveryLevel}
+          created={secret.attributes.created}
+          updated={secret.attributes.updated}
+        />
+      )}
 
       <ConfirmDialog
         isOpen={showDeleteModal}

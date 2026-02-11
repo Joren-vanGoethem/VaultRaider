@@ -1,5 +1,7 @@
 ﻿import {
   DownloadIcon,
+  EyeIcon,
+  EyeOffIcon,
   FileJsonIcon,
   GitCompareIcon,
   KeyIcon,
@@ -7,8 +9,7 @@
   Trash2,
   UploadIcon,
 } from "lucide-react";
-import type { DropdownMenuItem } from "./common";
-import { Button, DropdownButton, DropdownMenu } from "./common";
+import { Button, DropdownButton, DropdownMenu, type DropdownMenuItem, IconButton } from "./common";
 
 interface KeyvaultHeaderProps {
   name: string;
@@ -22,6 +23,8 @@ interface KeyvaultHeaderProps {
   onViewDeleted?: () => void;
   onDeleteVault?: () => void;
   softDeleteEnabled?: boolean;
+  showDetails: boolean;
+  onToggleDetails: () => void;
 }
 
 export function KeyvaultHeader({
@@ -36,6 +39,8 @@ export function KeyvaultHeader({
   onViewDeleted,
   onDeleteVault,
   softDeleteEnabled,
+  showDetails,
+  onToggleDetails,
 }: KeyvaultHeaderProps) {
   // Dropdown menu items for "More Actions"
   const moreActionsItems: DropdownMenuItem[] = [
@@ -130,6 +135,23 @@ export function KeyvaultHeader({
             items={moreActionsItems}
             align="right"
           />
+
+          {secretsCount > 0 && (
+            <IconButton
+              icon={
+                showDetails ? <EyeOffIcon className="w-4 h-4" /> : <EyeIcon className="w-4 h-4" />
+              }
+              label={showDetails ? "Hide secret details" : "Show secret details"}
+              variant="secondary"
+              size="sm"
+              onClick={onToggleDetails}
+              title={
+                showDetails
+                  ? "Hide secret details (Recovery, Created, Updated)"
+                  : "Show secret details (Recovery, Created, Updated)"
+              }
+            />
+          )}
         </div>
       </div>
     </div>
