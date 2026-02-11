@@ -252,7 +252,7 @@ function Keyvaults() {
 
         {/* Main Content */}
         <div className="flex-1 overflow-auto p-6">
-          <div className="flex flex-row pb-3 justify-between">
+          <div className="flex flex-row gap-3 pb-3 justify-between">
             {/* Search Bar */}
             {secrets.length > 0 && (
               <KeyvaultSearchBar

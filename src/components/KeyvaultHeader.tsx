@@ -7,7 +7,8 @@
   Trash2,
   UploadIcon,
 } from "lucide-react";
-import { Button } from "./common";
+import type { DropdownMenuItem } from "./common";
+import { Button, DropdownButton, DropdownMenu } from "./common";
 
 interface KeyvaultHeaderProps {
   name: string;
@@ -36,23 +37,68 @@ export function KeyvaultHeader({
   onDeleteVault,
   softDeleteEnabled,
 }: KeyvaultHeaderProps) {
+  // Dropdown menu items for "More Actions"
+  const moreActionsItems: DropdownMenuItem[] = [
+    {
+      id: "export",
+      label: "Export",
+      icon: <FileJsonIcon className="w-4 h-4" />,
+      onClick: onExport,
+      disabled: secretsCount === 0,
+    },
+    {
+      id: "import",
+      label: "Import",
+      icon: <UploadIcon className="w-4 h-4" />,
+      onClick: onImport,
+    },
+    {
+      id: "compare",
+      label: "Compare",
+      icon: <GitCompareIcon className="w-4 h-4" />,
+      onClick: onCompare,
+    },
+    ...(softDeleteEnabled && onViewDeleted
+      ? [
+          {
+            id: "view-deleted",
+            label: "View Deleted",
+            icon: <Trash2 className="w-4 h-4" />,
+            onClick: onViewDeleted,
+          },
+        ]
+      : []),
+    ...(onDeleteVault
+      ? [
+          {
+            id: "delete-vault",
+            label: "Delete Vault",
+            icon: <Trash2 className="w-4 h-4" />,
+            onClick: onDeleteVault,
+            variant: "danger" as const,
+          },
+        ]
+      : []),
+  ];
+
   return (
     <div className="flex-none px-6 py-4 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="p-2 rounded-lg bg-primary-100 dark:bg-primary-900/30">
+      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+        {/* Title Section */}
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="p-2 rounded-lg bg-primary-100 dark:bg-primary-900/30 shrink-0">
             <KeyIcon className="w-6 h-6 text-primary-600 dark:text-primary-400" />
           </div>
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">{name}</h1>
+          <div className="min-w-0">
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 truncate">{name}</h1>
             <p className="text-sm text-gray-500 dark:text-gray-400">
               {secretsCount} secret{secretsCount !== 1 ? "s" : ""}
             </p>
           </div>
         </div>
 
-        {/* Action Buttons */}
-        <div className="flex items-center gap-2">
+        {/* Action Buttons Section */}
+        <div className="flex flex-wrap items-center gap-2 shrink-0">
           {secretsCount > 0 && !loadAll && (
             <Button
               variant="secondary"
@@ -65,53 +111,6 @@ export function KeyvaultHeader({
             </Button>
           )}
 
-          <div className="h-6 w-px bg-gray-300 dark:bg-gray-600 mx-1" />
-
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={onExport}
-            disabled={secretsCount === 0}
-            leftIcon={<FileJsonIcon className="w-4 h-4" />}
-            title="Export secrets to JSON"
-          >
-            Export
-          </Button>
-
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={onImport}
-            leftIcon={<UploadIcon className="w-4 h-4" />}
-            title="Import secrets from file"
-          >
-            Import
-          </Button>
-
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={onCompare}
-            leftIcon={<GitCompareIcon className="w-4 h-4" />}
-            title="Compare with another vault"
-          >
-            Compare
-          </Button>
-
-          {softDeleteEnabled && onViewDeleted && (
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={onViewDeleted}
-              leftIcon={<Trash2 className="w-4 h-4" />}
-              title="View deleted secrets"
-            >
-              Deleted
-            </Button>
-          )}
-
-          <div className="h-6 w-px bg-gray-300 dark:bg-gray-600 mx-1" />
-
           <Button
             variant="success"
             size="sm"
@@ -122,20 +121,15 @@ export function KeyvaultHeader({
             Add Secret
           </Button>
 
-          {onDeleteVault && (
-            <>
-              <div className="h-6 w-px bg-gray-300 dark:bg-gray-600 mx-1" />
-              <Button
-                variant="danger"
-                size="sm"
-                onClick={onDeleteVault}
-                leftIcon={<Trash2 className="w-4 h-4" />}
-                title="Delete this Key Vault"
-              >
-                Delete Vault
-              </Button>
-            </>
-          )}
+          <DropdownMenu
+            trigger={
+              <DropdownButton variant="secondary" size="sm">
+                More Actions
+              </DropdownButton>
+            }
+            items={moreActionsItems}
+            align="right"
+          />
         </div>
       </div>
     </div>
