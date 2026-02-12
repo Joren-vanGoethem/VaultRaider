@@ -28,15 +28,6 @@ use super::types::{CreateVaultRequest, KeyVault, KeyVaultAccessCheck, Properties
 /// - The user is not authenticated
 /// - The API request fails
 /// - The response cannot be parsed
-// #[instrument(
-//     name = "keyvault.list",
-//     skip(subscription_id),
-//     fields(
-//         subscription_id = %subscription_id,
-//         vault_count = tracing::field::Empty,
-//         otel.kind = "client",
-//     )
-// )]
 pub async fn get_keyvaults(subscription_id: &str) -> Result<Vec<KeyVault>, String> {
     get_keyvaults_internal(subscription_id).await.map_err(|e| {
         error!("Failed to get keyvaults: {}", e);

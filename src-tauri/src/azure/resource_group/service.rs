@@ -24,15 +24,6 @@ use super::types::ResourceGroup;
 /// This function will return an error if:
 /// - The user is not authenticated
 /// - The API request fails
-// #[instrument(
-//     name = "resource_group.list",
-//     skip(subscription_id),
-//     fields(
-//         subscription_id = %subscription_id,
-//         resource_group_count = tracing::field::Empty,
-//         otel.kind = "client",
-//     )
-// )]
 pub async fn get_resource_groups(subscription_id: &str) -> Result<Vec<ResourceGroup>, String> {
     get_resource_groups_internal(subscription_id)
         .await
@@ -89,15 +80,6 @@ async fn get_resource_groups_internal(subscription_id: &str) -> Result<Vec<Resou
 /// - The user is not authenticated
 /// - The resource group doesn't exist
 /// - The API request fails
-// #[instrument(
-//     name = "resource_group.get",
-//     skip(subscription_id, resource_group_name),
-//     fields(
-//         subscription_id = %subscription_id,
-//         resource_group.name = %resource_group_name,
-//         otel.kind = "client",
-//     )
-// )]
 pub async fn get_resource_group_by_name(
     subscription_id: &str,
     resource_group_name: &str,

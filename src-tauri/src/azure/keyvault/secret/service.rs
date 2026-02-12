@@ -32,15 +32,6 @@ struct SecretValue {
 /// - The user is not authenticated
 /// - Access to the Key Vault is denied
 /// - The API request fails
-// #[instrument(
-//     name = "secret.list",
-//     skip(keyvault_uri),
-//     fields(
-//         keyvault.uri = %keyvault_uri,
-//         secret_count = tracing::field::Empty,
-//         otel.kind = "client",
-//     )
-// )]
 pub async fn get_secrets(keyvault_uri: &str) -> Result<Vec<Secret>, String> {
     get_secrets_internal(keyvault_uri).await.map_err(|e| {
         error!("Failed to get secrets: {}", e);
@@ -87,16 +78,6 @@ async fn get_secrets_internal(keyvault_uri: &str) -> Result<Vec<Secret>> {
 /// - The user is not authenticated
 /// - The secret doesn't exist
 /// - Access is denied
-// #[instrument(
-//     name = "secret.get",
-//     skip(keyvault_uri, secret_name, secret_version),
-//     fields(
-//         keyvault.uri = %keyvault_uri,
-//         secret.name = %secret_name,
-//         secret.version = ?secret_version,
-//         otel.kind = "client",
-//     )
-// )]
 pub async fn get_secret(
     keyvault_uri: &str,
     secret_name: &str,
@@ -202,15 +183,6 @@ async fn get_secret_versions_internal(keyvault_uri: &str, secret_name: &str) -> 
 /// - The user is not authenticated
 /// - The secret doesn't exist
 /// - Access is denied
-// #[instrument(
-//     name = "secret.delete",
-//     skip(keyvault_uri, secret_name),
-//     fields(
-//         keyvault.uri = %keyvault_uri,
-//         secret.name = %secret_name,
-//         otel.kind = "client",
-//     )
-// )]
 pub async fn delete_secret(keyvault_uri: &str, secret_name: &str) -> Result<Secret, String> {
     delete_secret_internal(keyvault_uri, secret_name)
         .await
@@ -266,15 +238,6 @@ async fn delete_secret_internal(keyvault_uri: &str, secret_name: &str) -> Result
 /// - The user is not authenticated
 /// - Access is denied
 /// - A secret with that name already exists (use update instead)
-// #[instrument(
-//     name = "secret.create",
-//     skip(keyvault_uri, secret_name, secret_value),
-//     fields(
-//         keyvault.uri = %keyvault_uri,
-//         secret.name = %secret_name,
-//         otel.kind = "client",
-//     )
-// )]
 pub async fn create_secret(
     keyvault_uri: &str,
     secret_name: &str,
@@ -341,15 +304,6 @@ async fn create_secret_internal(
 /// This function will return an error if:
 /// - The user is not authenticated
 /// - Access is denied
-// #[instrument(
-//     name = "secret.update",
-//     skip(keyvault_uri, secret_name, secret_value),
-//     fields(
-//         keyvault.uri = %keyvault_uri,
-//         secret.name = %secret_name,
-//         otel.kind = "client",
-//     )
-// )]
 pub async fn update_secret(
     keyvault_uri: &str,
     secret_name: &str,

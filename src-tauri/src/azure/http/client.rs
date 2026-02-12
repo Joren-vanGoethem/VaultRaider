@@ -237,17 +237,6 @@ impl AzureHttpClient {
     }
 
     /// Internal method to perform a request and deserialize the response.
-    // #[instrument(
-    //     name = "azure_http_request",
-    //     skip(self, body),
-    //     fields(
-    //         request_id = %uuid::Uuid::new_v4(),
-    //         http.method = %method,
-    //         http.url = %url,
-    //         http.status_code = tracing::field::Empty,
-    //         response_size_bytes = tracing::field::Empty,
-    //     )
-    // )]
     async fn request<T, B>(
         &self,
         method: Method,

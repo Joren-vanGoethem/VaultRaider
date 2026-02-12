@@ -164,12 +164,7 @@ impl TokenProvider for GlobalTokenProvider {
     async fn get_keyvault_token(&self) -> Result<String, AzureHttpError> {
         self.get_token_for_scope(KEYVAULT_SCOPE).await
     }
-
-    // #[instrument(
-    //     name = "token.get_for_scope",
-    //     skip(self),
-    //     fields(scope = %scope)
-    // )]
+    
     async fn get_token_for_scope(&self, scope: &str) -> Result<String, AzureHttpError> {
         debug!("Requesting token from global state");
 
