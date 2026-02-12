@@ -1,10 +1,6 @@
 //! Types for Azure Resource Groups
 
-use crate::azure::auth::types::AzureListResponse;
 use serde::{Deserialize, Serialize};
-
-pub type ResourceGroupListResponse = AzureListResponse<ResourceGroup>;
-
 /// Azure Resource Group
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]

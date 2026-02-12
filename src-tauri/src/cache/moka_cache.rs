@@ -6,7 +6,7 @@
 //! - Thread-safe access
 //! - Per-key eviction
 
-use anyhow::{Context, Result};
+use anyhow::{Result};
 use log::{debug, info};
 use moka::future::Cache;
 use serde::{Deserialize, Serialize};
@@ -101,42 +101,6 @@ impl AzureCache {
         }
     }
 
-    /// Create cache with custom TTLs (in seconds)
-    pub fn with_ttls(
-        subscription_ttl: u64,
-        resource_group_ttl: u64,
-        keyvault_ttl: u64,
-        secrets_list_ttl: u64,
-        secret_value_ttl: u64,
-    ) -> Self {
-        Self {
-            subscriptions: Cache::builder()
-                .max_capacity(100)
-                .time_to_live(Duration::from_secs(subscription_ttl))
-                .build(),
-
-            resource_groups: Cache::builder()
-                .max_capacity(1_000)
-                .time_to_live(Duration::from_secs(resource_group_ttl))
-                .build(),
-
-            keyvaults: Cache::builder()
-                .max_capacity(1_000)
-                .time_to_live(Duration::from_secs(keyvault_ttl))
-                .build(),
-
-            secrets_list: Cache::builder()
-                .max_capacity(1_000)
-                .time_to_live(Duration::from_secs(secrets_list_ttl))
-                .build(),
-
-            secret_values: Cache::builder()
-                .max_capacity(MAX_CACHE_ENTRIES)
-                .time_to_live(Duration::from_secs(secret_value_ttl))
-                .build(),
-        }
-    }
-
     // ==================== Subscription ====================
 
     /// Get subscription from cache by id
@@ -193,15 +157,6 @@ impl AzureCache {
 
     // ==================== Subscriptions ====================
 
-    /// Get subscriptions from cache
-    pub async fn get_subscriptions(&self) -> Option<Vec<Subscription>> {
-        let result = self.subscriptions.get("subscriptions").await;
-        if result.is_some() {
-            debug!("Cache hit for subscriptions");
-        }
-        result.map(|v| v.0)
-    }
-
     /// Get subscriptions with automatic loading on cache miss
     pub async fn get_subscriptions_or_load<F, Fut>(
         &self,
@@ -234,13 +189,6 @@ impl AzureCache {
         Ok(subscriptions)
     }
 
-    /// Cache subscriptions
-    pub async fn cache_subscriptions(&self, subscriptions: Vec<Subscription>) {
-        self.subscriptions
-            .insert("subscriptions".to_string(), CachedVec(subscriptions))
-            .await;
-    }
-
     /// Invalidate subscriptions cache
     pub async fn invalidate_subscriptions(&self) {
         self.subscriptions.invalidate("subscriptions").await;
@@ -248,18 +196,6 @@ impl AzureCache {
     }
 
     // ==================== Resource Groups ====================
-
-    /// Get resource groups from cache for a subscription
-    pub async fn get_resource_groups(&self, subscription_id: &str) -> Option<Vec<ResourceGroup>> {
-        let result = self.resource_groups.get(subscription_id).await;
-        if result.is_some() {
-            debug!(
-                "Cache hit for resource groups in subscription {}",
-                subscription_id
-            );
-        }
-        result.map(|v| v.0)
-    }
 
     /// Get resource groups with automatic loading on cache miss
     pub async fn get_resource_groups_or_load<F, Fut>(
@@ -304,16 +240,6 @@ impl AzureCache {
         Ok(resource_groups)
     }
 
-    /// Cache resource groups for a subscription
-    pub async fn cache_resource_groups(
-        &self,
-        subscription_id: &str,
-        resource_groups: Vec<ResourceGroup>,
-    ) {
-        self.resource_groups
-            .insert(subscription_id.to_string(), CachedVec(resource_groups))
-            .await;
-    }
 
     /// Invalidate resource groups cache for a subscription
     pub async fn invalidate_resource_groups(&self, subscription_id: &str) {
@@ -324,25 +250,7 @@ impl AzureCache {
         );
     }
 
-    /// Invalidate all resource groups cache
-    pub async fn invalidate_all_resource_groups(&self) {
-        self.resource_groups.invalidate_all();
-        debug!("Invalidated all resource groups cache");
-    }
-
     // ==================== Key Vaults ====================
-
-    /// Get keyvaults from cache for a subscription
-    pub async fn get_keyvaults(&self, subscription_id: &str) -> Option<Vec<KeyVault>> {
-        let result = self.keyvaults.get(subscription_id).await;
-        if result.is_some() {
-            debug!(
-                "Cache hit for keyvaults in subscription {}",
-                subscription_id
-            );
-        }
-        result.map(|v| v.0)
-    }
 
     /// Get keyvaults with automatic loading on cache miss
     pub async fn get_keyvaults_or_load<F, Fut>(
@@ -384,13 +292,6 @@ impl AzureCache {
         Ok(keyvaults)
     }
 
-    /// Cache keyvaults for a subscription
-    pub async fn cache_keyvaults(&self, subscription_id: &str, keyvaults: Vec<KeyVault>) {
-        self.keyvaults
-            .insert(subscription_id.to_string(), CachedVec(keyvaults))
-            .await;
-    }
-
     /// Invalidate keyvaults cache for a subscription
     pub async fn invalidate_keyvaults(&self, subscription_id: &str) {
         self.keyvaults.invalidate(subscription_id).await;
@@ -400,22 +301,7 @@ impl AzureCache {
         );
     }
 
-    /// Invalidate all keyvaults cache
-    pub async fn invalidate_all_keyvaults(&self) {
-        self.keyvaults.invalidate_all();
-        debug!("Invalidated all keyvaults cache");
-    }
-
     // ==================== Secrets List ====================
-
-    /// Get secrets list from cache for a vault
-    pub async fn get_secrets_list(&self, vault_uri: &str) -> Option<Vec<Secret>> {
-        let result = self.secrets_list.get(vault_uri).await;
-        if result.is_some() {
-            debug!("Cache hit for secrets list in vault {}", vault_uri);
-        }
-        result.map(|v| v.0)
-    }
 
     /// Get secrets list with automatic loading on cache miss
     pub async fn get_secrets_list_or_load<F, Fut>(
@@ -450,13 +336,6 @@ impl AzureCache {
         Ok(secrets)
     }
 
-    /// Cache secrets list for a vault
-    pub async fn cache_secrets_list(&self, vault_uri: &str, secrets: Vec<Secret>) {
-        self.secrets_list
-            .insert(vault_uri.to_string(), CachedVec(secrets))
-            .await;
-    }
-
     /// Invalidate secrets list cache for a vault
     pub async fn invalidate_secrets_list(&self, vault_uri: &str) {
         self.secrets_list.invalidate(vault_uri).await;
@@ -469,23 +348,6 @@ impl AzureCache {
     /// Build key for secret value cache
     fn secret_key(vault_uri: &str, secret_name: &str) -> String {
         format!("{}::{}", vault_uri, secret_name)
-    }
-
-    /// Get secret value from cache
-    pub async fn get_secret_value(
-        &self,
-        vault_uri: &str,
-        secret_name: &str,
-    ) -> Option<SecretBundle> {
-        let key = Self::secret_key(vault_uri, secret_name);
-        let result = self.secret_values.get(&key).await;
-        if result.is_some() {
-            debug!(
-                "Cache hit for secret {} in vault {}",
-                secret_name, vault_uri
-            );
-        }
-        result
     }
 
     /// Get secret value with automatic loading on cache miss

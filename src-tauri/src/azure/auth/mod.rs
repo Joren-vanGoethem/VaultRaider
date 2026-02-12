@@ -17,11 +17,3 @@ pub(crate) mod constants;
 pub(crate) mod service_principal;
 pub(crate) mod state;
 pub(crate) mod user_info;
-
-// Re-export old auth module for backwards compatibility
-#[deprecated(note = "Use azure::auth::service module instead")]
-pub mod auth {}
-
-// Re-export interactive_browser for backwards compatibility
-#[deprecated(note = "Use azure::auth::interactive module instead")]
-pub mod interactive_browser {}

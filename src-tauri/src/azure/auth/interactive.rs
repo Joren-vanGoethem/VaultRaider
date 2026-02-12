@@ -16,11 +16,11 @@ use time::OffsetDateTime;
 use crate::azure::auth::state::{AUTH_CREDENTIAL, DEVICE_CODE_STATE};
 use crate::azure::auth::token::store_auth_result;
 use crate::azure::auth::types::{
-  AuthResult, DeviceCodeInfo, DeviceCodeResponse, DeviceCodeState, TokenResponse,
+    AuthResult, DeviceCodeInfo, DeviceCodeResponse, DeviceCodeState, TokenResponse,
 };
 use crate::config::{
-  AUTH_SCOPES, DEVICE_CODE_ENDPOINT, MAX_POLL_ATTEMPTS, POLL_SLOWDOWN_SECONDS,
-  TOKEN_ENDPOINT,
+    AUTH_SCOPES, DEVICE_CODE_ENDPOINT, MAX_POLL_ATTEMPTS, POLL_SLOWDOWN_SECONDS,
+    TOKEN_ENDPOINT,
 };
 use crate::user_config::{get_client_id, get_tenant_id};
 

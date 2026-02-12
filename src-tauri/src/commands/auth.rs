@@ -1,7 +1,7 @@
 //! Authentication-related Tauri commands
 
 use crate::azure::auth::interactive::{
-  complete_interactive_browser_login, start_interactive_browser_login,
+    complete_interactive_browser_login, start_interactive_browser_login,
 };
 use crate::azure::auth::service::{get_user_info, is_authenticated, login, logout};
 use crate::azure::auth::types::{AuthResult, DeviceCodeInfo};
