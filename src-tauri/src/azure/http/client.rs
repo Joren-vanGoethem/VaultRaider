@@ -84,17 +84,7 @@ impl AzureHttpClient {
         );
         Ok(self)
     }
-
-    /// Adds the JSON content type header to the client.
-    ///
-    /// This is automatically added for POST, PUT, and PATCH requests
-    /// that have a body, but can be called explicitly if needed.
-    pub fn with_json_content_type(mut self) -> Self {
-        self.base_headers
-            .insert(CONTENT_TYPE, HeaderValue::from_static("application/json"));
-        self
-    }
-
+    
     /// Adds a custom header to the client.
     ///
     /// # Arguments
@@ -394,9 +384,9 @@ impl AzureHttpClient {
 
 #[cfg(test)]
 mod tests {
-  use super::*;
+    use super::*;
 
-  #[test]
+    #[test]
     fn test_client_creation() {
         let client = AzureHttpClient::new();
         assert!(client.headers().is_empty());

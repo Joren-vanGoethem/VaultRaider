@@ -16,10 +16,10 @@ pub mod types;
 pub mod constants;
 mod disk_io;
 
-use tokio::sync::RwLock;
 use crate::user_config::constants::{MULTI_TENANT_ENDPOINT, USER_CONFIG, VAULTRAIDER_CLIENT_ID};
 use crate::user_config::disk_io::{load_config_from_disk, save_config_to_disk};
 use crate::user_config::types::UserConfig;
+use tokio::sync::RwLock;
 
 
 /// Initialize the global configuration

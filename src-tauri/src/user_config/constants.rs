@@ -1,6 +1,6 @@
-﻿use std::sync::OnceLock;
+﻿use crate::user_config::types::UserConfig;
+use std::sync::OnceLock;
 use tokio::sync::RwLock;
-use crate::user_config::types::UserConfig;
 
 /// VaultRaider's published multi-tenant app registration Client ID
 /// This app is registered as a multi-tenant public client application

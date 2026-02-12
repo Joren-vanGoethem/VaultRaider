@@ -2,7 +2,7 @@
 
 use crate::azure::keyvault::secret::export::ExportOptions;
 use crate::azure::keyvault::secret::import::ImportedSecret;
-use crate::azure::keyvault::secret::types::{Secret, SecretBundle, DeletedSecretItem};
+use crate::azure::keyvault::secret::types::{DeletedSecretItem, Secret, SecretBundle};
 use crate::azure::keyvault::service::get_keyvaults;
 use crate::azure::keyvault::types::{KeyVault, KeyVaultAccessCheck};
 use crate::cache::AZURE_CACHE;

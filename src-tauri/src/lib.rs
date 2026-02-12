@@ -16,9 +16,9 @@ use commands::cache::{
   clear_cache, get_cache_stats, invalidate_keyvaults_cache, invalidate_resource_groups_cache,
   invalidate_subscriptions_cache, invalidate_vault_cache,
 };
-use commands::config::{get_azure_config, save_azure_config, get_auto_login, set_auto_login};
+use commands::config::{get_auto_login, get_azure_config, save_azure_config, set_auto_login};
 use commands::keyvault::{
-  check_keyvault_access, create_keyvault, delete_keyvault, create_secret, delete_secret, export_secrets,
+  check_keyvault_access, create_keyvault, create_secret, delete_keyvault, delete_secret, export_secrets,
   fetch_keyvaults, get_deleted_secrets, get_secret, get_secret_versions, get_secrets,
   global_search_secrets, parse_import_file, purge_deleted_secret, recover_deleted_secret, update_secret,
 };

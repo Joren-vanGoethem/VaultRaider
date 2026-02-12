@@ -1,8 +1,8 @@
 ﻿//! Configuration-related Tauri commands
 
-use crate::user_config::{get_client_id, get_config, get_tenant_id, update_config};
 use crate::user_config::constants::{MULTI_TENANT_ENDPOINT, VAULTRAIDER_CLIENT_ID};
 use crate::user_config::types::UserConfig;
+use crate::user_config::{get_client_id, get_config, get_tenant_id, update_config};
 
 /// Azure configuration returned to the frontend
 #[derive(serde::Serialize, serde::Deserialize)]

@@ -1,7 +1,7 @@
-﻿use std::fs;
-use std::path::PathBuf;
-use crate::user_config::constants::{APP_NAME, CONFIG_FILE_NAME};
+﻿use crate::user_config::constants::{APP_NAME, CONFIG_FILE_NAME};
 use crate::user_config::types::UserConfig;
+use std::fs;
+use std::path::PathBuf;
 
 /// Get the configuration directory path
 fn get_config_dir() -> Option<PathBuf> {

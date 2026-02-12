@@ -16,12 +16,12 @@ pub struct ImportedSecret {
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct FullExportFormat {
-    #[serde(default)]
-    vault_name: Option<String>,
-    #[serde(default)]
-    vault_uri: Option<String>,
-    #[serde(default)]
-    exported_at: Option<String>,
+    // #[serde(default)]
+    // vault_name: Option<String>,
+    // #[serde(default)]
+    // vault_uri: Option<String>,
+    // #[serde(default)]
+    // exported_at: Option<String>,
     secrets: Vec<FullExportSecret>,
 }
 

@@ -8,7 +8,7 @@ use crate::azure::auth::token::get_token_for_scope;
 use crate::azure::http::{fetch_all_paginated, AzureHttpClient, AzureHttpError};
 use crate::config::{urls, KEYVAULT_SCOPE};
 
-use super::types::{DeletedSecretBundle, DeletedSecretItem, Secret, SecretBundle};
+use super::types::{DeletedSecretItem, Secret, SecretBundle};
 
 /// Request body for creating/updating a secret
 #[derive(Serialize)]
@@ -394,50 +394,6 @@ async fn get_deleted_secrets_internal(keyvault_uri: &str) -> Result<Vec<DeletedS
         deleted_list.len()
     );
     Ok(deleted_list)
-}
-
-/// Get a specific deleted secret with its value.
-pub async fn get_deleted_secret(
-    keyvault_uri: &str,
-    secret_name: &str,
-) -> Result<DeletedSecretBundle, String> {
-    get_deleted_secret_internal(keyvault_uri, secret_name)
-        .await
-        .map_err(|e| {
-            error!("Failed to get deleted secret: {}", e);
-            if let Some(root_cause) = e.root_cause().downcast_ref::<AzureHttpError>() {
-                root_cause.to_string()
-            } else {
-                e.to_string()
-            }
-        })
-}
-
-async fn get_deleted_secret_internal(
-    keyvault_uri: &str,
-    secret_name: &str,
-) -> Result<DeletedSecretBundle> {
-    info!("Fetching deleted secret '{}'", secret_name);
-
-    let url = urls::deleted_secret(keyvault_uri, secret_name);
-    let token = get_token_for_scope(KEYVAULT_SCOPE)
-        .await
-        .map_err(|e| anyhow::anyhow!(e))
-        .context("Failed to retrieve Key Vault token")?;
-
-    let client =
-        AzureHttpClient::with_token(&token).context("Failed to create HTTP client with token")?;
-
-    let deleted_secret: DeletedSecretBundle =
-        client.get(&url).await.with_context(|| {
-            format!(
-                "Failed to fetch deleted secret '{}' from {}",
-                secret_name, keyvault_uri
-            )
-        })?;
-
-    info!("Deleted secret fetched successfully");
-    Ok(deleted_secret)
 }
 
 /// Recover a deleted secret back to active state.

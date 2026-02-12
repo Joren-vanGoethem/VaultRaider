@@ -72,14 +72,6 @@ pub mod urls {
         )
     }
 
-    /// Get the URL to list all subscriptions
-    pub fn subscription(subscription_id: &str) -> String {
-        format!(
-            "https://management.azure.com/subscriptions/{subscription_id}?api-version={}",
-            ARM_API_VERSION
-        )
-    }
-
     /// Get the URL to list all Key Vaults in a subscription
     pub fn keyvaults(subscription_id: &str) -> String {
         format!(
@@ -182,17 +174,6 @@ pub mod urls {
         format!(
             "https://{}/deletedsecrets?api-version={}",
             clean_uri, KEYVAULT_DATA_API_VERSION
-        )
-    }
-
-    /// Get the URL to get a specific deleted secret
-    pub fn deleted_secret(keyvault_uri: &str, secret_name: &str) -> String {
-        let clean_uri = keyvault_uri
-            .trim_start_matches("https://")
-            .trim_end_matches('/');
-        format!(
-            "https://{}/deletedsecrets/{}?api-version={}",
-            clean_uri, secret_name, KEYVAULT_DATA_API_VERSION
         )
     }
 
