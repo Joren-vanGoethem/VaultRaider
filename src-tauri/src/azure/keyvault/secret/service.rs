@@ -537,7 +537,213 @@ async fn purge_deleted_secret_internal(
     Ok(())
 }
 
-/// Global search across multiple key vaults with parallelization
+// ============================================================================
+// Global Search Operations
+// ============================================================================
+
+/// Determines which search modes are active
+#[derive(Clone)]
+struct SearchConfig {
+    query_lower: String,
+    search_in_keys: bool,
+    search_in_values: bool,
+    search_type: String,
+}
+
+impl SearchConfig {
+    fn new(query: &str, search_type: &str) -> Self {
+        Self {
+            query_lower: query.to_lowercase(),
+            search_in_keys: search_type == "key" || search_type == "both",
+            search_in_values: search_type == "value" || search_type == "both",
+            search_type: search_type.to_string(),
+        }
+    }
+}
+
+/// Extract secret name from the full secret ID URL
+fn extract_secret_name(secret_id: &str) -> String {
+    secret_id
+        .split('/')
+        .last()
+        .unwrap_or(secret_id)
+        .to_string()
+}
+
+/// Determine the match type based on which fields matched
+fn determine_match_type(name_matches: bool, value_matches: bool) -> &'static str {
+    match (name_matches, value_matches) {
+        (true, true) => "both",
+        (true, false) => "key",
+        (false, true) => "value",
+        (false, false) => "none",
+    }
+}
+
+/// Process a single secret and return a search result if it matches
+async fn process_secret(
+    secret: super::types::Secret,
+    vault_uri: String,
+    vault_name: String,
+    subscription_id: String,
+    config: SearchConfig,
+) -> Option<crate::commands::keyvault::SearchResult> {
+    let secret_name = extract_secret_name(&secret.id);
+    let name_lower = secret_name.to_lowercase();
+    let name_matches = name_lower.contains(&config.query_lower);
+
+    // Fast path: key-only search with name match
+    if config.search_in_keys && !config.search_in_values && name_matches {
+        return Some(crate::commands::keyvault::SearchResult {
+            secret_id: secret.id.clone(),
+            secret_name,
+            vault_name,
+            vault_uri,
+            subscription_id,
+            match_type: "key".to_string(),
+            secret_value: None,
+            attributes: secret.attributes,
+        });
+    }
+
+    // Value search path
+    if config.search_in_values {
+        return process_secret_with_value(
+            secret,
+            secret_name,
+            vault_uri,
+            vault_name,
+            subscription_id,
+            name_matches,
+            config,
+        )
+        .await;
+    }
+
+    None
+}
+
+/// Process a secret that requires value fetching
+async fn process_secret_with_value(
+    secret: super::types::Secret,
+    secret_name: String,
+    vault_uri: String,
+    vault_name: String,
+    subscription_id: String,
+    name_matches: bool,
+    config: SearchConfig,
+) -> Option<crate::commands::keyvault::SearchResult> {
+    // Use cache for secret value
+    let uri_clone = vault_uri.clone();
+    let name_clone = secret_name.clone();
+    let secret_result = crate::cache::AZURE_CACHE
+        .get_secret_value_or_load(&vault_uri, &secret_name, || async move {
+            get_secret(&uri_clone, &name_clone, None).await
+        })
+        .await;
+
+    match secret_result {
+        Ok(secret_bundle) => {
+            let value_lower = secret_bundle.value.to_lowercase();
+            let value_matches = value_lower.contains(&config.query_lower);
+
+            let should_include = match config.search_type.as_str() {
+                "value" => value_matches,
+                _ => name_matches || value_matches, // "both"
+            };
+
+            if should_include {
+                Some(crate::commands::keyvault::SearchResult {
+                    secret_id: secret.id,
+                    secret_name,
+                    vault_name,
+                    vault_uri,
+                    subscription_id,
+                    match_type: determine_match_type(name_matches, value_matches).to_string(),
+                    secret_value: Some(secret_bundle.value),
+                    attributes: secret.attributes,
+                })
+            } else {
+                None
+            }
+        }
+        Err(e) => {
+            error!("Failed to fetch value for secret '{}': {}", secret_name, e);
+
+            // If in "both" mode and name matches, still include it
+            if config.search_type == "both" && name_matches {
+                Some(crate::commands::keyvault::SearchResult {
+                    secret_id: secret.id,
+                    secret_name,
+                    vault_name,
+                    vault_uri,
+                    subscription_id,
+                    match_type: "key".to_string(),
+                    secret_value: None,
+                    attributes: secret.attributes,
+                })
+            } else {
+                None
+            }
+        }
+    }
+}
+
+/// Search all secrets in a single vault
+async fn search_vault(
+    vault_uri: String,
+    vault_name: String,
+    subscription_id: String,
+    config: SearchConfig,
+) -> Vec<crate::commands::keyvault::SearchResult> {
+    use futures::stream::{self, StreamExt};
+
+    // Fetch secrets list for this vault using cache
+    let uri_clone = vault_uri.clone();
+    let secrets = match crate::cache::AZURE_CACHE
+        .get_secrets_list_or_load(&vault_uri, || async move {
+            get_secrets(&uri_clone).await
+        })
+        .await
+    {
+        Ok(s) => s,
+        Err(e) => {
+            error!("Failed to fetch secrets from {}: {}", vault_name, e);
+            return Vec::new();
+        }
+    };
+
+    // Process secrets in parallel within this vault
+    let results: Vec<Option<crate::commands::keyvault::SearchResult>> = stream::iter(secrets)
+        .map(|secret| {
+            let vault_uri = vault_uri.clone();
+            let vault_name = vault_name.clone();
+            let subscription_id = subscription_id.clone();
+            let config = config.clone();
+            async move {
+                process_secret(secret, vault_uri, vault_name, subscription_id, config).await
+            }
+        })
+        .buffer_unordered(20) // Process up to 20 secrets concurrently per vault
+        .collect()
+        .await;
+
+    // Filter out None values
+    let vault_results: Vec<_> = results.into_iter().flatten().collect();
+
+    info!(
+        "Found {} matching secrets in {}",
+        vault_results.len(),
+        vault_name
+    );
+
+    vault_results
+}
+
+/// Global search across multiple key vaults with parallelization.
+///
+/// This function processes vaults in parallel (up to 10 at a time), and within
+/// each vault, processes secrets in parallel (up to 20 at a time) for maximum performance.
 pub async fn global_search_secrets(
     vault_uris: Vec<String>,
     vault_names: Vec<String>,
@@ -554,9 +760,7 @@ pub async fn global_search_secrets(
         search_type
     );
 
-    let query_lower = query.to_lowercase();
-    let search_in_keys = search_type == "key" || search_type == "both";
-    let search_in_values = search_type == "value" || search_type == "both";
+    let config = SearchConfig::new(query, search_type);
 
     // Create tuples of (vault_uri, vault_name, subscription_id)
     let vault_data: Vec<(String, String, String)> = vault_uris
@@ -568,128 +772,13 @@ pub async fn global_search_secrets(
 
     // Process vaults in parallel with a concurrency limit
     let results: Vec<Vec<crate::commands::keyvault::SearchResult>> = stream::iter(
-        vault_data.into_iter().enumerate()
+        vault_data.into_iter().enumerate(),
     )
     .map(|(idx, (vault_uri, vault_name, subscription_id))| {
-        let query_lower_clone = query_lower.clone();
-        let search_type_owned = search_type.to_string();
+        let config = config.clone();
         async move {
             info!("Searching vault {}: {}", idx + 1, vault_name);
-
-            // Fetch secrets list for this vault using cache
-            let uri_clone = vault_uri.clone();
-            let secrets = match crate::cache::AZURE_CACHE
-                .get_secrets_list_or_load(&vault_uri, || async move {
-                    get_secrets(&uri_clone).await
-                })
-                .await
-            {
-                Ok(s) => s,
-                Err(e) => {
-                    error!("Failed to fetch secrets from {}: {}", vault_name, e);
-                    return Vec::new();
-                }
-            };
-
-            let mut vault_results = Vec::new();
-
-            for secret in secrets {
-                // Extract secret name from ID
-                let secret_name = secret
-                    .id
-                    .split('/')
-                    .last()
-                    .unwrap_or(&secret.id)
-                    .to_string();
-
-                let name_lower = secret_name.to_lowercase();
-                let name_matches = name_lower.contains(&query_lower_clone);
-
-                // If searching by key only and name matches, add result
-                if search_in_keys && !search_in_values && name_matches {
-                    vault_results.push(crate::commands::keyvault::SearchResult {
-                        secret_id: secret.id.clone(),
-                        secret_name: secret_name.clone(),
-                        vault_name: vault_name.clone(),
-                        vault_uri: vault_uri.clone(),
-                        subscription_id: subscription_id.clone(),
-                        match_type: "key".to_string(),
-                        secret_value: None,
-                        attributes: secret.attributes.clone(),
-                    });
-                }
-                // If searching by value or both, fetch the value
-                else if search_in_values {
-                    // Use cache for secret value
-                    let uri_clone = vault_uri.clone();
-                    let name_clone = secret_name.clone();
-                    let secret_result = crate::cache::AZURE_CACHE
-                        .get_secret_value_or_load(&vault_uri, &secret_name, || async move {
-                            get_secret(&uri_clone, &name_clone, None).await
-                        })
-                        .await;
-
-                    match secret_result {
-                        Ok(secret_bundle) => {
-                            let value_lower = secret_bundle.value.to_lowercase();
-                            let value_matches = value_lower.contains(&query_lower_clone);
-
-                            let should_include = if search_type_owned == "value" {
-                                value_matches
-                            } else {
-                                // "both" - include if either matches
-                                name_matches || value_matches
-                            };
-
-                            if should_include {
-                                let match_type = if name_matches && value_matches {
-                                    "both"
-                                } else if name_matches {
-                                    "key"
-                                } else {
-                                    "value"
-                                };
-
-                                vault_results.push(crate::commands::keyvault::SearchResult {
-                                    secret_id: secret.id.clone(),
-                                    secret_name,
-                                    vault_name: vault_name.clone(),
-                                    vault_uri: vault_uri.clone(),
-                                    subscription_id: subscription_id.clone(),
-                                    match_type: match_type.to_string(),
-                                    secret_value: Some(secret_bundle.value),
-                                    attributes: secret.attributes,
-                                });
-                            }
-                        }
-                        Err(e) => {
-                            // Log error but continue with other secrets
-                            error!("Failed to fetch value for secret '{}': {}", secret_name, e);
-
-                            // If in "both" mode and name matches, still include it
-                            if search_type_owned == "both" && name_matches {
-                                vault_results.push(crate::commands::keyvault::SearchResult {
-                                    secret_id: secret.id.clone(),
-                                    secret_name,
-                                    vault_name: vault_name.clone(),
-                                    vault_uri: vault_uri.clone(),
-                                    subscription_id: subscription_id.clone(),
-                                    match_type: "key".to_string(),
-                                    secret_value: None,
-                                    attributes: secret.attributes,
-                                });
-                            }
-                        }
-                    }
-                }
-            }
-
-            info!(
-                "Found {} matching secrets in {}",
-                vault_results.len(),
-                vault_name
-            );
-            vault_results
+            search_vault(vault_uri, vault_name, subscription_id, config).await
         }
     })
     .buffer_unordered(10) // Process up to 10 vaults concurrently
