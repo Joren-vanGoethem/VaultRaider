@@ -21,9 +21,9 @@ interface KeyvaultHeaderProps {
 	onImport: () => void;
 	onCompare: () => void;
 	onCreate: () => void;
-	onDeleteVault: () => void;
+	onDeleteVault: (() => void) | undefined;
 	onViewDeleted?: () => void;
-	onViewAuditLogs?: () => void;
+	onViewAuditLogs?: (() => void) | undefined;
   softDeleteEnabled?: boolean;
   showDetails: boolean;
   onToggleDetails: () => void;
