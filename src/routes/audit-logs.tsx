@@ -16,7 +16,7 @@ import {
 	User,
 	XCircle,
 } from "lucide-react";
-import { Suspense, useCallback, useMemo, useState } from "react";
+import { memo, Suspense, useCallback, useDeferredValue, useEffect, useMemo, useState } from "react";
 import { Button, PageError, PageLoadingSpinner, StatusBadge } from "../components/common";
 import type { ActivityLogEvent } from "../types/activityLog";
 import {
@@ -135,7 +135,7 @@ function getCallerDisplay(
 	// If it looks like an email, return it
 	if (caller.includes("@")) return { display: caller, resolved: false };
 	// If it's a GUID (service principal), truncate it
-	if (/^[0-9a-f-]{36}$/i.test(caller)) return { display: `SP: ${caller.slice(0, 8)}...`, resolved: false };
+	if (/^[0-9a-f-]{36}$/i.test(caller)) return { display: `SP: ${caller}`, resolved: false };
 	return { display: caller, resolved: false };
 }
 
@@ -153,7 +153,7 @@ const RESULT_FILTER_OPTIONS = ["All", "Success", "Failure", "Start"] as const;
 // Event Detail Row (expandable)
 // ============================================================================
 
-function EventDetailRow({
+const EventDetailRow = memo(function EventDetailRow({
 	event,
 	callerMap,
 }: { event: ActivityLogEvent; callerMap: Record<string, ResolvedCaller> }) {
@@ -281,7 +281,102 @@ function EventDetailRow({
 			</td>
 		</tr>
 	);
-}
+});
+
+// ============================================================================
+// Memoized Table Row
+// ============================================================================
+
+const PAGE_SIZE = 50;
+
+const EventRow = memo(function EventRow({
+	event,
+	eventKey,
+	isExpanded,
+	onToggle,
+	callerMap,
+}: {
+	event: ActivityLogEvent;
+	eventKey: string;
+	isExpanded: boolean;
+	onToggle: (key: string) => void;
+	callerMap: Record<string, ResolvedCaller>;
+}) {
+	const callerInfo = useMemo(() => getCallerDisplay(event.caller, callerMap), [event.caller, callerMap]);
+
+	return (
+		<>
+			<tr
+				className="hover:bg-gray-50 dark:hover:bg-gray-700/30 cursor-pointer transition-colors"
+				onClick={() => onToggle(eventKey)}
+			>
+				<td className="px-4 py-3 text-gray-400">
+					{isExpanded ? (
+						<ChevronUp className="w-4 h-4" />
+					) : (
+						<ChevronDown className="w-4 h-4" />
+					)}
+				</td>
+				<td className="px-4 py-3">
+					<div className="flex items-center gap-2">
+						{getResultIcon(event.resultType)}
+						<span className="text-sm font-medium text-gray-900 dark:text-gray-100">
+							{getOperationLabel(event.operationName)}
+						</span>
+					</div>
+				</td>
+				<td className="px-4 py-3">
+					<StatusBadge
+						variant={
+							event.resultType?.toLowerCase() === "success"
+								? "success"
+								: event.resultType?.toLowerCase() === "failure" ||
+										  event.resultType?.toLowerCase() === "failed"
+									? "error"
+									: "neutral"
+						}
+					>
+						{event.resultType || "—"}
+					</StatusBadge>
+				</td>
+				<td className="px-4 py-3">
+					<StatusBadge variant={getLevelVariant(event.level)}>
+						{event.level || "—"}
+					</StatusBadge>
+				</td>
+				<td className="px-4 py-3">
+					<div className="flex items-center gap-1.5">
+						<User className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
+						<span
+							className="text-sm text-gray-600 dark:text-gray-400 truncate max-w-[275px]"
+							title={event.caller || "Unknown"}
+						>
+							{callerInfo.display}
+						</span>
+						{callerInfo.resolved && (
+							<span className="inline-flex items-center px-1.5 py-0.5 text-[10px] font-medium rounded bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400">
+								{callerMap[event.caller!]?.callerType === "user" ? "User" : "SP"}
+							</span>
+						)}
+					</div>
+				</td>
+				<td className="px-4 py-3">
+					<div className="text-sm text-gray-600 dark:text-gray-400">
+						{formatTimestamp(event.eventTimestamp)}
+					</div>
+					{formatRelativeTime(event.eventTimestamp) && (
+						<div className="text-xs text-gray-400 dark:text-gray-500">
+							{formatRelativeTime(event.eventTimestamp)}
+						</div>
+					)}
+				</td>
+			</tr>
+			{isExpanded && (
+				<EventDetailRow event={event} callerMap={callerMap} />
+			)}
+		</>
+	);
+});
 
 // ============================================================================
 // Main Component
@@ -291,8 +386,11 @@ function AuditLogs() {
 	const { vaultId, name, vaultUri, subscriptionId, resourceGroup } = Route.useSearch();
 	const [days, setDays] = useState(1);
 	const [searchQuery, setSearchQuery] = useState("");
+	const deferredSearchQuery = useDeferredValue(searchQuery);
 	const [resultFilter, setResultFilter] = useState<string>("All");
 	const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
+	const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+	const isSearchStale = searchQuery !== deferredSearchQuery;
 
 	const {
 		data: events = [],
@@ -337,7 +435,7 @@ function AuditLogs() {
 		});
 	}, []);
 
-	// Filter events
+	// Filter events — uses deferred search so typing stays responsive
 	const filteredEvents = useMemo(() => {
 		return events.filter((event) => {
 			// Result filter
@@ -350,18 +448,20 @@ function AuditLogs() {
 				}
 			}
 
-			// Search filter
-			if (searchQuery) {
-				const q = searchQuery.toLowerCase();
+			// Search filter (uses deferred value)
+			if (deferredSearchQuery) {
+				const q = deferredSearchQuery.toLowerCase();
 				const opName = (event.operationName?.localizedValue || event.operationName?.value || "").toLowerCase();
 				const caller = (event.caller || "").toLowerCase();
 				const desc = (event.description || "").toLowerCase();
 				const status = (event.status?.localizedValue || "").toLowerCase();
 				const action = (event.authorization?.action || "").toLowerCase();
+                const callerInfo = getCallerDisplay(event.caller || "", callerMap);
 
-				return (
+                return (
 					opName.includes(q) ||
 					caller.includes(q) ||
+                    callerInfo.display.toLowerCase().includes(q) ||
 					desc.includes(q) ||
 					status.includes(q) ||
 					action.includes(q)
@@ -370,7 +470,17 @@ function AuditLogs() {
 
 			return true;
 		});
-	}, [events, resultFilter, searchQuery]);
+	}, [events, resultFilter, deferredSearchQuery]);
+
+	// Paginated slice of filtered events
+	const visibleEvents = useMemo(
+		() => filteredEvents.slice(0, visibleCount),
+		[filteredEvents, visibleCount],
+	);
+
+	// Reset visible count when filters change
+	// biome-ignore lint/correctness/useExhaustiveDependencies: intentional reset
+	useEffect(() => setVisibleCount(PAGE_SIZE), [deferredSearchQuery, resultFilter, days]);
 
 	// Stats
 	const stats = useMemo(() => {
@@ -506,9 +616,14 @@ function AuditLogs() {
 
 					{/* Results count */}
 					{!isLoading && (
-						<p className="text-sm text-gray-500 dark:text-gray-400 mb-3">
-							Showing {filteredEvents.length} of {events.length} events
-						</p>
+						<div className="flex items-center gap-2 mb-3">
+							<p className="text-sm text-gray-500 dark:text-gray-400">
+								Showing {Math.min(visibleCount, filteredEvents.length)} of {filteredEvents.length} matching events ({events.length} total)
+							</p>
+							{isSearchStale && (
+								<Loader2 className="w-3.5 h-3.5 text-primary-500 animate-spin" />
+							)}
+						</div>
 					)}
 
 					{/* Loading State */}
@@ -594,88 +709,37 @@ function AuditLogs() {
 										</tr>
 									</thead>
 									<tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-										{filteredEvents.map((event) => {
+										{visibleEvents.map((event) => {
 											const eventKey =
-												event.eventDataId || event.operationId || event.correlationId || Math.random().toString();
-											const isExpanded = expandedRows.has(eventKey);
+												event.eventDataId || event.operationId || event.correlationId || "";
 
 											return (
-												<>
-													<tr
-														key={eventKey}
-														className="hover:bg-gray-50 dark:hover:bg-gray-700/30 cursor-pointer transition-colors"
-														onClick={() => toggleRow(eventKey)}
-													>
-														<td className="px-4 py-3 text-gray-400">
-															{isExpanded ? (
-																<ChevronUp className="w-4 h-4" />
-															) : (
-																<ChevronDown className="w-4 h-4" />
-															)}
-														</td>
-														<td className="px-4 py-3">
-															<div className="flex items-center gap-2">
-																{getResultIcon(event.resultType)}
-																<span className="text-sm font-medium text-gray-900 dark:text-gray-100">
-																	{getOperationLabel(event.operationName)}
-																</span>
-															</div>
-														</td>
-														<td className="px-4 py-3">
-															<StatusBadge
-																variant={
-																	event.resultType?.toLowerCase() === "success"
-																		? "success"
-																		: event.resultType?.toLowerCase() === "failure" ||
-																			  event.resultType?.toLowerCase() === "failed"
-																			? "error"
-																			: "neutral"
-																}
-															>
-																{event.resultType || "—"}
-															</StatusBadge>
-														</td>
-														<td className="px-4 py-3">
-															<StatusBadge variant={getLevelVariant(event.level)}>
-																{event.level || "—"}
-															</StatusBadge>
-														</td>
-														<td className="px-4 py-3">
-															<div className="flex items-center gap-1.5">
-																<User className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
-																<span
-																	className="text-sm text-gray-600 dark:text-gray-400 truncate max-w-[275px]"
-																	title={event.caller || "Unknown"}
-																>
-																	{getCallerDisplay(event.caller, callerMap).display}
-																</span>
-																{getCallerDisplay(event.caller, callerMap).resolved && (
-																	<span className="inline-flex items-center px-1.5 py-0.5 text-[10px] font-medium rounded bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400">
-																		{callerMap[event.caller!]?.callerType === "user" ? "User" : "SP"}
-																	</span>
-																)}
-															</div>
-														</td>
-														<td className="px-4 py-3">
-															<div className="text-sm text-gray-600 dark:text-gray-400">
-																{formatTimestamp(event.eventTimestamp)}
-															</div>
-															{formatRelativeTime(event.eventTimestamp) && (
-																<div className="text-xs text-gray-400 dark:text-gray-500">
-																	{formatRelativeTime(event.eventTimestamp)}
-																</div>
-															)}
-														</td>
-													</tr>
-													{isExpanded && (
-														<EventDetailRow key={`${eventKey}-detail`} event={event} callerMap={callerMap} />
-													)}
-												</>
+												<EventRow
+													key={eventKey}
+													event={event}
+													eventKey={eventKey}
+													isExpanded={expandedRows.has(eventKey)}
+													onToggle={toggleRow}
+													callerMap={callerMap}
+												/>
 											);
 										})}
 									</tbody>
 								</table>
 							</div>
+
+							{/* Load More */}
+							{visibleCount < filteredEvents.length && (
+								<div className="flex justify-center py-4 border-t border-gray-200 dark:border-gray-700">
+									<Button
+										variant="secondary"
+										size="sm"
+										onClick={() => setVisibleCount((c) => c + PAGE_SIZE)}
+									>
+										Load More ({filteredEvents.length - visibleCount} remaining)
+									</Button>
+								</div>
+							)}
 						</div>
 					)}
 				</div>
