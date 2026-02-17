@@ -332,3 +332,24 @@ export async function fetchActivityLogs(
     throw new Error(errorMessage);
   }
 }
+
+export interface ResolvedCaller {
+  id: string;
+  displayName: string;
+  callerType: string;
+  userPrincipalName?: string;
+}
+
+export const resolveCallersKey = "resolve_callers";
+
+export async function resolveCallers(
+  callerIds: string[],
+): Promise<Record<string, ResolvedCaller>> {
+  try {
+    return await invoke<Record<string, ResolvedCaller>>("resolve_callers", { callerIds });
+  } catch (err) {
+    const errorMessage = err instanceof Error ? err.message : String(err);
+    console.error("Failed to resolve caller identities:", errorMessage);
+    return {};
+  }
+}

@@ -8,7 +8,7 @@ mod commands;
 mod config;
 mod user_config;
 
-use commands::activity_log::fetch_activity_logs;
+use commands::activity_log::{fetch_activity_logs, resolve_callers};
 use commands::auth::{
   azure_login, azure_logout, check_auth, complete_browser_login,
   get_current_user, start_browser_login,
@@ -75,6 +75,7 @@ pub fn run() {
             get_resource_groups,
             // Activity Log commands
             fetch_activity_logs,
+            resolve_callers,
             // Cache commands
             get_cache_stats,
             clear_cache,

@@ -19,7 +19,13 @@ import {
 import { Suspense, useCallback, useMemo, useState } from "react";
 import { Button, PageError, PageLoadingSpinner, StatusBadge } from "../components/common";
 import type { ActivityLogEvent } from "../types/activityLog";
-import { fetchActivityLogs, fetchActivityLogsKey } from "../services/azureService";
+import {
+	fetchActivityLogs,
+	fetchActivityLogsKey,
+	resolveCallers,
+	resolveCallersKey,
+	type ResolvedCaller,
+} from "../services/azureService";
 import { requireAuth } from "../utils/routeGuards";
 
 type AuditLogsSearch = {
@@ -115,13 +121,22 @@ function formatRelativeTime(isoString?: string): string {
 	return "";
 }
 
-function getCallerDisplay(caller?: string): string {
-	if (!caller) return "Unknown";
+function getCallerDisplay(
+	caller?: string,
+	callerMap?: Record<string, ResolvedCaller>,
+): { display: string; resolved: boolean } {
+	if (!caller) return { display: "Unknown", resolved: false };
+	// Check if we have a resolved name for this caller
+	if (callerMap?.[caller]) {
+		const resolved = callerMap[caller];
+		const name = resolved.displayName || resolved.userPrincipalName || caller;
+		return { display: name, resolved: true };
+	}
 	// If it looks like an email, return it
-	if (caller.includes("@")) return caller;
+	if (caller.includes("@")) return { display: caller, resolved: false };
 	// If it's a GUID (service principal), truncate it
-	if (/^[0-9a-f-]{36}$/i.test(caller)) return `SP: ${caller}`;
-	return caller;
+	if (/^[0-9a-f-]{36}$/i.test(caller)) return { display: `SP: ${caller.slice(0, 8)}...`, resolved: false };
+	return { display: caller, resolved: false };
 }
 
 const DAYS_OPTIONS = [
@@ -138,7 +153,10 @@ const RESULT_FILTER_OPTIONS = ["All", "Success", "Failure", "Start"] as const;
 // Event Detail Row (expandable)
 // ============================================================================
 
-function EventDetailRow({ event }: { event: ActivityLogEvent }) {
+function EventDetailRow({
+	event,
+	callerMap,
+}: { event: ActivityLogEvent; callerMap: Record<string, ResolvedCaller> }) {
 	return (
 		<tr>
 			<td colSpan={6} className="px-4 py-3 bg-gray-50 dark:bg-gray-800/60">
@@ -157,8 +175,13 @@ function EventDetailRow({ event }: { event: ActivityLogEvent }) {
 							<div>
 								<span className="font-medium text-gray-700 dark:text-gray-300">Caller:</span>
 								<span className="ml-2 text-gray-600 dark:text-gray-400 break-all">
-									{event.caller}
+									{getCallerDisplay(event.caller, callerMap).display}
 								</span>
+								{getCallerDisplay(event.caller, callerMap).resolved && (
+									<span className="ml-2 text-xs text-gray-400 dark:text-gray-500 font-mono">
+										({event.caller})
+									</span>
+								)}
 							</div>
 						)}
 						{event.correlationId && (
@@ -266,7 +289,7 @@ function EventDetailRow({ event }: { event: ActivityLogEvent }) {
 
 function AuditLogs() {
 	const { vaultId, name, vaultUri, subscriptionId, resourceGroup } = Route.useSearch();
-	const [days, setDays] = useState(7);
+	const [days, setDays] = useState(1);
 	const [searchQuery, setSearchQuery] = useState("");
 	const [resultFilter, setResultFilter] = useState<string>("All");
 	const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
@@ -281,6 +304,25 @@ function AuditLogs() {
 	} = useQuery({
 		queryKey: [fetchActivityLogsKey, vaultId, days],
 		queryFn: () => fetchActivityLogs(vaultId, days),
+	});
+
+	// Extract unique GUID callers for resolution
+	const uniqueCallerGuids = useMemo(() => {
+		const guids = new Set<string>();
+		for (const event of events) {
+			if (event.caller && /^[0-9a-f-]{36}$/i.test(event.caller)) {
+				guids.add(event.caller);
+			}
+		}
+		return [...guids];
+	}, [events]);
+
+	// Resolve caller GUIDs to display names via Microsoft Graph
+	const { data: callerMap = {} } = useQuery({
+		queryKey: [resolveCallersKey, ...uniqueCallerGuids],
+		queryFn: () => resolveCallers(uniqueCallerGuids),
+		enabled: uniqueCallerGuids.length > 0,
+		staleTime: 5 * 60 * 1000, // cache for 5 minutes
 	});
 
 	const toggleRow = useCallback((eventId: string) => {
@@ -605,8 +647,13 @@ function AuditLogs() {
 																	className="text-sm text-gray-600 dark:text-gray-400 truncate max-w-[275px]"
 																	title={event.caller || "Unknown"}
 																>
-																	{getCallerDisplay(event.caller)}
+																	{getCallerDisplay(event.caller, callerMap).display}
 																</span>
+																{getCallerDisplay(event.caller, callerMap).resolved && (
+																	<span className="inline-flex items-center px-1.5 py-0.5 text-[10px] font-medium rounded bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400">
+																		{callerMap[event.caller!]?.callerType === "user" ? "User" : "SP"}
+																	</span>
+																)}
 															</div>
 														</td>
 														<td className="px-4 py-3">
@@ -621,7 +668,7 @@ function AuditLogs() {
 														</td>
 													</tr>
 													{isExpanded && (
-														<EventDetailRow key={`${eventKey}-detail`} event={event} />
+														<EventDetailRow key={`${eventKey}-detail`} event={event} callerMap={callerMap} />
 													)}
 												</>
 											);
