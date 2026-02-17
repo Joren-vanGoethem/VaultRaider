@@ -74,7 +74,7 @@ export function KeyVaultCard({ vault, subscriptionId, onDelete }: KeyVaultCardPr
           resourceGroup,
           enableSoftDelete: vault.properties.enableSoftDelete,
         }}
-        className="block p-4 rounded-lg bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 hover:border-primary-500 dark:hover:border-primary-400 hover:shadow-md transition-all cursor-pointer"
+        className="block p-4 rounded-lg shadow-sm bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 hover:border-primary-500 dark:hover:border-primary-400 hover:shadow-md transition-all cursor-pointer"
       >
         <div className="flex justify-between items-start">
           <div className="flex-1">
