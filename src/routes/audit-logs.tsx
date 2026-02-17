@@ -730,13 +730,20 @@ function AuditLogs() {
 
 							{/* Load More */}
 							{visibleCount < filteredEvents.length && (
-								<div className="flex justify-center py-4 border-t border-gray-200 dark:border-gray-700">
+								<div className="flex justify-center py-4 gap-4 border-t border-gray-200 dark:border-gray-700">
 									<Button
 										variant="secondary"
 										size="sm"
 										onClick={() => setVisibleCount((c) => c + PAGE_SIZE)}
 									>
-										Load More ({filteredEvents.length - visibleCount} remaining)
+										Load {PAGE_SIZE} More ({filteredEvents.length - visibleCount} remaining)
+									</Button>
+                                    <Button
+										variant="secondary"
+										size="sm"
+										onClick={() => setVisibleCount(filteredEvents.length)}
+									>
+										Load all ({filteredEvents.length - visibleCount} remaining)
 									</Button>
 								</div>
 							)}
