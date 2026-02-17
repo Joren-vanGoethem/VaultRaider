@@ -1,4 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
+import type { ActivityLogEvent } from "~/types/activityLog.ts";
 import type { KeyVault, KeyVaultAccess } from "~/types/keyvault.ts";
 import type { ResourceGroup } from "~/types/resourceGroups.ts";
 import type { DeletedSecretItem, Secret, SecretAttributes, SecretBundle } from "~/types/secrets.ts";
@@ -11,6 +12,7 @@ export const fetchKeyvaultsKey = "fetch_keyvaults";
 export const fetchSecretsKey = "fetch_secrets";
 export const fetchDeletedSecretsKey = "fetch_deleted_secrets";
 export const createKeyvaultKey = "create_keyvault";
+export const fetchActivityLogsKey = "fetch_activity_logs";
 
 export async function fetchResourceGroups(subscriptionId: string): Promise<ResourceGroup[]> {
   try {
@@ -104,8 +106,8 @@ export async function fetchSecrets(keyvaultUri: string): Promise<Secret[]> {
   }
 }
 
-// Global request queue for secret fetching (max 10 concurrent requests)
-const secretRequestQueue = new RequestQueue(25);
+// Global request queue for secret fetching (max 50 concurrent requests)
+const secretRequestQueue = new RequestQueue(50);
 
 export async function fetchSecret(
   keyvaultUri: string,
@@ -311,5 +313,43 @@ export async function globalSearchSecrets(
     const errorMessage = err instanceof Error ? err.message : String(err);
     console.error("Failed to perform global search:", errorMessage);
     throw new Error(errorMessage);
+  }
+}
+
+// ============================================================================
+// Activity Log Operations
+// ============================================================================
+
+export async function fetchActivityLogs(
+  vaultId: string,
+  days?: number,
+): Promise<ActivityLogEvent[]> {
+  try {
+    return await invoke<ActivityLogEvent[]>("fetch_activity_logs", { vaultId, days });
+  } catch (err) {
+    const errorMessage = err instanceof Error ? err.message : String(err);
+    console.error(`Failed to fetch activity logs for vault ${vaultId}:`, errorMessage);
+    throw new Error(errorMessage);
+  }
+}
+
+export interface ResolvedCaller {
+  id: string;
+  displayName: string;
+  callerType: string;
+  userPrincipalName?: string;
+}
+
+export const resolveCallersKey = "resolve_callers";
+
+export async function resolveCallers(
+  callerIds: string[],
+): Promise<Record<string, ResolvedCaller>> {
+  try {
+    return await invoke<Record<string, ResolvedCaller>>("resolve_callers", { callerIds });
+  } catch (err) {
+    const errorMessage = err instanceof Error ? err.message : String(err);
+    console.error("Failed to resolve caller identities:", errorMessage);
+    return {};
   }
 }
