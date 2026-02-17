@@ -1,27 +1,28 @@
 ﻿import {
-  DownloadIcon,
-  EyeIcon,
-  EyeOffIcon,
-  FileJsonIcon,
-  GitCompareIcon,
-  KeyIcon,
-  PlusIcon,
-  Trash2,
-  UploadIcon,
+	ClockIcon,
+	DownloadIcon,
+	EyeIcon,
+	EyeOffIcon,
+	FileJsonIcon,
+	GitCompareIcon,
+	KeyIcon,
+	PlusIcon,
+	Trash2,
+	UploadIcon,
 } from "lucide-react";
 import { Button, DropdownButton, DropdownMenu, type DropdownMenuItem, IconButton } from "./common";
 
 interface KeyvaultHeaderProps {
-  name: string;
-  secretsCount: number;
-  loadAll: boolean;
-  onLoadAll: () => void;
-  onExport: () => void;
-  onImport: () => void;
-  onCompare: () => void;
-  onCreate: () => void;
-  onViewDeleted?: () => void;
-  onDeleteVault?: () => void;
+	name: string;
+	secretsCount: number;
+	loadAll: boolean;
+	onLoadAll: () => void;
+	onExport: () => void;
+	onImport: () => void;
+	onCompare: () => void;
+	onCreate: () => void;
+	onViewDeleted?: () => void;
+	onViewAuditLogs?: () => void;
   softDeleteEnabled?: boolean;
   showDetails: boolean;
   onToggleDetails: () => void;
@@ -37,6 +38,7 @@ export function KeyvaultHeader({
   onCompare,
   onCreate,
   onViewDeleted,
+  onViewAuditLogs,
   onDeleteVault,
   softDeleteEnabled,
   showDetails,
@@ -63,6 +65,16 @@ export function KeyvaultHeader({
       icon: <GitCompareIcon className="w-4 h-4" />,
       onClick: onCompare,
     },
+    ...(onViewAuditLogs
+      ? [
+          {
+            id: "audit-logs",
+            label: "Audit Logs",
+            icon: <ClockIcon className="w-4 h-4" />,
+            onClick: onViewAuditLogs,
+          },
+        ]
+      : []),
     ...(softDeleteEnabled && onViewDeleted
       ? [
           {

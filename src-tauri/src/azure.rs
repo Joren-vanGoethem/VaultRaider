@@ -2,6 +2,7 @@
 //!
 //! This module contains all Azure-related functionality organized by service.
 
+pub(crate) mod activity_log;
 pub(crate) mod auth;
 pub(crate) mod http;
 pub(crate) mod keyvault;

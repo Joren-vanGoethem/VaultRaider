@@ -1,4 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
+import type { ActivityLogEvent } from "~/types/activityLog.ts";
 import type { KeyVault, KeyVaultAccess } from "~/types/keyvault.ts";
 import type { ResourceGroup } from "~/types/resourceGroups.ts";
 import type { DeletedSecretItem, Secret, SecretAttributes, SecretBundle } from "~/types/secrets.ts";
@@ -11,6 +12,7 @@ export const fetchKeyvaultsKey = "fetch_keyvaults";
 export const fetchSecretsKey = "fetch_secrets";
 export const fetchDeletedSecretsKey = "fetch_deleted_secrets";
 export const createKeyvaultKey = "create_keyvault";
+export const fetchActivityLogsKey = "fetch_activity_logs";
 
 export async function fetchResourceGroups(subscriptionId: string): Promise<ResourceGroup[]> {
   try {
@@ -310,6 +312,23 @@ export async function globalSearchSecrets(
   } catch (err) {
     const errorMessage = err instanceof Error ? err.message : String(err);
     console.error("Failed to perform global search:", errorMessage);
+    throw new Error(errorMessage);
+  }
+}
+
+// ============================================================================
+// Activity Log Operations
+// ============================================================================
+
+export async function fetchActivityLogs(
+  vaultId: string,
+  days?: number,
+): Promise<ActivityLogEvent[]> {
+  try {
+    return await invoke<ActivityLogEvent[]>("fetch_activity_logs", { vaultId, days });
+  } catch (err) {
+    const errorMessage = err instanceof Error ? err.message : String(err);
+    console.error(`Failed to fetch activity logs for vault ${vaultId}:`, errorMessage);
     throw new Error(errorMessage);
   }
 }
