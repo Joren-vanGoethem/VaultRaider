@@ -196,7 +196,7 @@ export function SecretCard({
   return (
     <div
       onClick={selectionMode ? handleSelectionToggle : undefined}
-      className={`flex-col border rounded-lg p-3 transition-colors ${
+      className={`flex-col border rounded-lg p-3 transition-colors shadow-sm ${
         selectionMode ? "cursor-pointer" : ""
       } ${
         isSelected

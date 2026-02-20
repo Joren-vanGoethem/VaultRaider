@@ -109,11 +109,11 @@ export function DropdownButton({
 }: DropdownButtonProps) {
   const variantClasses = {
     primary:
-      "text-white bg-primary-600 hover:bg-primary-700 focus:ring-primary-500 disabled:bg-primary-400",
+      "text-white bg-primary-600 hover:bg-primary-700 focus:ring-primary-500 disabled:bg-primary-400 shadow",
     secondary:
-      "text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 focus:ring-gray-400",
+      "text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 focus:ring-gray-400 shadow",
     success:
-      "text-white bg-green-600 hover:bg-green-700 focus:ring-green-500 disabled:bg-green-400",
+      "text-white bg-green-600 hover:bg-green-700 focus:ring-green-500 disabled:bg-green-400 shadow",
   };
 
   const sizeClasses = {
