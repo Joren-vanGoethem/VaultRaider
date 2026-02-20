@@ -1,6 +1,6 @@
 ﻿# VaultRaider 🔐
 
-A modern, cross-platform desktop application for managing Azure Key Vaults. Built with Tauri, React, and Rust for optimal performance and security.
+A modern, cross-platform desktop application for managing Azure Key Vaults. Built with Tauri, React, and Rust.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Tauri](https://img.shields.io/badge/Tauri-2.0-blue.svg)](https://tauri.app/)
