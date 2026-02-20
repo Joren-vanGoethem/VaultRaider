@@ -9,11 +9,9 @@ A modern, cross-platform desktop application for managing Azure Key Vaults. Buil
 
 ## ✨ Features
 
-- 🔐 **Secure Azure Authentication** - OAuth2-based authentication with Azure Active Directory
 - 📋 **Multi-Subscription Support** - Browse and manage Key Vaults across all your Azure subscriptions
 - 🔑 **Secret Management** - View, search, and manage secrets with ease
 - 🎨 **Modern UI** - Clean, intuitive interface built with React and Tailwind CSS
-- ⚡ **High Performance** - Native performance powered by Tauri and Rust
 - 🌙 **Dark Mode** - Supports light and dark themes
 - 🚀 **Cross-Platform** - Works on Windows, macOS, and Linux
 
