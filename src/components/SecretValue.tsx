@@ -13,7 +13,7 @@ interface SecretValueProps {
 export function SecretValue({ value, isLoading, error, onLoad, onCopy }: SecretValueProps) {
   if (isLoading) {
     return (
-      <div className="flex items-center gap-2 py-1 mb-2">
+      <div className="flex items-center gap-2 py-1 mb-1">
         <LoadingSpinner size="sm" />
         <span className="text-xs text-gray-500 dark:text-gray-400">Loading value...</span>
       </div>
@@ -21,20 +21,20 @@ export function SecretValue({ value, isLoading, error, onLoad, onCopy }: SecretV
   }
 
   if (error) {
-    return <div className="text-xs text-red-600 dark:text-red-400 py-1 mb-2">{error}</div>;
+    return <div className="text-xs text-red-600 dark:text-red-400 py-1 mb-1">{error}</div>;
   }
 
-  if (value) {
+  if (value !== undefined) {
     return (
-      <div className="flex items-start gap-2 mb-2">
-        <div className="flex-1 min-w-0 p-1.5 bg-white dark:bg-gray-900 rounded border border-gray-300 dark:border-gray-600 font-mono text-xs break-all max-h-20 overflow-y-auto">
-          {value}
+      <div className="flex items-start gap-2 mb-1">
+        <div className="flex-1 min-w-0 p-1.5 bg-white dark:bg-gray-900 rounded border border-gray-300 dark:border-gray-600 font-mono text-sm break-all max-h-20 overflow-y-auto">
+          {value || <span className="text-gray-400 dark:text-gray-500 italic">(empty)</span>}
         </div>
         <IconButton
-          icon={<ClipboardIcon className="w-3.5 h-3.5" />}
+          icon={<ClipboardIcon className="w-4 h-4" />}
           label="Copy secret value to clipboard"
           variant="secondary"
-          size="sm"
+          size="md"
           onClick={() => onCopy(value)}
         />
       </div>
@@ -42,7 +42,7 @@ export function SecretValue({ value, isLoading, error, onLoad, onCopy }: SecretV
   }
 
   return (
-    <div className="mb-2">
+    <div className="mb-1">
       <Button
         variant="primary"
         size="sm"

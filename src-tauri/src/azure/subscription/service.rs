@@ -67,21 +67,3 @@ pub async fn get_subscription(subscription_id: &str) -> Result<Subscription> {
             ))
         })
 }
-
-pub async fn get_subscription_internal(subscription_id: &str) -> Result<Subscription> {
-    let url = urls::subscription(subscription_id);
-
-    let token = get_token_from_state()
-        .await
-        .map_err(|e| anyhow::anyhow!(e))
-        .context("Failed to retrieve authentication token")?;
-
-    let client = AzureHttpClient::new()
-        .with_bearer_token(&token)
-        .context("Failed to create HTTP client with token")?;
-
-    client
-        .get(&url)
-        .await
-        .context("Failed to fetch subscription from Azure")
-}

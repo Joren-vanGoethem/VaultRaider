@@ -70,6 +70,15 @@ function Keyvaults() {
     });
   }, [navigate, vaultUri, name, subscriptionId, resourceGroup, enableSoftDelete]);
 
+  const handleViewAuditLogs = useCallback(() => {
+    if (!subscriptionId || !resourceGroup) return;
+    const vaultId = `/subscriptions/${subscriptionId}/resourceGroups/${resourceGroup}/providers/Microsoft.KeyVault/vaults/${name}`;
+    navigate({
+      to: "/audit-logs",
+      search: { vaultId, name, vaultUri, subscriptionId, resourceGroup },
+    });
+  }, [navigate, subscriptionId, resourceGroup, name, vaultUri]);
+
   // Use React Query to fetch secrets list
   const { data: secrets } = useSuspenseQuery({
     queryKey: [fetchSecretsKey, vaultUri],
@@ -247,6 +256,7 @@ function Keyvaults() {
           onCompare={() => setShowCompareModal(true)}
           onCreate={() => setShowCreateModal(true)}
           onViewDeleted={handleViewDeleted}
+          onViewAuditLogs={subscriptionId && resourceGroup ? handleViewAuditLogs : undefined}
           onDeleteVault={resourceGroup ? handleDeleteVault : undefined}
           softDeleteEnabled={enableSoftDelete === true}
           showDetails={showSecretDetails}

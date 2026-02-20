@@ -57,6 +57,9 @@ pub const KEYVAULT_DATA_API_VERSION: &str = "2025-07-01";
 /// Azure Resource Groups API version
 pub const RESOURCE_GROUPS_API_VERSION: &str = "2021-04-01";
 
+/// Azure Monitor Activity Logs API version
+pub const ACTIVITY_LOG_API_VERSION: &str = "2015-04-01";
+
 // ============================================================================
 // URL Builders
 // ============================================================================
@@ -68,14 +71,6 @@ pub mod urls {
     pub fn subscriptions() -> String {
         format!(
             "https://management.azure.com/subscriptions?api-version={}",
-            ARM_API_VERSION
-        )
-    }
-
-    /// Get the URL to list all subscriptions
-    pub fn subscription(subscription_id: &str) -> String {
-        format!(
-            "https://management.azure.com/subscriptions/{subscription_id}?api-version={}",
             ARM_API_VERSION
         )
     }
@@ -185,17 +180,6 @@ pub mod urls {
         )
     }
 
-    /// Get the URL to get a specific deleted secret
-    pub fn deleted_secret(keyvault_uri: &str, secret_name: &str) -> String {
-        let clean_uri = keyvault_uri
-            .trim_start_matches("https://")
-            .trim_end_matches('/');
-        format!(
-            "https://{}/deletedsecrets/{}?api-version={}",
-            clean_uri, secret_name, KEYVAULT_DATA_API_VERSION
-        )
-    }
-
     /// Get the URL to recover a deleted secret
     pub fn recover_deleted_secret(keyvault_uri: &str, secret_name: &str) -> String {
         let clean_uri = keyvault_uri
@@ -216,6 +200,43 @@ pub mod urls {
             "https://{}/deletedsecrets/{}?api-version={}",
             clean_uri, secret_name, KEYVAULT_DATA_API_VERSION
         )
+    }
+
+    /// Get the URL to list activity logs for a specific resource.
+    ///
+    /// Uses the Azure Monitor Activity Log REST API.
+    /// The `resource_id` should be the full ARM resource ID of the Key Vault.
+    /// `days` controls how many days of history to fetch.
+    pub fn activity_logs(resource_id: &str, days: u32) -> String {
+        let now = chrono::Utc::now();
+        let start = now - chrono::Duration::days(i64::from(days));
+        let start_str = start.format("%Y-%m-%dT%H:%M:%S%.3fZ").to_string();
+        let end_str = now.format("%Y-%m-%dT%H:%M:%S%.3fZ").to_string();
+
+        // URL-encode the $filter parameter
+        let filter = format!(
+            "eventTimestamp ge '{}' and eventTimestamp le '{}' and resourceUri eq '{}'",
+            start_str, end_str, resource_id
+        );
+
+        format!(
+            "https://management.azure.com/subscriptions/{}/providers/Microsoft.Insights/eventtypes/management/values?api-version={}&$filter={}",
+            extract_subscription_id(resource_id),
+            ACTIVITY_LOG_API_VERSION,
+            urlencoding::encode(&filter)
+        )
+    }
+
+    /// Extract subscription ID from a full ARM resource ID.
+    fn extract_subscription_id(resource_id: &str) -> &str {
+        // Resource ID format: /subscriptions/{sub-id}/resourceGroups/...
+        let parts: Vec<&str> = resource_id.split('/').collect();
+        if let Some(pos) = parts.iter().position(|&p| p.eq_ignore_ascii_case("subscriptions")) {
+            if pos + 1 < parts.len() {
+                return parts[pos + 1];
+            }
+        }
+        resource_id
     }
 }
 

@@ -75,7 +75,7 @@ export function DeletedSecretCard({
   });
 
   return (
-    <div className="flex-col border rounded-lg p-3 transition-colors border-red-200 dark:border-red-800/50 bg-red-50/30 dark:bg-red-900/10 hover:border-red-400 dark:hover:border-red-600">
+    <div className="flex-col border rounded-lg p-3 shadow-sm transition-colors border-red-200 dark:border-red-800/50 bg-red-50/30 dark:bg-red-900/10 hover:border-red-400 dark:hover:border-red-600">
       {/* Header */}
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-2 min-w-0 flex-1">

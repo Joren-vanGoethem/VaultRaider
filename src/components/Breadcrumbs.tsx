@@ -1,5 +1,5 @@
 ﻿import { Link, useMatches } from "@tanstack/react-router";
-import { ChevronRight, GitCompare, Key, Search, Shield, Trash2 } from "lucide-react";
+import { ChevronRight, Clock, GitCompare, Key, Search, Shield, Trash2 } from "lucide-react";
 
 interface BreadcrumbItem {
   label: string;
@@ -30,17 +30,22 @@ export function Breadcrumbs() {
     currentPath.startsWith("/subscriptions") ||
     currentPath.startsWith("/keyvault") ||
     currentPath.startsWith("/compare") ||
-    currentPath.startsWith("/deleted-secrets")
+    currentPath.startsWith("/deleted-secrets") ||
+    currentPath.startsWith("/audit-logs")
   ) {
     // Get the subscriptionId from the keyvault route or compare route if available
     const keyvaultMatch = matches.find((m) => m.pathname === "/keyvault");
     const compareMatch = matches.find((m) => m.pathname === "/compare");
     const deletedSecretsMatch = matches.find((m) => m.pathname === "/deleted-secrets");
+    const auditLogsMatch = matches.find((m) => m.pathname === "/audit-logs");
     const keyvaultSearchParams = keyvaultMatch?.search as { subscriptionId?: string } | undefined;
     const compareSearchParams = compareMatch?.search as
       | { sourceSubscriptionId?: string }
       | undefined;
     const deletedSecretsSearchParams = deletedSecretsMatch?.search as
+      | { subscriptionId?: string }
+      | undefined;
+    const auditLogsSearchParams = auditLogsMatch?.search as
       | { subscriptionId?: string }
       | undefined;
 
@@ -53,7 +58,9 @@ export function Breadcrumbs() {
           ? { subscriptionId: compareSearchParams.sourceSubscriptionId }
           : deletedSecretsSearchParams?.subscriptionId
             ? { subscriptionId: deletedSecretsSearchParams.subscriptionId }
-            : undefined,
+            : auditLogsSearchParams?.subscriptionId
+              ? { subscriptionId: auditLogsSearchParams.subscriptionId }
+              : undefined,
       icon: <Shield className="w-4 h-4" />,
     });
   }
@@ -139,6 +146,40 @@ export function Breadcrumbs() {
     breadcrumbs.push({
       label: "Deleted Secrets",
       icon: <Trash2 className="w-4 h-4" />,
+    });
+  }
+
+  // Check for audit-logs route
+  if (currentPath.startsWith("/audit-logs")) {
+    const auditLogsMatch = matches.find((m) => m.pathname === "/audit-logs");
+    const searchParams = auditLogsMatch?.search as
+      | {
+          name?: string;
+          vaultUri?: string;
+          subscriptionId?: string;
+          resourceGroup?: string;
+        }
+      | undefined;
+
+    // Add vault breadcrumb that links back to the vault
+    if (searchParams?.name && searchParams?.vaultUri) {
+      breadcrumbs.push({
+        label: searchParams.name,
+        to: "/keyvault",
+        search: {
+          name: searchParams.name,
+          vaultUri: searchParams.vaultUri,
+          subscriptionId: searchParams.subscriptionId,
+          resourceGroup: searchParams.resourceGroup,
+        },
+        icon: <Key className="w-4 h-4" />,
+      });
+    }
+
+    // Add audit logs breadcrumb
+    breadcrumbs.push({
+      label: "Audit Logs",
+      icon: <Clock className="w-4 h-4" />,
     });
   }
 

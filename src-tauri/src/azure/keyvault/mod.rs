@@ -6,5 +6,3 @@
 pub mod secret;
 pub mod service;
 pub mod types;
-
-pub(crate) mod constants;

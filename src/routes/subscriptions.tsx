@@ -45,7 +45,6 @@ export const Route = createFileRoute("/subscriptions")({
     // We don't await the key vault queries so the UI shows immediately
     queryClient.prefetchQuery(subscriptionQueryOptions).then((subscriptions) => {
       // Prefetch key vaults for all subscriptions in parallel (non-blocking)
-      // TODO@JOREN: do some proper type mapping
       (subscriptions as unknown as Subscription[]).forEach((sub) => {
         queryClient.prefetchQuery({
           queryKey: [fetchKeyvaultsKey, sub.subscriptionId],
